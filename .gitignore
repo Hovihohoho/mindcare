@@ -1,0 +1,19 @@
+# Java/Spring Boot
+target/
+*.jar
+*.war
+.mvn/
+
+# Node.js/React (Nếu có folder frontend nằm chung)
+node_modules/
+dist/
+build/
+
+# IDEs and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Environment variables (Bảo mật)
+.env

@@ -1,0 +1,24 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/mindcare_db?currentSchema=auth_schema}
+    username: ${DB_USERNAME:postgres_admin}
+    password: ${DB_PASSWORD:secretpassword}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate # Tắt tự động tạo bảng của Hibernate vì đã có Flyway
+    show-sql: true
+  flyway:
+    schemas: auth_schema
+    default-schema: auth_schema
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:TWluZENhcmUtRGV2ZWxvcG1lbnQtSldULVNlY3JldC0yMDI2IQ==}
+    expiration-ms: 86400000
