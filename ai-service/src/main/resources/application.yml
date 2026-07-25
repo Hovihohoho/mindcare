@@ -16,3 +16,16 @@ spring:
   flyway:
     schemas: ai_schema
     default-schema: ai_schema
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+  embedding-model: ${GEMINI_EMBEDDING_MODEL:gemini-embedding-2}
+  chat-model: ${GEMINI_CHAT_MODEL:gemini-3.1-flash-lite}
+  fallback-chat-model: ${GEMINI_FALLBACK_CHAT_MODEL:gemini-3.1-flash-lite}
+  embedding-dimensions: 768
+
+rag:
+  default-top-k: 5
+  max-top-k: 10
+  similarity-threshold: 0.35

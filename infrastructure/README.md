@@ -32,3 +32,10 @@ Services running inside Docker should use `postgres` as the host and port
 
 These are development defaults only. Do not reuse them in staging or
 production.
+
+## Mailpit
+
+- Inbox: `http://localhost:8025`
+- SMTP: `localhost:1025`
+
+Mailpit captures local verification emails and does not deliver them to the public internet.

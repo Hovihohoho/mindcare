@@ -5,9 +5,10 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record UserSummary(UUID id, String email, String fullName, String role,
-                          boolean active, LocalDateTime createdAt) {
+                          boolean active, boolean emailVerified, LocalDateTime createdAt) {
     public static UserSummary from(User user) {
         return new UserSummary(user.getId(), user.getEmail(), user.getFullName(),
-                user.getRole().getName(), Boolean.TRUE.equals(user.getIsActive()), user.getCreatedAt());
+                user.getRole().getName(), Boolean.TRUE.equals(user.getIsActive()),
+                Boolean.TRUE.equals(user.getEmailVerified()), user.getCreatedAt());
     }
 }

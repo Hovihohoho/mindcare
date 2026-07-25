@@ -1,0 +1,217 @@
+param(
+    [switch]$SkipAi,
+    [switch]$RestartExisting
+)
+
+$ErrorActionPreference = "Stop"
+$projectRoot = $PSScriptRoot
+$envFile = Join-Path $projectRoot ".env"
+$runDirectory = Join-Path $projectRoot ".run"
+
+function Import-DotEnv {
+    param([string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "Missing $Path. Copy .env.example to .env and fill in the configuration."
+    }
+
+    foreach ($line in Get-Content -LiteralPath $Path -Encoding UTF8) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith("#")) {
+            continue
+        }
+
+        $separator = $trimmed.IndexOf("=")
+        if ($separator -lt 1) {
+            throw "Invalid line in .env: $line"
+        }
+
+        $name = $trimmed.Substring(0, $separator).Trim()
+        $value = $trimmed.Substring($separator + 1).Trim()
+        if (($value.StartsWith('"') -and $value.EndsWith('"')) -or
+            ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        [Environment]::SetEnvironmentVariable($name, $value, "Process")
+    }
+}
+
+function Require-EnvironmentValue {
+    param([string]$Name)
+
+    $value = [Environment]::GetEnvironmentVariable($Name, "Process")
+    if ([string]::IsNullOrWhiteSpace($value) -or $value.StartsWith("your-")) {
+        throw "Missing $Name in .env."
+    }
+}
+
+function Get-MavenExecutable {
+    $installed = Get-Command "mvn.cmd" -ErrorAction SilentlyContinue
+    if ($installed) {
+        return $installed.Source
+    }
+
+    $wrapperDirectory = Join-Path $env:USERPROFILE ".m2\wrapper\dists"
+    if (Test-Path -LiteralPath $wrapperDirectory) {
+        $cached = Get-ChildItem -LiteralPath $wrapperDirectory -Recurse -Filter "mvn.cmd" |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+        if ($cached) {
+            return $cached.FullName
+        }
+    }
+
+    throw "Maven was not found. Run a project mvnw.cmd once to download Maven."
+}
+
+function Test-PortInUse {
+    param([int]$Port)
+    return [bool](Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue)
+}
+
+function Stop-PortListener {
+    param([int]$Port)
+
+    $listeners = @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue)
+    foreach ($listener in $listeners) {
+        $process = Get-Process -Id $listener.OwningProcess -ErrorAction SilentlyContinue
+        if ($process) {
+            Write-Host "Stopping PID $($process.Id) ($($process.ProcessName)) on port $Port..."
+            Stop-Process -Id $process.Id
+            Wait-Process -Id $process.Id -Timeout 10 -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+function Start-LoggedProcess {
+    param(
+        [string]$Name,
+        [string]$FilePath,
+        [string[]]$Arguments,
+        [string]$WorkingDirectory
+    )
+
+    $stdout = Join-Path $runDirectory "$Name.log"
+    $stderr = Join-Path $runDirectory "$Name.error.log"
+    $process = Start-Process -FilePath $FilePath `
+        -ArgumentList $Arguments `
+        -WorkingDirectory $WorkingDirectory `
+        -RedirectStandardOutput $stdout `
+        -RedirectStandardError $stderr `
+        -WindowStyle Hidden `
+        -PassThru
+
+    Write-Host "Started $Name (PID $($process.Id)). Log: $stdout"
+    return [PSCustomObject]@{ name = $Name; pid = $process.Id }
+}
+
+Import-DotEnv -Path $envFile
+
+if ($env:SPRING_PROFILES_ACTIVE -ne "real-email") {
+    throw "SPRING_PROFILES_ACTIVE must be real-email."
+}
+
+Require-EnvironmentValue "SMTP_USERNAME"
+Require-EnvironmentValue "SMTP_PASSWORD"
+if ([string]::IsNullOrWhiteSpace($env:MAIL_FROM)) {
+    $env:MAIL_FROM = $env:SMTP_USERNAME
+}
+if (-not $SkipAi) {
+    Require-EnvironmentValue "GEMINI_API_KEY"
+}
+
+$ports = [ordered]@{
+    "API Gateway" = 8080
+    "Auth Service" = 8081
+    "AI Service" = 8084
+    "Frontend" = 5173
+}
+if ($SkipAi) {
+    $ports.Remove("AI Service")
+}
+
+$occupied = @($ports.GetEnumerator() | Where-Object { Test-PortInUse -Port $_.Value })
+if ($occupied.Count -gt 0) {
+    if (-not $RestartExisting) {
+        $details = ($occupied | ForEach-Object { "$($_.Key):$($_.Value)" }) -join ", "
+        throw "Ports are already in use: $details. Run again with -RestartExisting."
+    }
+    foreach ($entry in $occupied) {
+        Stop-PortListener -Port $entry.Value
+    }
+}
+
+New-Item -ItemType Directory -Path $runDirectory -Force | Out-Null
+
+Write-Host "Starting PostgreSQL and pgAdmin..."
+& docker compose --file (Join-Path $projectRoot "infrastructure\docker-compose.yml") up -d postgres pgadmin
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not start Docker infrastructure."
+}
+
+$maven = Get-MavenExecutable
+$processes = @()
+$processes += Start-LoggedProcess -Name "auth-service" -FilePath $maven `
+    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "auth-service")
+
+if (-not $SkipAi) {
+    $processes += Start-LoggedProcess -Name "ai-service" -FilePath $maven `
+        -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "ai-service")
+}
+
+$processes += Start-LoggedProcess -Name "api-gateway" -FilePath $maven `
+    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "api-gateway")
+
+$npm = (Get-Command "npm.cmd" -ErrorAction Stop).Source
+$processes += Start-LoggedProcess -Name "frontend" -FilePath $npm `
+    -Arguments @("run", "dev", "--", "--host", "127.0.0.1") `
+    -WorkingDirectory (Join-Path $projectRoot "frontend")
+
+$processes | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $runDirectory "pids.json") -Encoding UTF8
+
+Write-Host "Waiting for services..."
+$deadline = (Get-Date).AddSeconds(90)
+$exitedServices = @()
+do {
+    $exitedServices = @($processes | Where-Object {
+        -not (Get-Process -Id $_.pid -ErrorAction SilentlyContinue)
+    })
+    if ($exitedServices.Count -gt 0) {
+        break
+    }
+    $waiting = @($ports.GetEnumerator() | Where-Object { -not (Test-PortInUse -Port $_.Value) })
+    if ($waiting.Count -eq 0) {
+        break
+    }
+    Start-Sleep -Seconds 2
+} while ((Get-Date) -lt $deadline)
+
+if ($exitedServices.Count -gt 0) {
+    foreach ($service in $exitedServices) {
+        Write-Warning "$($service.name) exited during startup."
+        $serviceLog = Join-Path $runDirectory "$($service.name).log"
+        $serviceErrorLog = Join-Path $runDirectory "$($service.name).error.log"
+        if (Test-Path -LiteralPath $serviceErrorLog) {
+            Get-Content -LiteralPath $serviceErrorLog -Tail 30
+        }
+        if (Test-Path -LiteralPath $serviceLog) {
+            Get-Content -LiteralPath $serviceLog -Tail 50
+        }
+    }
+    exit 1
+}
+
+if ($waiting.Count -gt 0) {
+    $failed = ($waiting | ForEach-Object { "$($_.Key):$($_.Value)" }) -join ", "
+    Write-Warning "Not ready after 90 seconds: $failed"
+    Write-Warning "Check .run\*.error.log and .run\*.log."
+    exit 1
+}
+
+Write-Host ""
+Write-Host "MindCare is ready:"
+Write-Host "  Frontend:    http://localhost:5173"
+Write-Host "  API Gateway: http://localhost:8080"
+Write-Host "  pgAdmin:     http://localhost:5050"
+Write-Host "Real SMTP sender: $env:SMTP_USERNAME"
+Write-Host "Stop application processes with: .\stop-all.ps1"

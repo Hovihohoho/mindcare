@@ -6,34 +6,36 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOrigins: "*"
-            allowedMethods: "*"
-            allowedHeaders: "*"
-      routes:
-        - id: auth-service
-          uri: ${AUTH_SERVICE_URI:http://localhost:8081}
-          predicates:
-            - Path=/api/auth/**
-        - id: expert-service
-          uri: ${EXPERT_SERVICE_URI:http://localhost:8082}
-          predicates:
-            - Path=/api/experts/**,/api/bookings/**
-        - id: emotion-service
-          uri: ${EMOTION_SERVICE_URI:http://localhost:8083}
-          predicates:
-            - Path=/api/emotions/**
-        - id: ai-service
-          uri: ${AI_SERVICE_URI:http://localhost:8084}
-          predicates:
-            - Path=/api/ai/**
-        - id: ai-websocket
-          uri: ${AI_WEBSOCKET_URI:ws://localhost:8084}
-          predicates:
-            - Path=/ws/ai/**
-        - id: expert-websocket
-          uri: ${EXPERT_WEBSOCKET_URI:ws://localhost:8082}
-          predicates:
-            - Path=/ws/expert/**
+      server:
+        webflux:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: "*"
+                allowedMethods: "*"
+                allowedHeaders: "*"
+          routes:
+            - id: auth-service
+              uri: ${AUTH_SERVICE_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**
+            - id: expert-service
+              uri: ${EXPERT_SERVICE_URI:http://localhost:8082}
+              predicates:
+                - Path=/api/experts/**,/api/bookings/**
+            - id: emotion-service
+              uri: ${EMOTION_SERVICE_URI:http://localhost:8083}
+              predicates:
+                - Path=/api/emotions/**
+            - id: ai-service
+              uri: ${AI_SERVICE_URI:http://localhost:8084}
+              predicates:
+                - Path=/api/ai/**
+            - id: ai-websocket
+              uri: ${AI_WEBSOCKET_URI:ws://localhost:8084}
+              predicates:
+                - Path=/ws/ai/**
+            - id: expert-websocket
+              uri: ${EXPERT_WEBSOCKET_URI:ws://localhost:8082}
+              predicates:
+                - Path=/ws/expert/**

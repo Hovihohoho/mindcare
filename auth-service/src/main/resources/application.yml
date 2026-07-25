@@ -17,8 +17,21 @@ spring:
   flyway:
     schemas: auth_schema
     default-schema: auth_schema
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${SMTP_STARTTLS:false}
 
 security:
   jwt:
     secret: ${JWT_SECRET:TWluZENhcmUtRGV2ZWxvcG1lbnQtSldULVNlY3JldC0yMDI2IQ==}
     expiration-ms: 86400000
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  mail-from: ${MAIL_FROM:no-reply@mindcare.local}
+  verification-expiration-minutes: 30

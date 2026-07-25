@@ -4,6 +4,7 @@ import com.mindcare.ai_service.dto.ApiResponse;
 import com.mindcare.ai_service.dto.KnowledgeDocumentRequest;
 import com.mindcare.ai_service.entity.KnowledgeDocument;
 import com.mindcare.ai_service.service.KnowledgeDocumentService;
+import com.mindcare.ai_service.service.EmbeddingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class KnowledgeDocumentController {
     private final KnowledgeDocumentService service;
+    private final EmbeddingService embeddingService;
 
     @GetMapping
     ApiResponse<List<KnowledgeDocument>> findAll() {
@@ -45,5 +47,17 @@ public class KnowledgeDocumentController {
     ApiResponse<Void> delete(@PathVariable UUID id) {
         service.delete(id);
         return ApiResponse.success("Xóa tài liệu thành công", null);
+    }
+
+    @PostMapping("/{id}/reindex")
+    ApiResponse<Void> reindex(@PathVariable UUID id) {
+        embeddingService.reindex(id);
+        return ApiResponse.success("Đã tạo lại embedding", null);
+    }
+
+    @PostMapping("/reindex-all")
+    ApiResponse<Integer> reindexAll() {
+        int count = embeddingService.reindexAll();
+        return ApiResponse.success("Đã tạo lại embedding cho tài liệu", count);
     }
 }

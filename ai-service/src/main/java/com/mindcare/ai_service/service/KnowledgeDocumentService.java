@@ -13,6 +13,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class KnowledgeDocumentService {
     private final KnowledgeDocumentRepository repository;
+    private final EmbeddingService embeddingService;
 
     @Transactional(readOnly = true)
     public List<KnowledgeDocument> findAll() { return repository.findAll(); }
@@ -25,12 +26,16 @@ public class KnowledgeDocumentService {
 
     @Transactional
     public KnowledgeDocument create(KnowledgeDocumentRequest request) {
-        return repository.save(apply(new KnowledgeDocument(), request));
+        KnowledgeDocument saved = repository.saveAndFlush(apply(new KnowledgeDocument(), request));
+        embeddingService.embed(saved);
+        return saved;
     }
 
     @Transactional
     public KnowledgeDocument update(UUID id, KnowledgeDocumentRequest request) {
-        return repository.save(apply(findById(id), request));
+        KnowledgeDocument saved = repository.saveAndFlush(apply(findById(id), request));
+        embeddingService.embed(saved);
+        return saved;
     }
 
     @Transactional
