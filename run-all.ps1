@@ -121,7 +121,7 @@ if (-not $SkipAi) {
 }
 
 $ports = [ordered]@{
-    "API Gateway" = 8080
+    "API Gateway" = 8079
     "Auth Service" = 8081
     "AI Service" = 8084
     "Frontend" = 5173
