@@ -1,31 +1,47 @@
 # MindCare AI Service
 
-## Gemini configuration
+## Cấu hình Gemini
 
-Set `GEMINI_API_KEY` before starting the service. The default models are:
+Tạo API key trong Google AI Studio rồi cập nhật file `.env` ở thư mục gốc:
 
-- Embedding: `gemini-embedding-2`, 768 dimensions.
-- Chat: `gemini-3.5-flash`.
+```env
+GEMINI_API_KEY=your-real-api-key
+GEMINI_EMBEDDING_MODEL=gemini-embedding-2
+GEMINI_CHAT_MODEL=gemini-3.1-flash-lite
+GEMINI_FALLBACK_CHAT_MODEL=gemini-3.1-flash-lite
+```
+
+Khởi động đầy đủ AI Service:
 
 ```powershell
-cd ..\auth-service
-$env:GEMINI_API_KEY='your-google-ai-studio-key'
-.\mvnw.cmd -f ..\ai-service\pom.xml spring-boot:run
+.\run-all.ps1 -RestartExisting
 ```
 
-## RAG endpoints
+Không dùng `-SkipAi` khi muốn chat hoặc tạo embedding.
 
-- `POST /api/ai/documents`: save a document and generate its embedding (`ROLE_ADMIN`).
-- `POST /api/ai/documents/{id}/reindex`: regenerate one embedding (`ROLE_ADMIN`).
-- `POST /api/ai/documents/reindex-all`: regenerate all active embeddings (`ROLE_ADMIN`).
-- `POST /api/ai/chat`: similarity search plus grounded Gemini response (authenticated user).
+## Nạp dữ liệu cho AI
 
-The service trusts `X-User-Id` and `X-User-Role` only when it is reachable through
-the API Gateway. Do not expose port `8084` publicly; the Gateway removes
-client-supplied identity headers and replaces them with verified JWT claims.
+1. Đăng nhập bằng tài khoản `ROLE_ADMIN`.
+2. Mở `/admin/ai-documents`.
+3. Chọn **Thêm tài liệu** để nhập nội dung, hoặc **Nhập TXT/MD**.
+4. Điền nguồn tham khảo và loại tài liệu.
+5. Chỉ bật **Cho phép AI sử dụng** sau khi nội dung đã được kiểm duyệt.
+6. Nhấn **Lưu và tạo embedding**. AI Service lưu văn bản và gọi Gemini Embedding.
+7. Khi đổi model embedding hoặc cần làm mới dữ liệu, dùng **Reindex tất cả**.
 
-Example chat body:
+File nhập hỗ trợ `.txt` và `.md`, tối đa 2 MB ở giao diện. Không nạp hồ sơ cá nhân,
+thông tin nhận dạng, hội thoại riêng tư hoặc tài liệu chưa xác minh. Nên chia tài
+liệu dài thành các chủ đề độc lập để kết quả tìm kiếm RAG chính xác hơn.
 
-```json
-{ "question": "Tôi nên làm gì khi đang hoảng loạn?", "topK": 5 }
-```
+## API quản trị
+
+- `GET /api/ai/documents`: danh sách tài liệu.
+- `POST /api/ai/documents`: lưu tài liệu và tạo embedding.
+- `PUT /api/ai/documents/{id}`: cập nhật và tạo lại embedding.
+- `POST /api/ai/documents/{id}/reindex`: tạo lại một embedding.
+- `POST /api/ai/documents/reindex-all`: tạo lại embedding của mọi tài liệu active.
+- `DELETE /api/ai/documents/{id}`: xóa tài liệu.
+- `POST /api/ai/chat`: tìm kiếm vector và tạo câu trả lời có grounding.
+
+AI Service chỉ nên được truy cập qua API Gateway. Không công khai trực tiếp cổng
+`8084`, vì Gateway chịu trách nhiệm xác minh JWT và gắn danh tính người dùng.
