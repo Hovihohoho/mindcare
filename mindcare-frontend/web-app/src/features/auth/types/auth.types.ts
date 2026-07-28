@@ -8,21 +8,7 @@ export interface AuthUser {
   active: boolean;
   emailVerified: boolean;
   createdAt: string;
-  phone?: string | null;
-  birthDate?: string | null;
-  gender?: string | null;
-  address?: string | null;
-  bio?: string | null;
-  headline?: string | null;
-  specialties?: string | null;
-  yearsOfExperience?: number | null;
-  consultationFee?: number | null;
-  workplace?: string | null;
-  education?: string | null;
 }
-
-export type UpdateProfilePayload = Pick<AuthUser, "fullName"> &
-  Partial<Pick<AuthUser, "phone" | "birthDate" | "gender" | "address" | "bio" | "headline" | "specialties" | "yearsOfExperience" | "consultationFee" | "workplace" | "education">>;
 
 export interface LoginPayload {
   email: string;

@@ -1,20 +1,18 @@
 import { createBrowserRouter } from "react-router-dom";
 import { AiChatPage } from "@/features/ai-chat";
-import { AdminDashboardPage, AdminDocumentsPage, AdminLayout, AdminNotificationsPage, AdminUsersPage } from "@/features/admin";
 import { AssessmentLibraryPage, AssessmentOverviewPage, AssessmentProcessPage, AssessmentResultPage } from "@/features/assessment";
-import { ForgotPasswordPage, LoginPage, RegisterPage, RequireRole, ResetPasswordPage, VerifyEmailPage } from "@/features/auth";
+import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyEmailPage } from "@/features/auth";
 import { BookingPage } from "@/features/booking";
 import { BookmarkPage } from "@/features/bookmark";
 import { ClientRecordPage } from "@/features/client-record";
 import { EmotionDiaryPage, EmotionHistoryPage } from "@/features/emotion";
 import { ExpertCalendarPage } from "@/features/expert-calendar";
-import { ExpertBookingsPage, ExpertDashboardPage } from "@/features/expert-dashboard";
+import { ExpertDashboardPage } from "@/features/expert-dashboard";
 import { ExpertDirectoryPage, ExpertProfilePage } from "@/features/expert-directory";
 import { ExpertManageProfilePage } from "@/features/expert-profile";
 import { ExpertRegistrationPage } from "@/features/expert-registration";
 import { HomePage } from "@/features/home";
 import { PaymentPage } from "@/features/payment";
-import { NotificationsPage } from "@/features/notifications";
 import { ProfilePage } from "@/features/profile";
 import { SettingsPage } from "@/features/settings";
 import { AssessmentFocusLayout, AuthLayout, ExpertLayout, PublicLayout, UserLayout } from "@/layouts";
@@ -27,7 +25,7 @@ export const appRouter = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       {
-        element: <RequireRole roles={["ROLE_USER"]}><UserLayout /></RequireRole>,
+        element: <UserLayout />,
         children: [
           { path: "assessments", element: <AssessmentOverviewPage /> },
           { path: "assessments/library", element: <AssessmentLibraryPage /> },
@@ -42,14 +40,13 @@ export const appRouter = createBrowserRouter([
           { path: "bookmarks", element: <BookmarkPage /> },
           { path: "profile", element: <ProfilePage /> },
           { path: "settings", element: <SettingsPage /> },
-          { path: "notifications", element: <NotificationsPage /> },
           { path: "expert/register", element: <ExpertRegistrationPage /> },
         ],
       },
     ],
   },
   {
-    element: <RequireRole roles={["ROLE_USER"]}><AssessmentFocusLayout /></RequireRole>,
+    element: <AssessmentFocusLayout />,
     children: [{ path: "/assessments/:code", element: <AssessmentProcessPage /> }],
   },
   {
@@ -64,26 +61,14 @@ export const appRouter = createBrowserRouter([
   },
   {
     path: "/expert",
-    element: <RequireRole roles={["ROLE_EXPERT"]}><ExpertLayout /></RequireRole>,
+    element: <ExpertLayout />,
     children: [
       { index: true, element: <ExpertDashboardPage /> },
       { path: "calendar", element: <ExpertCalendarPage /> },
-      { path: "booking-requests", element: <ExpertBookingsPage /> },
       { path: "profile", element: <ExpertManageProfilePage /> },
       { path: "statistics", element: <ExpertDashboardPage /> },
       { path: "clients/:id", element: <ClientRecordPage /> },
       { path: "settings", element: <SettingsPage /> },
-      { path: "notifications", element: <NotificationsPage /> },
-    ],
-  },
-  {
-    path: "/admin",
-    element: <RequireRole roles={["ROLE_ADMIN"]}><AdminLayout /></RequireRole>,
-    children: [
-      { index: true, element: <AdminDashboardPage /> },
-      { path: "users", element: <AdminUsersPage /> },
-      { path: "ai-documents", element: <AdminDocumentsPage /> },
-      { path: "notifications", element: <AdminNotificationsPage /> },
     ],
   },
   { path: "*", element: <NotFoundPage /> },

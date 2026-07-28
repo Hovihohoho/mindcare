@@ -3,8 +3,6 @@ package com.mindcare.auth_service.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
-import java.time.LocalDate;
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
@@ -36,19 +34,4 @@ public class User {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
-
-    private String phone;
-    private LocalDate birthDate;
-    private String gender;
-    private String address;
-    @Column(columnDefinition = "TEXT")
-    private String bio;
-    private String headline;
-    @Column(columnDefinition = "TEXT")
-    private String specialties;
-    private Integer yearsOfExperience;
-    private BigDecimal consultationFee;
-    private String workplace;
-    @Column(columnDefinition = "TEXT")
-    private String education;
 }

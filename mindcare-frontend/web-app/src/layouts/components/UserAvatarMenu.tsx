@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Bookmark, LogOut, Settings, UserRound } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "react-router-dom";
 import { Avatar, cn } from "@/shared";
+import { tokenStorage } from "@/shared/lib/storage";
 
 interface UserAvatarMenuProps {
   fallback: string;
-  onLogout: () => void;
 }
 
 const menuItems = [
@@ -14,9 +15,11 @@ const menuItems = [
   { label: "Cài đặt", to: "/settings", icon: Settings },
 ];
 
-export function UserAvatarMenu({ fallback, onLogout }: UserAvatarMenuProps) {
+export function UserAvatarMenu({ fallback }: UserAvatarMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!open) return;
@@ -37,8 +40,10 @@ export function UserAvatarMenu({ fallback, onLogout }: UserAvatarMenuProps) {
   }, [open]);
 
   const logout = () => {
+    tokenStorage.clear();
+    queryClient.clear();
     setOpen(false);
-    onLogout();
+    navigate("/login", { replace: true });
   };
 
   return (

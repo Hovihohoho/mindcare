@@ -2,7 +2,6 @@ export { Avatar } from "./Avatar/Avatar";
 export { Badge } from "./Badge/Badge";
 export { Button } from "./Button/Button";
 export { Card } from "./Card/Card";
-export { ConfirmDialog } from "./ConfirmDialog/ConfirmDialog";
 export { EmptyState } from "./EmptyState/EmptyState";
 export { Input } from "./Input/Input";
 export { Textarea } from "./Input/Textarea";
