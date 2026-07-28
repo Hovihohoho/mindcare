@@ -7,7 +7,7 @@ export const authApi = {
     return data.data;
   },
   async register(payload: RegisterPayload) {
-    const { data } = await httpClient.post<ApiResponse<AuthSession>>("/api/auth/register", payload);
+    const { data } = await httpClient.post<ApiResponse<null>>("/api/auth/register", payload);
     return data.data;
   },
   async me() {

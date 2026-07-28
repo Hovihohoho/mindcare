@@ -7,6 +7,11 @@ $ErrorActionPreference = "Stop"
 $projectRoot = $PSScriptRoot
 $envFile = Join-Path $projectRoot ".env"
 $runDirectory = Join-Path $projectRoot ".run"
+$frontendDirectory = Join-Path $projectRoot "mindcare-frontend\web-app"
+
+if (-not (Test-Path -LiteralPath (Join-Path $frontendDirectory "package.json"))) {
+    throw "Missing frontend project at $frontendDirectory."
+}
 
 function Import-DotEnv {
     param([string]$Path)
@@ -120,9 +125,37 @@ if (-not $SkipAi) {
     Require-EnvironmentValue "GEMINI_API_KEY"
 }
 
+$databasePort = 0
+$databasePortValue = [Environment]::GetEnvironmentVariable("POSTGRES_PORT", "Process")
+if ([string]::IsNullOrWhiteSpace($databasePortValue)) {
+    $databasePort = 55432
+    [Environment]::SetEnvironmentVariable("POSTGRES_PORT", $databasePort.ToString(), "Process")
+} elseif (-not [int]::TryParse($databasePortValue, [ref]$databasePort)) {
+    throw "POSTGRES_PORT must be a valid TCP port."
+}
+
+if ($databasePort -lt 1 -or $databasePort -gt 65535) {
+    throw "POSTGRES_PORT must be between 1 and 65535."
+}
+
+$databaseName = if ([string]::IsNullOrWhiteSpace($env:POSTGRES_DB)) {
+    "mindcare_db"
+} else {
+    $env:POSTGRES_DB
+}
+$env:DB_URL = "jdbc:postgresql://127.0.0.1:$databasePort/$databaseName"
+if ([string]::IsNullOrWhiteSpace($env:BOOKING_AUTH_ADAPTER_MODE)) {
+    $env:BOOKING_AUTH_ADAPTER_MODE = "local"
+}
+if ([string]::IsNullOrWhiteSpace($env:BOOKING_PAYMENT_REQUIRED)) {
+    $env:BOOKING_PAYMENT_REQUIRED = "false"
+}
+
 $ports = [ordered]@{
     "API Gateway" = 8079
     "Auth Service" = 8081
+    "Booking Service" = 8082
+    "Emotion Service" = 8083
     "AI Service" = 8084
     "Frontend" = 5173
 }
@@ -143,7 +176,7 @@ if ($occupied.Count -gt 0) {
 
 New-Item -ItemType Directory -Path $runDirectory -Force | Out-Null
 
-Write-Host "Starting PostgreSQL and pgAdmin..."
+Write-Host "Starting PostgreSQL on port $databasePort and pgAdmin..."
 & docker compose --file (Join-Path $projectRoot "infrastructure\docker-compose.yml") up -d postgres pgadmin
 if ($LASTEXITCODE -ne 0) {
     throw "Could not start Docker infrastructure."
@@ -154,6 +187,12 @@ $processes = @()
 $processes += Start-LoggedProcess -Name "auth-service" -FilePath $maven `
     -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "auth-service")
 
+$processes += Start-LoggedProcess -Name "booking-service" -FilePath $maven `
+    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "booking-service")
+
+$processes += Start-LoggedProcess -Name "emotion-service" -FilePath $maven `
+    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "emotion-service")
+
 if (-not $SkipAi) {
     $processes += Start-LoggedProcess -Name "ai-service" -FilePath $maven `
         -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "ai-service")
@@ -162,10 +201,14 @@ if (-not $SkipAi) {
 $processes += Start-LoggedProcess -Name "api-gateway" -FilePath $maven `
     -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "api-gateway")
 
+if ([string]::IsNullOrWhiteSpace($env:VITE_API_URL)) {
+    $env:VITE_API_URL = "http://localhost:8079"
+}
+
 $npm = (Get-Command "npm.cmd" -ErrorAction Stop).Source
-$processes += Start-LoggedProcess -Name "frontend" -FilePath $npm `
+$processes += Start-LoggedProcess -Name "mindcare-web-app" -FilePath $npm `
     -Arguments @("run", "dev", "--", "--host", "127.0.0.1") `
-    -WorkingDirectory (Join-Path $projectRoot "frontend")
+    -WorkingDirectory $frontendDirectory
 
 $processes | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $runDirectory "pids.json") -Encoding UTF8
 
@@ -211,7 +254,8 @@ if ($waiting.Count -gt 0) {
 Write-Host ""
 Write-Host "MindCare is ready:"
 Write-Host "  Frontend:    http://localhost:5173"
-Write-Host "  API Gateway: http://localhost:8080"
+Write-Host "  API Gateway: http://localhost:8079"
 Write-Host "  pgAdmin:     http://localhost:5050"
+Write-Host "Frontend API URL: $env:VITE_API_URL"
 Write-Host "Real SMTP sender: $env:SMTP_USERNAME"
 Write-Host "Stop application processes with: .\stop-all.ps1"

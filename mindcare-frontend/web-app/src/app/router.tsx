@@ -65,7 +65,6 @@ export const appRouter = createBrowserRouter([
     children: [
       { index: true, element: <ExpertDashboardPage /> },
       { path: "calendar", element: <ExpertCalendarPage /> },
-      { path: "booking-requests", element: <ExpertCalendarPage /> },
       { path: "profile", element: <ExpertManageProfilePage /> },
       { path: "statistics", element: <ExpertDashboardPage /> },
       { path: "clients/:id", element: <ClientRecordPage /> },

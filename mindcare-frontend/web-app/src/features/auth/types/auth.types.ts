@@ -1,10 +1,13 @@
-export type UserRole = "USER" | "EXPERT" | "ADMIN";
+export type UserRole = "ROLE_USER" | "ROLE_EXPERT" | "ROLE_ADMIN";
 
 export interface AuthUser {
   id: string;
   email: string;
   fullName: string;
-  roles: UserRole[];
+  role: UserRole;
+  active: boolean;
+  emailVerified: boolean;
+  createdAt: string;
 }
 
 export interface LoginPayload {
@@ -18,5 +21,7 @@ export interface RegisterPayload extends LoginPayload {
 
 export interface AuthSession {
   accessToken: string;
+  tokenType: "Bearer";
+  expiresIn: number;
   user: AuthUser;
 }

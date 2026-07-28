@@ -1,22 +1,39 @@
-import { Pencil, Save, UserRound } from "lucide-react";
-import { Avatar, Badge, Button, Card, Input, Textarea } from "@/shared";
-import { ProfileStats } from "../components/ProfileStats";
+import { UserRound } from "lucide-react";
+import { Avatar, Badge, Card, Loading } from "@/shared";
+import { useCurrentUser } from "@/features/auth";
 
 export function ProfilePage() {
+  const user = useCurrentUser();
+  if (user.isLoading) return <Loading />;
+  if (!user.data) return <p className="rounded-xl bg-rose-50 p-4 text-rose-700">Không thể tải thông tin tài khoản.</p>;
+
+  const item = user.data;
   return (
     <div className="space-y-8">
       <Card className="p-7">
         <div className="flex flex-col gap-7 md:flex-row md:items-center">
-          <div className="relative shrink-0"><Avatar className="size-32 border-4 border-sky-200 text-2xl" fallback="NA" /><button className="absolute bottom-0 right-0 grid size-10 place-items-center rounded-full bg-brand-700 text-white shadow"><Pencil className="size-4" /></button></div>
-          <div className="flex-1"><h1 className="text-xl font-medium">Nguyễn Văn A</h1><p className="mt-3 text-slate-500">nguyenvana@email.com</p><div className="mt-4"><Textarea className="min-h-28 bg-slate-50 text-base" defaultValue="Hiện tại đang là sinh viên năm cuối ngành công nghệ thông tin tại trường Đại học Công nghiệp Hồ Chí Minh." /></div></div>
+          <Avatar className="size-32 border-4 border-sky-200 text-2xl" fallback={item.fullName} />
+          <div className="flex-1">
+            <h1 className="text-2xl font-semibold">{item.fullName}</h1>
+            <p className="mt-2 text-slate-500">{item.email}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Badge tone="neutral">{item.role}</Badge>
+              <Badge tone={item.emailVerified ? "success" : "warning"}>{item.emailVerified ? "Email đã xác thực" : "Email chưa xác thực"}</Badge>
+              <Badge tone={item.active ? "success" : "warning"}>{item.active ? "Đang hoạt động" : "Đã khóa"}</Badge>
+            </div>
+          </div>
         </div>
       </Card>
-      <ProfileStats />
       <Card className="p-8">
-        <h2 className="flex items-center gap-3 text-xl font-medium"><UserRound className="text-slate-700" />Thông tin cá nhân</h2>
-        <div className="mt-8 grid gap-6 sm:grid-cols-2"><Input label="Họ và Tên" defaultValue="Nguyễn Minh Tâm" /><Input label="Ngày sinh" type="date" defaultValue="1998-05-15" /><label className="space-y-2 text-sm font-semibold text-slate-700">Giới tính<select className="mt-2 h-12 w-full rounded-xl border border-line bg-slate-50 px-4 font-normal"><option>Nữ</option><option>Nam</option></select></label><Input label="Số điện thoại" defaultValue="090 123 4567" /><div className="sm:col-span-2"><Textarea label="Địa chỉ hiện tại" defaultValue="123 Đường Điện Biên Phủ, Phường Đa Kao, Quận 1, TP. Hồ Chí Minh" /></div><div className="sm:col-span-2"><label className="text-sm font-semibold text-slate-700">Sở thích</label><div className="mt-2 rounded-xl border border-line bg-slate-50 p-4"><div className="flex gap-2"><Badge>Thiền định ×</Badge><Badge>Đọc sách ×</Badge></div><p className="mt-3 text-slate-500">Thêm sở thích...</p></div></div></div>
+        <h2 className="flex items-center gap-3 text-xl font-medium"><UserRound className="text-slate-700" />Thông tin tài khoản</h2>
+        <dl className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div><dt className="text-sm text-muted">Mã người dùng</dt><dd className="mt-1 break-all font-medium">{item.id}</dd></div>
+          <div><dt className="text-sm text-muted">Ngày tạo</dt><dd className="mt-1 font-medium">{new Date(item.createdAt).toLocaleString("vi-VN")}</dd></div>
+          <div><dt className="text-sm text-muted">Họ tên</dt><dd className="mt-1 font-medium">{item.fullName}</dd></div>
+          <div><dt className="text-sm text-muted">Email</dt><dd className="mt-1 font-medium">{item.email}</dd></div>
+        </dl>
+        <p className="mt-8 rounded-xl bg-slate-50 p-4 text-sm text-muted">Auth Service hiện chưa cung cấp API cập nhật hồ sơ, nên màn hình chỉ hiển thị dữ liệu thật và không giả lập thao tác lưu.</p>
       </Card>
-      <div className="flex justify-end"><Button size="lg" leftIcon={<Save className="size-5" />}>Lưu thay đổi</Button></div>
     </div>
   );
 }

@@ -7,5 +7,4 @@ export { Input } from "./Input/Input";
 export { Textarea } from "./Input/Textarea";
 export { Loading } from "./Loading/Loading";
 export { Logo } from "./Logo/Logo";
-export { MonthCalendar } from "./MonthCalendar/MonthCalendar";
 export { PageHeader } from "./PageHeader/PageHeader";

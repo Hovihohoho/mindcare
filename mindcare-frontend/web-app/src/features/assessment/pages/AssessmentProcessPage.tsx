@@ -1,16 +1,29 @@
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Loading } from "@/shared";
+import { assessmentApi } from "../api/assessment.api";
 import { QuestionPanel } from "../components/QuestionPanel";
 import { useAssessment } from "../hooks/useAssessments";
 
 export function AssessmentProcessPage() {
-  const { code = "GAD_7" } = useParams();
+  const { code = "PHQ-9" } = useParams();
   const navigate = useNavigate();
   const assessment = useAssessment(code);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const submit = useMutation({
+    mutationFn: () => assessmentApi.submit(
+      code,
+      assessment.data!.assessmentVersion,
+      assessment.data!.questions!.map((item) => ({
+        questionId: item.id,
+        optionId: answers[item.id],
+      })),
+    ),
+    onSuccess: (result) => navigate(`/assessments/${code}/result?resultId=${result.resultId}`),
+  });
   if (assessment.isLoading || !assessment.data?.questions) return <Loading />;
   const questions = assessment.data.questions;
   const question = questions[index];
@@ -27,8 +40,17 @@ export function AssessmentProcessPage() {
         <QuestionPanel question={question} value={answers[question.id]} onChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))} />
         <div className="mt-10 flex justify-between pt-2">
           <Button variant="ghost" leftIcon={<ChevronLeft className="size-4" />} disabled={index === 0} onClick={() => setIndex((value) => value - 1)}>Quay lại</Button>
-          <Button className="min-w-44" leftIcon={<ChevronRight className="size-4" />} disabled={!answers[question.id]} onClick={() => last ? navigate(`/assessments/${code}/result`) : setIndex((value) => value + 1)}>{last ? "Hoàn thành" : "Tiếp theo"}</Button>
+          <Button
+            className="min-w-44"
+            leftIcon={<ChevronRight className="size-4" />}
+            disabled={!answers[question.id] || submit.isPending}
+            loading={submit.isPending}
+            onClick={() => last ? submit.mutate() : setIndex((value) => value + 1)}
+          >
+            {last ? "Hoàn thành" : "Tiếp theo"}
+          </Button>
         </div>
+        {submit.isError && <p className="mt-4 text-sm text-rose-700">Không thể gửi bài đánh giá. Vui lòng thử lại.</p>}
       </Card>
     </div>
   );

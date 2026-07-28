@@ -1,7 +1,9 @@
-import { Bell, ChevronDown, Search } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { Avatar, Logo, cn } from "@/shared";
+import { useCurrentUser } from "@/features/auth";
 import { expertNavigation, expertUtilityNavigation } from "@/shared/constants/navigation";
+import { ExpertAvatarMenu } from "./ExpertAvatarMenu";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -10,6 +12,9 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
   );
 
 export function ExpertLayout() {
+  const user = useCurrentUser();
+  const displayName = user.data?.fullName ?? "Chuyên gia";
+  const email = user.data?.email ?? "";
   return (
     <div className="min-h-screen bg-[#f7f8fd] lg:grid lg:grid-cols-[256px_1fr]">
       <aside className="sticky top-0 hidden h-screen border-r border-slate-300 bg-white px-4 py-7 lg:flex lg:flex-col">
@@ -29,10 +34,10 @@ export function ExpertLayout() {
             <NavLink key={item.to} to={item.to} className={navClass}><Icon className="size-5" />{item.label}</NavLink>
           ))}
           <div className="mt-4 flex items-center gap-3 border-t border-slate-300 px-3 pt-5">
-            <Avatar fallback="NA" />
+            <Avatar fallback={displayName} />
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold">BS. Nguyen Van A</p>
-              <p className="truncate text-[11px] text-muted">minhanh@tampriviet.vn</p>
+              <p className="truncate text-sm font-bold">{displayName}</p>
+              <p className="truncate text-[11px] text-muted">{email}</p>
             </div>
           </div>
         </div>
@@ -48,8 +53,7 @@ export function ExpertLayout() {
             <Bell className="size-5" /><span className="absolute right-2 top-1.5 size-2 rounded-full bg-red-500" />
           </button>
           <span className="h-8 w-px bg-slate-300" />
-          <Avatar className="size-8" fallback="NA" />
-          <ChevronDown className="size-4 text-slate-600" />
+          <ExpertAvatarMenu displayName={displayName} />
         </header>
         <main className="p-5 md:p-8"><Outlet /></main>
       </div>

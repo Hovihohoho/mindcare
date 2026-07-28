@@ -2,7 +2,6 @@ import {
   Bot,
   CalendarDays,
   ChartNoAxesColumn,
-  ClipboardClock,
   ClipboardCheck,
   HeartPulse,
   Home,
@@ -23,7 +22,6 @@ export const userNavigation = [
 export const expertNavigation = [
   { label: "Dashboard", to: "/expert", icon: LayoutDashboard },
   { label: "Lịch làm việc", to: "/expert/calendar", icon: CalendarDays },
-  { label: "Yêu cầu đặt lịch", to: "/expert/booking-requests", icon: ClipboardClock },
   { label: "Hồ sơ chuyên gia", to: "/expert/profile", icon: UserRound },
   { label: "Thống kê", to: "/expert/statistics", icon: ChartNoAxesColumn },
 ] as const;

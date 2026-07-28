@@ -9,7 +9,7 @@ export function useLogin() {
     mutationFn: authApi.login,
     onSuccess: (session) => {
       tokenStorage.set(session.accessToken);
-      navigate(session.user.roles.includes("EXPERT") ? "/expert" : "/");
+      navigate(session.user.role === "ROLE_EXPERT" ? "/expert" : "/");
     },
   });
 }

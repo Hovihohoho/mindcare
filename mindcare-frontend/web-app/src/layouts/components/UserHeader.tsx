@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Bell, Menu, Search, X } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
-import { Avatar, Button, Logo, cn } from "@/shared";
+import { Button, Logo, cn } from "@/shared";
 import { userNavigation } from "@/shared/constants/navigation";
+import { useCurrentUser } from "@/features/auth";
+import { UserAvatarMenu } from "./UserAvatarMenu";
 
 export function UserHeader() {
   const [open, setOpen] = useState(false);
   const isAuthenticated = Boolean(localStorage.getItem("mindcare.accessToken"));
+  const currentUser = useCurrentUser();
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/60 bg-cyan-100/80 shadow-sm backdrop-blur-md">
@@ -31,7 +34,7 @@ export function UserHeader() {
           {isAuthenticated ? (
             <>
               <button className="focus-ring rounded-full p-2 text-slate-500 hover:bg-white/50" aria-label="Thông báo"><Bell className="size-5" /></button>
-              <Link to="/profile"><Avatar className="ring-2 ring-sky-200" fallback="MT" /></Link>
+              <UserAvatarMenu fallback={currentUser.data?.fullName ?? "MT"} />
             </>
           ) : (
             <>

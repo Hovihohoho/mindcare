@@ -6,9 +6,9 @@ spring:
     name: emotion-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/mindcare_db?currentSchema=emotion_schema
-    username: postgres_admin
-    password: secretpassword
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/mindcare_db?currentSchema=emotion_schema}
+    username: ${DB_USERNAME:postgres_admin}
+    password: ${DB_PASSWORD:secretpassword}
     driver-class-name: org.postgresql.Driver
 
   jpa:
