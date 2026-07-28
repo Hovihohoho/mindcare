@@ -39,6 +39,8 @@ public interface AssessmentRepository extends JpaRepository<AssessmentEntity, UU
             AssessmentStatus status
     );
 
+    boolean existsByCodeAndDeletedAtIsNull(AssessmentCode code);
+
     boolean existsByIdAndStatusAndDeletedAtIsNull(
             UUID id,
             AssessmentStatus status

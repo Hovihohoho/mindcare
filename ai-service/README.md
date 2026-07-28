@@ -15,10 +15,14 @@ $env:GEMINI_API_KEY='your-google-ai-studio-key'
 
 ## RAG endpoints
 
-- `POST /api/ai/documents`: save a document and generate its embedding.
-- `POST /api/ai/documents/{id}/reindex`: regenerate one embedding.
-- `POST /api/ai/documents/reindex-all`: regenerate all active embeddings.
-- `POST /api/ai/chat`: similarity search plus grounded Gemini response.
+- `POST /api/ai/documents`: save a document and generate its embedding (`ROLE_ADMIN`).
+- `POST /api/ai/documents/{id}/reindex`: regenerate one embedding (`ROLE_ADMIN`).
+- `POST /api/ai/documents/reindex-all`: regenerate all active embeddings (`ROLE_ADMIN`).
+- `POST /api/ai/chat`: similarity search plus grounded Gemini response (authenticated user).
+
+The service trusts `X-User-Id` and `X-User-Role` only when it is reachable through
+the API Gateway. Do not expose port `8084` publicly; the Gateway removes
+client-supplied identity headers and replaces them with verified JWT claims.
 
 Example chat body:
 

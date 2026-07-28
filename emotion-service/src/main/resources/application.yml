@@ -32,3 +32,5 @@ eureka:
     enabled: false
     service-url:
       defaultZone: http://localhost:8761/eureka/
+mindcare:
+  seed-assessments: ${SEED_ASSESSMENTS:false}

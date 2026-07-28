@@ -32,7 +32,7 @@ public class AuthService {
         if (!Boolean.TRUE.equals(user.getEmailVerified())) {
             throw new RuntimeException("Email chưa được xác thực. Vui lòng kiểm tra hộp thư");
         }
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().getName());
+        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().getName());
         return AuthResponse.bearer(token, jwtUtil.getExpirationSeconds(), UserSummary.from(user));
     }
 

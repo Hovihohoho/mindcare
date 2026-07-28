@@ -88,3 +88,4 @@ foreach ($managedPort in $managedPorts) {
 
 Write-Host "Application processes, including mindcare-frontend/web-app, have been stopped."
 Write-Host "PostgreSQL and pgAdmin are still running to preserve data."
+Write-Host "Mailpit is also still running. Use 'docker compose -f infrastructure\docker-compose.yml down' to stop infrastructure."

@@ -1,6 +1,7 @@
 param(
     [switch]$SkipAi,
-    [switch]$RestartExisting
+    [switch]$RestartExisting,
+    [switch]$UseRealEmail
 )
 
 $ErrorActionPreference = "Stop"
@@ -112,14 +113,22 @@ function Start-LoggedProcess {
 
 Import-DotEnv -Path $envFile
 
-if ($env:SPRING_PROFILES_ACTIVE -ne "real-email") {
-    throw "SPRING_PROFILES_ACTIVE must be real-email."
-}
-
-Require-EnvironmentValue "SMTP_USERNAME"
-Require-EnvironmentValue "SMTP_PASSWORD"
-if ([string]::IsNullOrWhiteSpace($env:MAIL_FROM)) {
-    $env:MAIL_FROM = $env:SMTP_USERNAME
+if ($UseRealEmail) {
+    $env:SPRING_PROFILES_ACTIVE = "real-email"
+    Require-EnvironmentValue "SMTP_USERNAME"
+    Require-EnvironmentValue "SMTP_PASSWORD"
+    if ([string]::IsNullOrWhiteSpace($env:MAIL_FROM)) {
+        $env:MAIL_FROM = $env:SMTP_USERNAME
+    }
+} else {
+    $env:SPRING_PROFILES_ACTIVE = "default"
+    $env:SMTP_HOST = "localhost"
+    $env:SMTP_PORT = "1025"
+    $env:SMTP_USERNAME = ""
+    $env:SMTP_PASSWORD = ""
+    $env:SMTP_AUTH = "false"
+    $env:SMTP_STARTTLS = "false"
+    $env:MAIL_FROM = "no-reply@mindcare.local"
 }
 if (-not $SkipAi) {
     Require-EnvironmentValue "GEMINI_API_KEY"
