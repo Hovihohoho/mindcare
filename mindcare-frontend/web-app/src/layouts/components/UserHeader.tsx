@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Bell, LogOut, Menu, Search, X } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell, Menu, Search, X } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { notificationApi } from "@/features/notifications";
 import type { AuthUser } from "@/features/auth";
-import { Avatar, Button, ConfirmDialog, Logo, cn } from "@/shared";
+import { Button, ConfirmDialog, Logo, cn } from "@/shared";
 import { tokenStorage, userStorage } from "@/shared/lib/storage";
 import { userNavigation } from "@/shared/constants/navigation";
+import { UserAvatarMenu } from "./UserAvatarMenu";
 
 const searchItems = [
   ...userNavigation,
@@ -22,6 +23,7 @@ export function UserHeader() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = userStorage.get<AuthUser>();
   const isAuthenticated = Boolean(tokenStorage.get() && user);
   const unread = useQuery({
@@ -36,6 +38,7 @@ export function UserHeader() {
 
   function logout() {
     tokenStorage.clear();
+    queryClient.clear();
     setLogoutOpen(false);
     navigate("/login", { replace: true });
   }
@@ -53,8 +56,7 @@ export function UserHeader() {
             <span className="mx-1 h-8 w-px bg-slate-300/40" />
             {isAuthenticated ? <>
               <Link className="focus-ring relative rounded-full p-2 text-slate-500 hover:bg-white/60" aria-label="Thông báo" to="/notifications"><Bell className="size-5" />{Boolean(unread.data) && <span className="absolute -right-0.5 -top-0.5 min-w-5 rounded-full bg-rose-600 px-1 text-center text-[10px] font-bold leading-5 text-white">{Math.min(unread.data ?? 0, 99)}</span>}</Link>
-              <Link to="/profile"><Avatar className="ring-2 ring-sky-200" fallback={user?.fullName} /></Link>
-              <button className="focus-ring rounded-full p-2 text-slate-500 hover:bg-white/60" onClick={() => setLogoutOpen(true)} aria-label="Đăng xuất"><LogOut className="size-5" /></button>
+              <UserAvatarMenu fallback={user?.fullName ?? ""} onLogout={() => setLogoutOpen(true)} />
             </> : <>
               <Link to="/login"><Button className="px-4 text-brand-700" variant="ghost">Đăng nhập</Button></Link>
               <Link to="/register"><Button className="h-12 px-6">Đăng ký</Button></Link>
