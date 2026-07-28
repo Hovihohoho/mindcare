@@ -1,6 +1,7 @@
 param(
     [switch]$SkipAi,
-    [switch]$RestartExisting
+    [switch]$RestartExisting,
+    [switch]$UseRealEmail
 )
 
 $ErrorActionPreference = "Stop"
@@ -107,22 +108,35 @@ function Start-LoggedProcess {
 
 Import-DotEnv -Path $envFile
 
-if ($env:SPRING_PROFILES_ACTIVE -ne "real-email") {
-    throw "SPRING_PROFILES_ACTIVE must be real-email."
-}
-
-Require-EnvironmentValue "SMTP_USERNAME"
-Require-EnvironmentValue "SMTP_PASSWORD"
-if ([string]::IsNullOrWhiteSpace($env:MAIL_FROM)) {
-    $env:MAIL_FROM = $env:SMTP_USERNAME
+if ($UseRealEmail) {
+    $env:SPRING_PROFILES_ACTIVE = "real-email"
+    Require-EnvironmentValue "SMTP_USERNAME"
+    Require-EnvironmentValue "SMTP_PASSWORD"
+    if ([string]::IsNullOrWhiteSpace($env:MAIL_FROM)) {
+        $env:MAIL_FROM = $env:SMTP_USERNAME
+    }
+} else {
+    $env:SPRING_PROFILES_ACTIVE = "default"
+    $env:SMTP_HOST = "localhost"
+    $env:SMTP_PORT = "1025"
+    $env:SMTP_USERNAME = ""
+    $env:SMTP_PASSWORD = ""
+    $env:SMTP_AUTH = "false"
+    $env:SMTP_STARTTLS = "false"
+    $env:MAIL_FROM = "no-reply@mindcare.local"
 }
 if (-not $SkipAi) {
     Require-EnvironmentValue "GEMINI_API_KEY"
 }
+$env:BOOKING_AUTH_ADAPTER_MODE = "local"
+$env:BOOKING_PAYMENT_REQUIRED = "false"
+$env:SEED_ASSESSMENTS = "true"
 
 $ports = [ordered]@{
     "API Gateway" = 8080
     "Auth Service" = 8081
+    "Booking Service" = 8082
+    "Emotion Service" = 8083
     "AI Service" = 8084
     "Frontend" = 5173
 }
@@ -143,8 +157,8 @@ if ($occupied.Count -gt 0) {
 
 New-Item -ItemType Directory -Path $runDirectory -Force | Out-Null
 
-Write-Host "Starting PostgreSQL and pgAdmin..."
-& docker compose --file (Join-Path $projectRoot "infrastructure\docker-compose.yml") up -d postgres pgadmin
+Write-Host "Starting PostgreSQL, pgAdmin and Mailpit..."
+& docker compose --file (Join-Path $projectRoot "infrastructure\docker-compose.yml") up -d postgres pgadmin mailpit
 if ($LASTEXITCODE -ne 0) {
     throw "Could not start Docker infrastructure."
 }
@@ -153,6 +167,12 @@ $maven = Get-MavenExecutable
 $processes = @()
 $processes += Start-LoggedProcess -Name "auth-service" -FilePath $maven `
     -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "auth-service")
+
+$processes += Start-LoggedProcess -Name "booking-service" -FilePath $maven `
+    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "booking-service")
+
+$processes += Start-LoggedProcess -Name "emotion-service" -FilePath $maven `
+    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "emotion-service")
 
 if (-not $SkipAi) {
     $processes += Start-LoggedProcess -Name "ai-service" -FilePath $maven `
@@ -211,7 +231,11 @@ if ($waiting.Count -gt 0) {
 Write-Host ""
 Write-Host "MindCare is ready:"
 Write-Host "  Frontend:    http://localhost:5173"
-Write-Host "  API Gateway: http://localhost:8080"
+Write-Host "  API Gateway: http://localhost:8079"
 Write-Host "  pgAdmin:     http://localhost:5050"
-Write-Host "Real SMTP sender: $env:SMTP_USERNAME"
+if ($UseRealEmail) {
+    Write-Host "  Email sender: $env:SMTP_USERNAME"
+} else {
+    Write-Host "  Mailpit:     http://localhost:8025"
+}
 Write-Host "Stop application processes with: .\stop-all.ps1"

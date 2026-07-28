@@ -1,36 +1,32 @@
-# MindCare Frontend
+# MindCare Web App
 
-Ứng dụng React duy nhất cho ba khu vực của MindCare.
+React 19 + Vite + TypeScript + Tailwind CSS application for MindCare users and
+experts. The source is organized by feature and follows public barrel import
+boundaries.
 
-## Chạy local
+## Run locally
 
-```powershell
+```bash
+cp .env.example .env
 npm install
 npm run dev
 ```
 
-Mặc định frontend gọi API Gateway tại `http://localhost:8080`. Có thể thay đổi bằng `VITE_API_URL`.
+The default gateway URL is `http://localhost:8079`.
 
-## Khu vực
+## Quality checks
 
-- `/`: giao diện người dùng và đăng nhập/đăng ký chung.
-- `/expert`: cổng làm việc của tài khoản `ROLE_EXPERT`.
-- `/admin`: quản trị người dùng, chuyên gia và tài liệu AI dành cho `ROLE_ADMIN`.
-
-Sau khi đăng nhập, ứng dụng tự chuyển tới khu vực tương ứng với vai trò tài khoản.
-
-## Cấu trúc
-
-```text
-src/
-├── auth/                  # Bảo vệ route theo vai trò
-├── components/            # Component dùng chung
-├── layouts/               # Layout theo khu vực
-├── pages/
-│   ├── user/              # Website người dùng
-│   ├── expert/            # Portal chuyên gia
-│   └── admin/             # Dashboard quản trị
-├── services/              # Fetch/Axios client và session
-├── App.jsx                # Chọn khu vực và lazy-load module
-└── main.jsx               # BrowserRouter/basename dùng chung
+```bash
+npm run lint
+npm run typecheck
+npm run build
 ```
+
+## Main routes
+
+- User: `/`, `/assessments`, `/emotion`, `/experts`, `/ai-chat`, `/profile`
+- Expert: `/expert`, `/expert/calendar`, `/expert/booking-requests`, `/expert/profile`
+- Admin: `/admin/users`, `/admin/ai-documents`
+- Expert onboarding: `/expert/register`
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for feature boundaries and API notes.

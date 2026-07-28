@@ -18,3 +18,4 @@ foreach ($entry in $entries) {
 
 Remove-Item -LiteralPath $pidFile
 Write-Host "PostgreSQL and pgAdmin are still running to preserve data."
+Write-Host "Mailpit is also still running. Use 'docker compose -f infrastructure\docker-compose.yml down' to stop infrastructure."
