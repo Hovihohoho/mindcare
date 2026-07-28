@@ -1,5 +1,0 @@
-:root { color-scheme: light; }
-body { margin: 0; min-width: 320px; background: #f5f7fa; }
-.page-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
-.page-title .ant-typography { margin-top: 0; }
-@media (max-width: 700px) { .page-title { flex-direction: column; } }

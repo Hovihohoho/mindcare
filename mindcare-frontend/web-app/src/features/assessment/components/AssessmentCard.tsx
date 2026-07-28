@@ -1,4 +1,4 @@
-import { Bookmark, BrainCircuit, Clock3, ListChecks } from "lucide-react";
+import { Bookmark, BrainCircuit, ListChecks } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button, Card } from "@/shared";
 import type { Assessment } from "../types/assessment.types";
@@ -13,8 +13,8 @@ export function AssessmentCard({ assessment }: { assessment: Assessment }) {
       <h3 className="mt-5 text-lg font-semibold text-slate-800">{assessment.title}</h3>
       <p className="mt-3 flex-1 leading-6 text-muted">{assessment.description}</p>
       <div className="mt-5 flex gap-5 text-sm text-muted">
-        <span className="flex items-center gap-1.5"><Clock3 className="size-4" />{assessment.durationMinutes} phút</span>
-        <span className="flex items-center gap-1.5"><ListChecks className="size-4" />{assessment.questionCount} câu hỏi</span>
+        <span className="flex items-center gap-1.5"><ListChecks className="size-4" />{assessment.code}</span>
+        <span>Phiên bản {assessment.assessmentVersion}</span>
       </div>
       <Link className="mt-7" to={`/assessments/${assessment.code}`}><Button className="w-full rounded-lg bg-emerald-700 hover:bg-emerald-800">Bắt đầu làm bài</Button></Link>
     </Card>

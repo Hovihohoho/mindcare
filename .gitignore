@@ -2,7 +2,7 @@
 target/
 *.jar
 *.war
-.mvn/
+.mvn/wrapper/maven-wrapper.jar
 
 # Node.js/React (Nếu có folder frontend nằm chung)
 node_modules/

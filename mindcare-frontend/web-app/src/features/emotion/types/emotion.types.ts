@@ -2,14 +2,16 @@ export type EmotionLevel = "VERY_HAPPY" | "HAPPY" | "NEUTRAL" | "SAD" | "STRESSE
 
 export interface EmotionJournal {
   id: string;
-  emotion: EmotionLevel;
-  note: string;
-  recordedAt: string;
-  score: number;
+  emotionType: EmotionLevel;
+  content: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface EmotionTrendPoint {
-  bucketStart: string;
+  periodStart: string;
+  periodEnd: string;
   averageScore: number;
-  journalCount: number;
+  count: number;
+  mappingVersion: string;
 }

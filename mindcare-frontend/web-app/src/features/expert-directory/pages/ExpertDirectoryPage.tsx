@@ -1,16 +1,18 @@
 import { BrainCircuit, Search } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Button, Input, Loading } from "@/shared";
+import { Button, EmptyState, Input, Loading } from "@/shared";
 import { ExpertCard } from "../components/ExpertCard";
 import { useExperts } from "../hooks/useExperts";
-
-const specialties = ["", "Rối loạn lo âu", "Trầm cảm", "Căng thẳng", "Tâm lý học đường"];
 
 export function ExpertDirectoryPage() {
   const [keyword, setKeyword] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const catalog = useExperts("", "");
   const experts = useExperts(keyword, specialty);
+  const specialties = Array.from(
+    new Set(catalog.data?.items.flatMap((expert) => expert.specialties) ?? []),
+  ).sort();
   return (
     <div>
       <header className="mx-auto max-w-2xl py-5 text-center md:py-10">
@@ -19,12 +21,17 @@ export function ExpertDirectoryPage() {
       </header>
       <section className="mt-14 grid gap-4 rounded-xl border border-line bg-white p-5 lg:grid-cols-[1fr_175px_150px_145px] lg:items-end">
         <Input label="Tìm theo tên hoặc chuyên môn" leading={<Search className="size-4" />} placeholder="Tìm kiếm chuyên gia..." value={keyword} onChange={(event) => setKeyword(event.target.value)} />
-        <label className="space-y-2 text-sm font-medium">Chuyên môn<select className="mt-2 h-11 w-full rounded-xl border border-line bg-white px-3" value={specialty} onChange={(event) => setSpecialty(event.target.value)}>{specialties.map((item) => <option key={item} value={item}>{item || "Tất cả"}</option>)}</select></label>
+        <label className="space-y-2 text-sm font-medium">Chuyên môn<select className="mt-2 h-11 w-full rounded-xl border border-line bg-white px-3" value={specialty} onChange={(event) => setSpecialty(event.target.value)}><option value="">Tất cả</option>{specialties.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
         <label className="space-y-2 text-sm font-medium">Kinh nghiệm<select className="mt-2 h-11 w-full rounded-xl border border-line bg-white px-3"><option>Mọi cấp độ</option></select></label>
         <Button className="w-full">Lọc kết quả</Button>
       </section>
-      {experts.isLoading ? <Loading /> : <div className="mx-auto mt-16 grid max-w-[1080px] gap-6 md:grid-cols-2 xl:grid-cols-3">{experts.data?.items.map((expert) => <ExpertCard key={expert.expertUserId} expert={expert} />)}</div>}
-      <div className="mt-16 flex items-center justify-center gap-5"><Button variant="outline">← Prev</Button><b>1</b><Button variant="outline">Next →</Button></div>
+      {experts.isLoading ? <Loading /> : experts.isError ? (
+        <EmptyState title="Không thể tải danh sách chuyên gia" description="Vui lòng thử lại sau." />
+      ) : experts.data?.items.length ? (
+        <div className="mx-auto mt-16 grid max-w-[1080px] gap-6 md:grid-cols-2 xl:grid-cols-3">{experts.data.items.map((expert) => <ExpertCard key={expert.expertUserId} expert={expert} />)}</div>
+      ) : (
+        <EmptyState title="Chưa có chuyên gia phù hợp" description="Hãy thay đổi điều kiện tìm kiếm." />
+      )}
       <section className="mt-16 bg-slate-100 px-6 py-14 text-center">
         <div className="mx-auto max-w-2xl rounded-2xl border border-line bg-white px-8 py-9">
           <h2 className="font-medium">Bạn chưa biết chọn ai?</h2>

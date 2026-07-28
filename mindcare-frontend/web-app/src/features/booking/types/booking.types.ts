@@ -3,7 +3,7 @@ export interface ExpertSchedule {
   expertUserId: string;
   startAt: string;
   endAt: string;
-  status: "AVAILABLE" | "HELD" | "BOOKED" | "CANCELED";
+  status: "AVAILABLE" | "HELD" | "BOOKED" | "CANCELLED";
 }
 
 export interface Booking {

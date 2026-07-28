@@ -1,22 +1,54 @@
-import { Pencil, Save, UserRound } from "lucide-react";
-import { Avatar, Badge, Button, Card, Input, Textarea } from "@/shared";
-import { ProfileStats } from "../components/ProfileStats";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Save, UserRound } from "lucide-react";
+import { authApi } from "@/features/auth";
+import { Avatar, Button, Card, Input, Loading, PageHeader, Textarea } from "@/shared";
+import { userStorage } from "@/shared/lib/storage";
 
 export function ProfilePage() {
+  const client = useQueryClient();
+  const profile = useQuery({ queryKey: ["auth-me"], queryFn: authApi.me });
+  const update = useMutation({
+    mutationFn: authApi.updateMe,
+    onSuccess: (user) => {
+      userStorage.set(user);
+      client.setQueryData(["auth-me"], user);
+    },
+  });
+  if (profile.isLoading) return <Loading />;
+  if (!profile.data) return <p className="text-rose-600">Không thể tải hồ sơ.</p>;
+  const user = profile.data;
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = Object.fromEntries(new FormData(event.currentTarget));
+    update.mutate({
+      fullName: String(value.fullName),
+      phone: String(value.phone) || null,
+      birthDate: String(value.birthDate) || null,
+      gender: String(value.gender) || null,
+      address: String(value.address) || null,
+      bio: String(value.bio) || null,
+    });
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
+      <PageHeader title="Hồ sơ cá nhân" description="Cập nhật thông tin để MindCare hỗ trợ bạn tốt hơn." />
+      <Card className="flex items-center gap-5 p-7"><Avatar className="size-24 text-2xl" fallback={user.fullName} /><div><h2 className="text-2xl font-bold">{user.fullName}</h2><p className="mt-1 text-muted">{user.email}</p></div></Card>
       <Card className="p-7">
-        <div className="flex flex-col gap-7 md:flex-row md:items-center">
-          <div className="relative shrink-0"><Avatar className="size-32 border-4 border-sky-200 text-2xl" fallback="NA" /><button className="absolute bottom-0 right-0 grid size-10 place-items-center rounded-full bg-brand-700 text-white shadow"><Pencil className="size-4" /></button></div>
-          <div className="flex-1"><h1 className="text-xl font-medium">Nguyễn Văn A</h1><p className="mt-3 text-slate-500">nguyenvana@email.com</p><div className="mt-4"><Textarea className="min-h-28 bg-slate-50 text-base" defaultValue="Hiện tại đang là sinh viên năm cuối ngành công nghệ thông tin tại trường Đại học Công nghiệp Hồ Chí Minh." /></div></div>
-        </div>
+        <h2 className="flex items-center gap-2 text-xl font-semibold"><UserRound className="text-brand-700" />Thông tin của bạn</h2>
+        <form className="mt-6 grid gap-5 md:grid-cols-2" onSubmit={submit}>
+          <Input defaultValue={user.fullName} label="Họ và tên" name="fullName" required />
+          <Input defaultValue={user.phone ?? ""} label="Số điện thoại" name="phone" />
+          <Input defaultValue={user.birthDate ?? ""} label="Ngày sinh" name="birthDate" type="date" />
+          <label className="space-y-2 text-sm font-semibold text-slate-700">Giới tính<select className="h-12 w-full rounded-xl border border-line bg-slate-50 px-4 font-normal" defaultValue={user.gender ?? ""} name="gender"><option value="">Chưa chọn</option><option value="MALE">Nam</option><option value="FEMALE">Nữ</option><option value="OTHER">Khác</option></select></label>
+          <div className="md:col-span-2"><Textarea defaultValue={user.address ?? ""} label="Địa chỉ" name="address" /></div>
+          <div className="md:col-span-2"><Textarea defaultValue={user.bio ?? ""} label="Giới thiệu bản thân" name="bio" rows={5} /></div>
+          {update.isError && <p className="text-sm text-rose-600 md:col-span-2">Không thể lưu hồ sơ.</p>}
+          {update.isSuccess && <p className="text-sm text-emerald-700 md:col-span-2">Đã cập nhật hồ sơ.</p>}
+          <div className="md:col-span-2"><Button leftIcon={<Save className="size-4" />} loading={update.isPending} type="submit">Lưu thay đổi</Button></div>
+        </form>
       </Card>
-      <ProfileStats />
-      <Card className="p-8">
-        <h2 className="flex items-center gap-3 text-xl font-medium"><UserRound className="text-slate-700" />Thông tin cá nhân</h2>
-        <div className="mt-8 grid gap-6 sm:grid-cols-2"><Input label="Họ và Tên" defaultValue="Nguyễn Minh Tâm" /><Input label="Ngày sinh" type="date" defaultValue="1998-05-15" /><label className="space-y-2 text-sm font-semibold text-slate-700">Giới tính<select className="mt-2 h-12 w-full rounded-xl border border-line bg-slate-50 px-4 font-normal"><option>Nữ</option><option>Nam</option></select></label><Input label="Số điện thoại" defaultValue="090 123 4567" /><div className="sm:col-span-2"><Textarea label="Địa chỉ hiện tại" defaultValue="123 Đường Điện Biên Phủ, Phường Đa Kao, Quận 1, TP. Hồ Chí Minh" /></div><div className="sm:col-span-2"><label className="text-sm font-semibold text-slate-700">Sở thích</label><div className="mt-2 rounded-xl border border-line bg-slate-50 p-4"><div className="flex gap-2"><Badge>Thiền định ×</Badge><Badge>Đọc sách ×</Badge></div><p className="mt-3 text-slate-500">Thêm sở thích...</p></div></div></div>
-      </Card>
-      <div className="flex justify-end"><Button size="lg" leftIcon={<Save className="size-5" />}>Lưu thay đổi</Button></div>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 server:
   port: 8079
 
+mindcare:
+  auth-service-uri: ${AUTH_SERVICE_URI:http://localhost:8081}
+
 spring:
   application:
     name: api-gateway
@@ -19,14 +22,14 @@ spring:
               uri: ${AUTH_SERVICE_URI:http://localhost:8081}
               predicates:
                 - Path=/api/auth/**
-            - id: expert-service
-              uri: ${EXPERT_SERVICE_URI:http://localhost:8082}
+            - id: booking-service
+              uri: ${BOOKING_SERVICE_URI:http://localhost:8082}
               predicates:
-                - Path=/api/experts/**,/api/bookings/**
+                - Path=/api/v1/bookings/**,/api/v1/expert/**,/api/v1/experts/**,/api/v1/conversations/**,/api/v1/payment-webhooks/**
             - id: emotion-service
               uri: ${EMOTION_SERVICE_URI:http://localhost:8083}
               predicates:
-                - Path=/api/emotions/**
+                - Path=/api/v1/emotion-journals/**,/api/v1/emotion-trends/**,/api/v1/assessments/**,/api/v1/assessment-results/**,/api/v1/admin/assessments/**
             - id: ai-service
               uri: ${AI_SERVICE_URI:http://localhost:8084}
               predicates:
@@ -36,6 +39,10 @@ spring:
               predicates:
                 - Path=/ws/ai/**
             - id: expert-websocket
-              uri: ${EXPERT_WEBSOCKET_URI:ws://localhost:8082}
+              uri: ${BOOKING_WEBSOCKET_URI:ws://localhost:8082}
               predicates:
                 - Path=/ws/expert/**
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:TWluZENhcmUtRGV2ZWxvcG1lbnQtSldULVNlY3JldC0yMDI2IQ==}

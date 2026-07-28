@@ -1,29 +1,31 @@
 export interface AnswerOption {
   id: string;
-  label: string;
-  value: number;
+  optionText: string;
 }
 
 export interface AssessmentQuestion {
   id: string;
-  prompt: string;
-  options: AnswerOption[];
+  questionText: string;
+  orderIndex: number;
+  answerOptions: AnswerOption[];
 }
 
 export interface Assessment {
+  id: string;
   code: string;
+  assessmentVersion: number;
   title: string;
   description: string;
-  durationMinutes: number;
-  questionCount: number;
-  category: string;
   questions?: AssessmentQuestion[];
 }
 
 export interface AssessmentResult {
   resultId: string;
   assessmentCode: string;
-  score: number;
-  severity: "NORMAL" | "MILD" | "MODERATE" | "SEVERE";
-  completedAt: string;
+  assessmentVersion: number;
+  totalScore: number;
+  riskLevel: "NORMAL" | "MILD" | "MODERATE" | "SEVERE" | "EXTREME";
+  screeningNotice: string;
+  recommendations: string[];
+  createdAt: string;
 }

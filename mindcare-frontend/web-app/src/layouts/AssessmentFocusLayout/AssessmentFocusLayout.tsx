@@ -10,7 +10,7 @@ export function AssessmentFocusLayout() {
         <Logo />
       </header>
       <main className="px-5 py-8 md:py-10"><Outlet /></main>
-      <footer className="py-10 text-center text-sm text-slate-400">© 2024 MindCare. Thông tin của bạn được bảo mật tuyệt đối.</footer>
+      <footer className="py-10 text-center text-sm text-slate-400">© {new Date().getFullYear()} MindCare. Thông tin của bạn được bảo mật tuyệt đối.</footer>
     </div>
   );
 }

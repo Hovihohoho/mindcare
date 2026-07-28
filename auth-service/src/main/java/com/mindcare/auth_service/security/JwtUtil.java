@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {
@@ -20,9 +21,11 @@ public class JwtUtil {
         this.expirationMs = expirationMs;
     }
 
-    public String generateToken(String email, String role) {
+    public String generateToken(UUID userId, String email, String role) {
         long now = System.currentTimeMillis();
-        return Jwts.builder().setSubject(email).claim("role", role)
+        return Jwts.builder().setSubject(email)
+                .claim("userId", userId.toString())
+                .claim("role", role)
                 .setIssuedAt(new Date(now)).setExpiration(new Date(now + expirationMs))
                 .signWith(signingKey).compact();
     }
