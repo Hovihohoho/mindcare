@@ -124,14 +124,11 @@ public class AdminManagementController {
         }
         User saved = userRepository.save(user);
         com.mindcare.auth_service.entity.Notification notification =
-                new com.mindcare.auth_service.entity.Notification();
-        notification.setUser(saved);
-        notification.setTitle("Kết quả duyệt hồ sơ chuyên gia");
-        notification.setContent("APPROVED".equals(request.status())
+                com.mindcare.auth_service.entity.Notification.create(saved.getId(), null, "EXPERT_REVIEW",
+                "Kết quả duyệt hồ sơ chuyên gia", "APPROVED".equals(request.status())
                 ? "Hồ sơ chuyên gia của bạn đã được duyệt. Vui lòng đăng nhập lại để sử dụng quyền chuyên gia."
-                : "Hồ sơ chuyên gia cần được bổ sung. Lý do: " + request.reason());
-        notification.setNotificationType("EXPERT_REVIEW");
-        notification.setActionUrl("APPROVED".equals(request.status()) ? "/expert" : "/expert/register");
+                : "Hồ sơ chuyên gia cần được bổ sung. Lý do: " + request.reason(),
+                "APPROVED".equals(request.status()) ? "/expert" : "/expert/register");
         notificationRepository.save(notification);
         if ("APPROVED".equals(request.status())) accountService.revokeAllSessions(id);
         auditService.record(auth.getName(), "REVIEW_EXPERT", "USER", id.toString(),

@@ -1,9 +1,11 @@
 import { Bell, Search } from "lucide-react";
-import { NavLink, Outlet } from "react-router-dom";
-import { Avatar, Logo, cn } from "@/shared";
+import { Navigate, NavLink, Outlet } from "react-router-dom";
+import { Avatar, Loading, Logo, cn } from "@/shared";
 import { useCurrentUser } from "@/features/auth";
+import { tokenStorage } from "@/shared/lib/storage";
 import { expertNavigation, expertUtilityNavigation } from "@/shared/constants/navigation";
 import { ExpertAvatarMenu } from "./ExpertAvatarMenu";
+import { NotificationPopover } from "@/features/notification";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -13,6 +15,20 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 
 export function ExpertLayout() {
   const user = useCurrentUser();
+  const hasStoredSession = Boolean(tokenStorage.get());
+
+  if (hasStoredSession && user.isLoading) {
+    return <div className="grid min-h-screen place-items-center"><Loading /></div>;
+  }
+
+  if (!hasStoredSession) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.isError || user.data?.role !== "ROLE_EXPERT") {
+    return <Navigate to="/" replace />;
+  }
+
   const displayName = user.data?.fullName ?? "Chuyên gia";
   const email = user.data?.email ?? "";
   return (
@@ -49,9 +65,7 @@ export function ExpertLayout() {
             <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-600" />
             <input className="h-10 w-full rounded-full bg-[#f2f5fd] pl-11 pr-4 text-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-brand-500" placeholder="Tìm kiếm bệnh nhân, hồ sơ..." />
           </label>
-          <button className="relative ml-auto rounded-full p-2 text-slate-600 hover:bg-slate-100" aria-label="Thông báo">
-            <Bell className="size-5" /><span className="absolute right-2 top-1.5 size-2 rounded-full bg-red-500" />
-          </button>
+          <div className="ml-auto"><NotificationPopover /></div>
           <span className="h-8 w-px bg-slate-300" />
           <ExpertAvatarMenu displayName={displayName} />
         </header>

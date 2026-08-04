@@ -4,13 +4,16 @@ import { queryClient } from "./providers/queryClient";
 import { appRouter } from "./router";
 import { ToastHost } from "@/shared";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
+import { RealtimeProvider } from "@/shared/realtime/RealtimeProvider";
 
 export function App() {
   return (
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={appRouter} />
-        <ToastHost />
+        <RealtimeProvider>
+          <RouterProvider router={appRouter} />
+          <ToastHost />
+        </RealtimeProvider>
       </QueryClientProvider>
     </AppErrorBoundary>
   );

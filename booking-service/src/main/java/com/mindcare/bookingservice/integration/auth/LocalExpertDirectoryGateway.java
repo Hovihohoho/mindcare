@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
         name = "booking.auth-adapter.mode",
         havingValue = "local")
 public class LocalExpertDirectoryGateway
-        implements ExpertDirectoryGateway, ExpertProfileGateway {
+        implements ExpertDirectoryGateway, ExpertProfileGateway, ClientProfileGateway {
 
     private static final List<ExpertDirectoryItem> EXPERTS = List.of(
             new ExpertDirectoryItem(
@@ -84,6 +84,15 @@ public class LocalExpertDirectoryGateway
                         item.consultationFee(),
                         item.currency()))
                 .orElseThrow(ResourceNotFoundException::new);
+    }
+
+    @Override
+    public ClientProfile getClientProfile(UUID userId) {
+        return new ClientProfile(
+                userId,
+                "Khách hàng " + userId.toString().substring(0, 8),
+                null,
+                null);
     }
 
     private boolean matchesKeyword(ExpertDirectoryItem item, String keyword) {

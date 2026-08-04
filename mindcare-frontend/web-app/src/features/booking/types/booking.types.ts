@@ -8,12 +8,24 @@ export interface ExpertSchedule {
 
 export interface Booking {
   id: string;
+  userId: string;
   expertUserId: string;
   scheduleId: string;
   status: string;
+  note?: string | null;
   price: number;
   currency: string;
   paymentStatus: string;
+  cancellationReason?: string | null;
+  expiresAt?: string | null;
+  confirmedAt?: string | null;
+  cancellationRequestedAt?: string | null;
+  cancellationReviewDeadline?: string | null;
+  cancellationDecisionReason?: string | null;
+  completedAt?: string | null;
+  canceledAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BookingCheckout {

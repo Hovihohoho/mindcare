@@ -11,7 +11,7 @@ export interface EmotionJournal {
 export interface EmotionTrendPoint {
   periodStart: string;
   periodEnd: string;
-  averageScore: number;
+  averageScore: number | null;
   count: number;
   mappingVersion: string;
 }

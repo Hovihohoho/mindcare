@@ -76,4 +76,18 @@ public interface ExpertScheduleRepository extends JpaRepository<ExpertSchedule, 
     List<ExpertSchedule> findExpiredHoldsForUpdate(
             @Param("now") OffsetDateTime now,
             Pageable pageable);
+
+    @Query("""
+            SELECT schedule
+            FROM ExpertSchedule schedule
+            WHERE schedule.status = com.mindcare.bookingservice.schedule.entity.ScheduleStatus.BOOKED
+              AND schedule.deletedAt IS NULL
+              AND schedule.startAt > :from
+              AND schedule.startAt <= :to
+            ORDER BY schedule.startAt ASC
+            """)
+    List<ExpertSchedule> findBookedStartingBetween(
+            @Param("from") OffsetDateTime from,
+            @Param("to") OffsetDateTime to,
+            Pageable pageable);
 }

@@ -17,12 +17,22 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
             FROM Message message
             WHERE message.conversationId = :conversationId
               AND message.deletedAt IS NULL
-              AND (:cursorCreatedAt IS NULL
-                    OR message.createdAt < :cursorCreatedAt
-                    OR (message.createdAt = :cursorCreatedAt AND message.id < :cursorId))
             ORDER BY message.createdAt DESC, message.id DESC
             """)
     List<Message> findHistory(
+            @Param("conversationId") UUID conversationId,
+            Pageable pageable);
+
+    @Query("""
+            SELECT message
+            FROM Message message
+            WHERE message.conversationId = :conversationId
+              AND message.deletedAt IS NULL
+              AND (message.createdAt < :cursorCreatedAt
+                    OR (message.createdAt = :cursorCreatedAt AND message.id < :cursorId))
+            ORDER BY message.createdAt DESC, message.id DESC
+            """)
+    List<Message> findHistoryAfter(
             @Param("conversationId") UUID conversationId,
             @Param("cursorCreatedAt") OffsetDateTime cursorCreatedAt,
             @Param("cursorId") UUID cursorId,

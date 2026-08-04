@@ -28,6 +28,14 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     Optional<Booking> findByIdAndExpertUserIdAndDeletedAtIsNull(UUID id, UUID expertUserId);
 
+    Optional<Booking> findByScheduleIdAndExpertUserIdAndDeletedAtIsNull(
+            UUID scheduleId,
+            UUID expertUserId);
+
+    Optional<Booking> findFirstByExpertUserIdAndUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(
+            UUID expertUserId,
+            UUID userId);
+
     Optional<Booking> findByScheduleIdAndStatusAndDeletedAtIsNull(
             UUID scheduleId,
             BookingStatus status);
@@ -42,12 +50,24 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
             WHERE booking.userId = :userId
               AND booking.deletedAt IS NULL
               AND (:status IS NULL OR booking.status = :status)
-              AND (:cursorCreatedAt IS NULL
-                    OR booking.createdAt < :cursorCreatedAt
-                    OR (booking.createdAt = :cursorCreatedAt AND booking.id < :cursorId))
             ORDER BY booking.createdAt DESC, booking.id DESC
             """)
     List<Booking> findUserHistory(
+            @Param("userId") UUID userId,
+            @Param("status") BookingStatus status,
+            Pageable pageable);
+
+    @Query("""
+            SELECT booking
+            FROM Booking booking
+            WHERE booking.userId = :userId
+              AND booking.deletedAt IS NULL
+              AND (:status IS NULL OR booking.status = :status)
+              AND (booking.createdAt < :cursorCreatedAt
+                    OR (booking.createdAt = :cursorCreatedAt AND booking.id < :cursorId))
+            ORDER BY booking.createdAt DESC, booking.id DESC
+            """)
+    List<Booking> findUserHistoryAfter(
             @Param("userId") UUID userId,
             @Param("status") BookingStatus status,
             @Param("cursorCreatedAt") OffsetDateTime cursorCreatedAt,
@@ -60,12 +80,24 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
             WHERE booking.expertUserId = :expertUserId
               AND booking.deletedAt IS NULL
               AND (:status IS NULL OR booking.status = :status)
-              AND (:cursorCreatedAt IS NULL
-                    OR booking.createdAt < :cursorCreatedAt
-                    OR (booking.createdAt = :cursorCreatedAt AND booking.id < :cursorId))
             ORDER BY booking.createdAt DESC, booking.id DESC
             """)
     List<Booking> findExpertHistory(
+            @Param("expertUserId") UUID expertUserId,
+            @Param("status") BookingStatus status,
+            Pageable pageable);
+
+    @Query("""
+            SELECT booking
+            FROM Booking booking
+            WHERE booking.expertUserId = :expertUserId
+              AND booking.deletedAt IS NULL
+              AND (:status IS NULL OR booking.status = :status)
+              AND (booking.createdAt < :cursorCreatedAt
+                    OR (booking.createdAt = :cursorCreatedAt AND booking.id < :cursorId))
+            ORDER BY booking.createdAt DESC, booking.id DESC
+            """)
+    List<Booking> findExpertHistoryAfter(
             @Param("expertUserId") UUID expertUserId,
             @Param("status") BookingStatus status,
             @Param("cursorCreatedAt") OffsetDateTime cursorCreatedAt,

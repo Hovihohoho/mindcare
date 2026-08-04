@@ -8,6 +8,10 @@ import com.mindcare.auth_service.entity.User;
 import com.mindcare.auth_service.repository.RoleRepository;
 import com.mindcare.auth_service.repository.UserRepository;
 import com.mindcare.auth_service.service.EmailVerificationService;
+import com.mindcare.auth_service.entity.Notification;
+import com.mindcare.auth_service.repository.NotificationRepository;
+import com.mindcare.auth_service.dto.NotificationDtos;
+import com.mindcare.auth_service.notification.NotificationSocketHub;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +29,8 @@ public class AdminUserController {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailVerificationService emailVerificationService;
+    private final NotificationRepository notificationRepository;
+    private final NotificationSocketHub notificationSocketHub;
 
     @GetMapping
     public ApiResponse<List<UserSummary>> findUsers() {
@@ -89,7 +95,34 @@ public class AdminUserController {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ROLE_EXPERT"));
         user.setRole(expert);
         userRepository.save(user);
+        Notification notification = notificationRepository.save(Notification.create(user.getId(), null, "EXPERT_APPROVED",
+                "Hồ sơ chuyên gia đã được duyệt",
+                "Bạn đã có thể tạo lịch tư vấn và sử dụng các chức năng dành cho chuyên gia.",
+                "/expert/calendar"));
+        notificationSocketHub.publish(user.getId(), NotificationDtos.Item.from(notification));
         return ResponseEntity.ok(ApiResponse.success("Đã cấp quyền chuyên gia", null));
+    }
+
+    @PostMapping("/{userId}/expert-review")
+    public ApiResponse<Void> reviewExpert(
+            @PathVariable UUID userId,
+            @Valid @RequestBody AdminUserRequest.ExpertReview request) {
+        User user = findUser(userId);
+        Role targetRole = roleRepository.findByName(request.approved() ? "ROLE_EXPERT" : "ROLE_USER")
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vai trò"));
+        user.setRole(targetRole);
+        userRepository.save(user);
+        Notification notification = notificationRepository.save(Notification.create(user.getId(), null,
+                request.approved() ? "EXPERT_APPROVED" : "EXPERT_REJECTED",
+                request.approved() ? "Hồ sơ chuyên gia đã được duyệt" : "Hồ sơ chuyên gia chưa được duyệt",
+                request.approved()
+                        ? "Bạn đã có thể tạo lịch tư vấn và sử dụng các chức năng dành cho chuyên gia."
+                        : (request.reason() == null || request.reason().isBlank()
+                                ? "Vui lòng kiểm tra và bổ sung thông tin hồ sơ chuyên gia."
+                                : request.reason().trim()),
+                request.approved() ? "/expert/calendar" : "/expert/register"));
+        notificationSocketHub.publish(user.getId(), NotificationDtos.Item.from(notification));
+        return ApiResponse.success("Đã lưu kết quả duyệt chuyên gia", null);
     }
 
     private User findUser(UUID userId) {

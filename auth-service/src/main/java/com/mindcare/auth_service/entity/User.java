@@ -2,11 +2,11 @@ package com.mindcare.auth_service.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 @Data
 @Entity
@@ -47,12 +47,13 @@ public class User {
     private String address;
     @Column(columnDefinition = "TEXT")
     private String bio;
+    @Column(length = 255)
     private String headline;
     @Column(columnDefinition = "TEXT")
     private String specialties;
     @Column(name = "years_of_experience")
     private Integer yearsOfExperience;
-    @Column(name = "consultation_fee")
+    @Column(name = "consultation_fee", precision = 12, scale = 2)
     private BigDecimal consultationFee;
     private String workplace;
     @Column(columnDefinition = "TEXT")

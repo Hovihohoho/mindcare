@@ -1,6 +1,12 @@
 import { addDays } from "date-fns";
-import { httpClient } from "@/shared";
-import type { BookingCheckout, ExpertSchedule } from "../types/booking.types";
+import { httpClient, type CursorPage } from "@/shared";
+import type { Booking, BookingCheckout, ExpertSchedule } from "../types/booking.types";
+
+interface BookingHistoryParams {
+  status?: string;
+  cursor?: string;
+  limit?: number;
+}
 
 export const bookingApi = {
   async schedules(expertUserId: string): Promise<ExpertSchedule[]> {
@@ -15,6 +21,19 @@ export const bookingApi = {
       { scheduleId, note, paymentMethod: null },
       { headers: { "Idempotency-Key": crypto.randomUUID() } },
     );
+    return data;
+  },
+  async history(params: BookingHistoryParams = {}): Promise<CursorPage<Booking>> {
+    const { data } = await httpClient.get<CursorPage<Booking>>("/api/v1/bookings", {
+      params: { limit: params.limit ?? 20, status: params.status, cursor: params.cursor },
+    });
+    return data;
+  },
+  async detail(bookingId: string, role?: string): Promise<Booking> {
+    const path = role === "ROLE_EXPERT"
+      ? `/api/v1/expert/bookings/${bookingId}`
+      : `/api/v1/bookings/${bookingId}`;
+    const { data } = await httpClient.get<Booking>(path);
     return data;
   },
 };

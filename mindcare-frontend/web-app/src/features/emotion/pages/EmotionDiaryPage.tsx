@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, Card, Loading, Textarea } from "@/shared";
 import { emotionApi } from "../api/emotion.api";
-import { EmotionPicker } from "../components/EmotionPicker";
+import { EmotionHistoryIcon, EmotionPicker } from "../components/EmotionPicker";
 import { EmotionTrendChart } from "../components/EmotionTrendChart";
 import { emotionOptions } from "../constants/emotion.constants";
 import type { EmotionLevel } from "../types/emotion.types";
@@ -71,7 +71,7 @@ export function EmotionDiaryPage() {
               const option = emotionOptions.find((entry) => entry.value === item.emotionType);
               return (
                 <article className="flex gap-4 py-5 first:pt-0" key={item.id}>
-                  <span className="grid size-12 shrink-0 place-items-center rounded-full bg-emerald-50 text-2xl">{option?.emoji}</span>
+                  <EmotionHistoryIcon option={option} />
                   <div className="min-w-0">
                     <div className="flex items-center justify-between gap-4">
                       <b>{option?.label ?? item.emotionType}</b>

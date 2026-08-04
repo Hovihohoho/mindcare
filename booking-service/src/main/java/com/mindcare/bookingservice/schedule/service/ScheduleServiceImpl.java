@@ -156,6 +156,16 @@ public class ScheduleServiceImpl implements ScheduleService, ScheduleLifecycleSe
                 .orElseThrow(ResourceNotFoundException::new);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<ScheduleSnapshot> findBookedStartingBetween(
+            OffsetDateTime from, OffsetDateTime to, int limit) {
+        return scheduleRepository.findBookedStartingBetween(from, to,
+                        PageRequest.of(0, normalizeLimit(limit))).stream()
+                .map(this::snapshot)
+                .toList();
+    }
+
     private ExpertSchedule getOwnedForUpdate(UUID expertUserId, UUID scheduleId) {
         ExpertSchedule schedule = scheduleRepository.findActiveByIdForUpdate(scheduleId)
                 .orElseThrow(ResourceNotFoundException::new);

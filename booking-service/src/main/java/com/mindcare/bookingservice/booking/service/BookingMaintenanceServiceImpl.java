@@ -4,6 +4,7 @@ import com.mindcare.bookingservice.booking.entity.Booking;
 import com.mindcare.bookingservice.booking.repository.BookingRepository;
 import com.mindcare.bookingservice.integration.outbox.service.OutboxService;
 import com.mindcare.bookingservice.schedule.service.ScheduleLifecycleService;
+import com.mindcare.bookingservice.booking.entity.BookingStatus;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -64,5 +65,26 @@ public class BookingMaintenanceServiceImpl implements BookingMaintenanceService 
                             "reasonCode", "REQUEST_TIMEOUT"));
         });
         return expired.size();
+    }
+
+    @Override
+    @Transactional
+    public int createConsultationReminders() {
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        var schedules = scheduleLifecycleService.findBookedStartingBetween(
+                now, now.plusMinutes(30), BATCH_SIZE);
+        int created = 0;
+        for (var schedule : schedules) {
+            Booking booking = bookingRepository.findByScheduleIdAndStatusAndDeletedAtIsNull(
+                    schedule.id(), BookingStatus.CONFIRMED).orElse(null);
+            if (booking == null || booking.getReminderSentAt() != null) continue;
+            outboxService.append("BOOKING", booking.getId(), "booking.reminder-due",
+                    Map.of("bookingId", booking.getId(), "userId", booking.getUserId(),
+                            "expertUserId", booking.getExpertUserId(),
+                            "startAt", schedule.startAt().toString()));
+            booking.markReminderSent(now);
+            created++;
+        }
+        return created;
     }
 }

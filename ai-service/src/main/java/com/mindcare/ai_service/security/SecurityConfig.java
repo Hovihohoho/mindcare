@@ -27,6 +27,7 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/ws/ai/**").authenticated()
                         .requestMatchers("/api/ai/documents/**").hasRole("ADMIN")
                         .requestMatchers("/api/ai/chat/**").authenticated()
                         .anyRequest().denyAll())

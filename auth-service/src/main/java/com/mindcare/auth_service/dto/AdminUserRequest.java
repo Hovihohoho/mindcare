@@ -15,4 +15,8 @@ public class AdminUserRequest {
             @NotBlank @Email String email,
             @NotBlank String role,
             boolean active) {}
+
+    public record ExpertReview(
+            boolean approved,
+            @Size(max = 500) String reason) {}
 }

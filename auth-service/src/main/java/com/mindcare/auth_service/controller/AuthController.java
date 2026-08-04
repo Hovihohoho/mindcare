@@ -6,11 +6,16 @@ import com.mindcare.auth_service.service.AccountService;
 import com.mindcare.auth_service.service.AuthService;
 import com.mindcare.auth_service.service.EmailVerificationService;
 import com.mindcare.auth_service.security.JwtUtil;
+import com.mindcare.auth_service.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +28,7 @@ public class AuthController {
     private final AccountService accountService;
     private final EmailVerificationService emailVerificationService;
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @PostMapping("/register")
     public ApiResponse<Void> register(@Valid @RequestBody AuthRequest.Register request) {
@@ -128,4 +134,68 @@ public class AuthController {
                     item.getRevokedAt() != null);
         }
     }
+
+    @GetMapping("/internal/experts/{userId}/booking-profile")
+    public ExpertBookingProfile bookingProfile(
+            @PathVariable UUID userId,
+            @RequestHeader("X-Internal-Secret") String suppliedSecret,
+            @Value("${app.internal-secret}") String expectedSecret,
+            @Value("${app.default-consultation-fee:300000}") BigDecimal defaultFee) {
+        if (!expectedSecret.equals(suppliedSecret)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        boolean eligible = Boolean.TRUE.equals(user.getIsActive())
+                && Boolean.TRUE.equals(user.getEmailVerified())
+                && "ROLE_EXPERT".equals(user.getRole().getName());
+        return new ExpertBookingProfile(user.getId(), eligible,
+                user.getConsultationFee() == null ? defaultFee : user.getConsultationFee(), "VND");
+    }
+
+    public record ExpertBookingProfile(UUID expertUserId, boolean eligible,
+                                       BigDecimal consultationFee, String currency) {}
+
+    @GetMapping("/internal/users/{userId}/client-profile")
+    public InternalClientProfile clientProfile(
+            @PathVariable UUID userId,
+            @RequestHeader("X-Internal-Secret") String suppliedSecret,
+            @Value("${app.internal-secret}") String expectedSecret) {
+        if (!expectedSecret.equals(suppliedSecret)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return new InternalClientProfile(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getCreatedAt());
+    }
+
+    public record InternalClientProfile(
+            UUID userId,
+            String fullName,
+            String email,
+            java.time.LocalDateTime createdAt) {}
+
+    @GetMapping("/internal/experts")
+    public List<InternalExpert> internalExperts(
+            @RequestHeader("X-Internal-Secret") String suppliedSecret,
+            @Value("${app.internal-secret}") String expectedSecret,
+            @Value("${app.default-consultation-fee:300000}") BigDecimal defaultFee) {
+        if (!expectedSecret.equals(suppliedSecret)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        return userRepository.findByRoleNameAndIsActiveTrueOrderByFullNameAsc("ROLE_EXPERT").stream()
+                .filter(user -> Boolean.TRUE.equals(user.getEmailVerified()))
+                .map(user -> new InternalExpert(user.getId(), user.getFullName(),
+                        user.getHeadline(), user.getSpecialties(), user.getYearsOfExperience(),
+                        user.getConsultationFee() == null ? defaultFee : user.getConsultationFee(), "VND"))
+                .toList();
+    }
+
+    public record InternalExpert(UUID expertUserId, String displayName, String headline,
+                                 String specialties, Integer yearsOfExperience,
+                                 BigDecimal consultationFee, String currency) {}
 }

@@ -1,14 +1,27 @@
-import { Bookmark, Clock3, MessageSquareText, Star, UsersRound } from "lucide-react";
-import { Link } from "react-router-dom";
+import type { MouseEvent } from "react";
+import { Clock3, MessageSquareText, Star, UsersRound } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button, Card } from "@/shared";
+import { BookmarkButton } from "@/features/bookmark";
 import type { ExpertSummary } from "../types/expert.types";
 
 export function ExpertCard({ expert }: { expert: ExpertSummary }) {
+  const navigate = useNavigate();
+  const profilePath = `/experts/${expert.expertUserId}`;
+
+  const openExpertProfile = (event: MouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("a, button")) return;
+    navigate(profilePath);
+  };
+
   return (
-    <Card className="group flex h-[510px] min-h-[510px] flex-col overflow-hidden rounded-xl">
+    <Card
+      className="group flex h-[510px] min-h-[510px] cursor-pointer flex-col overflow-hidden rounded-xl"
+      onClick={openExpertProfile}
+    >
       <div className="relative h-[232px] shrink-0 overflow-hidden bg-sky-50">
         <img className="size-full object-cover object-[35%_45%] transition duration-500 group-hover:scale-105" src={expert.avatarUrl || "/assets/mindcare-wellness-illustration.png"} alt="" />
-        <button className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-white text-brand-700 shadow" aria-label="Lưu chuyên gia"><Bookmark className="size-5 fill-current" /></button>
+        <BookmarkButton className="absolute right-4 top-4" type="EXPERT" targetId={expert.expertUserId} />
       </div>
       <div className="flex min-h-0 flex-1 flex-col p-4">
         <div className="flex h-8 min-w-0 items-center justify-between gap-3">
@@ -25,8 +38,18 @@ export function ExpertCard({ expert }: { expert: ExpertSummary }) {
           </span>
         </div>
         <div className="mt-auto flex shrink-0 gap-3 pt-4">
-          <Link className="flex-1" to={`/experts/${expert.expertUserId}`}><Button className="w-full">Đặt lịch</Button></Link>
-          <button className="grid size-11 shrink-0 place-items-center rounded-full border border-brand-700 text-brand-700"><MessageSquareText className="size-5" /></button>
+          <Link className="flex-1" to={profilePath}><Button className="w-full">Đặt lịch</Button></Link>
+          <button
+            type="button"
+            className="focus-ring grid size-11 shrink-0 place-items-center rounded-full border border-brand-700 text-brand-700 hover:bg-brand-50 active:bg-brand-100"
+            aria-label={`Chat với ${expert.displayName}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              navigate(`/chat?expertId=${expert.expertUserId}`);
+            }}
+          >
+            <MessageSquareText className="size-5" />
+          </button>
         </div>
       </div>
     </Card>

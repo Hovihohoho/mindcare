@@ -1,6 +1,7 @@
 package com.mindcare.bookingservice.chat.controller;
 
 import com.mindcare.bookingservice.chat.dto.ConversationResponse;
+import com.mindcare.bookingservice.chat.dto.ConversationHistoryResponse;
 import com.mindcare.bookingservice.chat.dto.MessageResponse;
 import com.mindcare.bookingservice.chat.dto.SendMessageRequest;
 import com.mindcare.bookingservice.chat.dto.MarkConversationReadResponse;
@@ -39,6 +40,16 @@ public class ChatController {
         return chatService.getOrCreate(
                 currentUserProvider.getRequiredUserId(),
                 bookingId);
+    }
+
+    @GetMapping("/conversations")
+    public CursorPageResponse<ConversationHistoryResponse> getConversationHistory(
+            @RequestParam(required = false) @Size(max = 512) String cursor,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
+        return chatService.getConversationHistory(
+                currentUserProvider.getRequiredUserId(),
+                cursor,
+                limit);
     }
 
     @GetMapping("/conversations/{conversationId}/messages")

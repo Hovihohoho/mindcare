@@ -26,5 +26,7 @@ eureka:
     enabled: false
 
 booking:
+  notification:
+    enabled: false
   payment:
     required: false

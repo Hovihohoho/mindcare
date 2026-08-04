@@ -14,5 +14,6 @@ public class BookingMaintenanceScheduler {
     public void releaseExpiredState() {
         bookingMaintenanceService.expirePaymentHolds();
         bookingMaintenanceService.expireCancellationRequests();
+        bookingMaintenanceService.createConsultationReminders();
     }
 }
