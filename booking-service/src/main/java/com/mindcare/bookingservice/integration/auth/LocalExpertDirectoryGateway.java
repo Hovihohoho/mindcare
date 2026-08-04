@@ -29,7 +29,8 @@ public class LocalExpertDirectoryGateway
                     new BigDecimal("300000.00"),
                     "VND",
                     new BigDecimal("4.80"),
-                    124),
+                    124,
+                    356, null, null, null, null),
             new ExpertDirectoryItem(
                     UUID.fromString("22222222-2222-4222-8222-222222222222"),
                     "Chuyên gia Bình",
@@ -39,7 +40,8 @@ public class LocalExpertDirectoryGateway
                     new BigDecimal("400000.00"),
                     "VND",
                     new BigDecimal("4.90"),
-                    98),
+                    98,
+                    281, null, null, null, null),
             new ExpertDirectoryItem(
                     UUID.fromString("33333333-3333-4333-8333-333333333333"),
                     "Chuyên gia Chi",
@@ -49,7 +51,8 @@ public class LocalExpertDirectoryGateway
                     new BigDecimal("250000.00"),
                     "VND",
                     new BigDecimal("4.70"),
-                    76));
+                    76,
+                    190, null, null, null, null));
 
     @Override
     public ExpertDirectoryPage listBookable(ExpertDirectoryQuery query) {

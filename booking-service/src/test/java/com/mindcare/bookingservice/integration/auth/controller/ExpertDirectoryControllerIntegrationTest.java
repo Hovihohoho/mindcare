@@ -48,7 +48,9 @@ class ExpertDirectoryControllerIntegrationTest {
                 new BigDecimal("300000.00"),
                 "VND",
                 new BigDecimal("4.80"),
-                124);
+                124,
+                356,
+                null, null, null, null);
         when(expertDirectoryService.listBookable(
                 "an",
                 "STRESS",

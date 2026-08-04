@@ -7,7 +7,7 @@ export function ExpertCard({ expert }: { expert: ExpertSummary }) {
   return (
     <Card className="group flex h-[510px] min-h-[510px] flex-col overflow-hidden rounded-xl">
       <div className="relative h-[232px] shrink-0 overflow-hidden bg-sky-50">
-        <img className="size-full object-cover object-[35%_45%] transition duration-500 group-hover:scale-105" src="/assets/mindcare-wellness-illustration.png" alt="" />
+        <img className="size-full object-cover object-[35%_45%] transition duration-500 group-hover:scale-105" src={expert.avatarUrl || "/assets/mindcare-wellness-illustration.png"} alt="" />
         <button className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-white text-brand-700 shadow" aria-label="Lưu chuyên gia"><Bookmark className="size-5 fill-current" /></button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col p-4">

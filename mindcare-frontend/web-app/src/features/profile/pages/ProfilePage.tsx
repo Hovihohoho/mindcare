@@ -1,38 +1,104 @@
-import { UserRound } from "lucide-react";
-import { Avatar, Badge, Card, Loading } from "@/shared";
-import { useCurrentUser } from "@/features/auth";
+import { useRef } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Save, Upload } from "lucide-react";
+import { authApi, useCurrentUser } from "@/features/auth";
+import { Avatar, Button, Card, Input, Loading, PageHeader, Textarea } from "@/shared";
+import { userStorage } from "@/shared/lib/storage";
 
 export function ProfilePage() {
   const user = useCurrentUser();
-  if (user.isLoading) return <Loading />;
-  if (!user.data) return <p className="rounded-xl bg-rose-50 p-4 text-rose-700">Không thể tải thông tin tài khoản.</p>;
+  const client = useQueryClient();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const save = useMutation({
+    mutationFn: authApi.updateMe,
+    onSuccess: (item) => {
+      userStorage.set(item);
+      client.setQueryData(["current-user"], item);
+    },
+  });
+  const avatar = useMutation({
+    mutationFn: authApi.uploadAvatar,
+    onSuccess: (item) => {
+      userStorage.set(item);
+      client.setQueryData(["current-user"], item);
+    },
+  });
 
-  const item = user.data;
+  if (user.isLoading) return <Loading />;
+  if (!user.data) return <p className="text-rose-600">Không thể tải hồ sơ.</p>;
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    save.mutate({
+      fullName: String(data.get("fullName")),
+      phone: String(data.get("phone") || "") || null,
+      birthDate: String(data.get("birthDate") || "") || null,
+      gender: String(data.get("gender") || "") || null,
+      address: String(data.get("address") || "") || null,
+      bio: String(data.get("bio") || "") || null,
+    });
+  }
+
   return (
-    <div className="space-y-8">
-      <Card className="p-7">
-        <div className="flex flex-col gap-7 md:flex-row md:items-center">
-          <Avatar className="size-32 border-4 border-sky-200 text-2xl" fallback={item.fullName} />
-          <div className="flex-1">
-            <h1 className="text-2xl font-semibold">{item.fullName}</h1>
-            <p className="mt-2 text-slate-500">{item.email}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Badge tone="neutral">{item.role}</Badge>
-              <Badge tone={item.emailVerified ? "success" : "warning"}>{item.emailVerified ? "Email đã xác thực" : "Email chưa xác thực"}</Badge>
-              <Badge tone={item.active ? "success" : "warning"}>{item.active ? "Đang hoạt động" : "Đã khóa"}</Badge>
-            </div>
-          </div>
+    <div className="space-y-7">
+      <PageHeader title="Hồ sơ cá nhân" description="Thông tin giúp MindCare hỗ trợ bạn phù hợp hơn." />
+      <Card className="flex flex-wrap items-center gap-5 p-7">
+        <Avatar
+          alt={user.data.fullName}
+          className="size-24 text-2xl"
+          fallback={user.data.fullName}
+          src={user.data.avatarUrl ?? undefined}
+        />
+        <div className="flex-1">
+          <h2 className="text-xl font-bold">{user.data.fullName}</h2>
+          <p className="text-muted">{user.data.email}</p>
+        </div>
+        <div>
+          <input
+            ref={avatarInputRef}
+            className="hidden"
+            accept="image/png,image/jpeg,image/webp"
+            type="file"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) avatar.mutate(file);
+              event.target.value = "";
+            }}
+          />
+          <Button
+            leftIcon={<Upload className="size-4" />}
+            loading={avatar.isPending}
+            onClick={() => avatarInputRef.current?.click()}
+            type="button"
+            variant="outline"
+          >
+            Tải ảnh đại diện
+          </Button>
+          {avatar.isSuccess && <p className="mt-2 text-sm text-emerald-700">Đã cập nhật ảnh đại diện.</p>}
+          {avatar.isError && <p className="mt-2 max-w-64 text-sm text-rose-600">Không thể tải ảnh. Chỉ nhận JPEG, PNG hoặc WebP tối đa 5MB.</p>}
         </div>
       </Card>
-      <Card className="p-8">
-        <h2 className="flex items-center gap-3 text-xl font-medium"><UserRound className="text-slate-700" />Thông tin tài khoản</h2>
-        <dl className="mt-6 grid gap-5 sm:grid-cols-2">
-          <div><dt className="text-sm text-muted">Mã người dùng</dt><dd className="mt-1 break-all font-medium">{item.id}</dd></div>
-          <div><dt className="text-sm text-muted">Ngày tạo</dt><dd className="mt-1 font-medium">{new Date(item.createdAt).toLocaleString("vi-VN")}</dd></div>
-          <div><dt className="text-sm text-muted">Họ tên</dt><dd className="mt-1 font-medium">{item.fullName}</dd></div>
-          <div><dt className="text-sm text-muted">Email</dt><dd className="mt-1 font-medium">{item.email}</dd></div>
-        </dl>
-        <p className="mt-8 rounded-xl bg-slate-50 p-4 text-sm text-muted">Auth Service hiện chưa cung cấp API cập nhật hồ sơ, nên màn hình chỉ hiển thị dữ liệu thật và không giả lập thao tác lưu.</p>
+      <Card className="p-7">
+        <form className="grid gap-5 md:grid-cols-2" onSubmit={submit}>
+          <Input defaultValue={user.data.fullName} label="Họ và tên" name="fullName" required />
+          <Input defaultValue={user.data.phone ?? ""} label="Số điện thoại" name="phone" />
+          <Input defaultValue={user.data.birthDate ?? ""} label="Ngày sinh" name="birthDate" type="date" />
+          <label className="space-y-2 text-sm font-semibold">
+            Giới tính
+            <select className="h-12 w-full rounded-xl border border-line px-4" defaultValue={user.data.gender ?? ""} name="gender">
+              <option value="">Chưa chọn</option>
+              <option value="MALE">Nam</option>
+              <option value="FEMALE">Nữ</option>
+              <option value="OTHER">Khác</option>
+            </select>
+          </label>
+          <div className="md:col-span-2"><Textarea defaultValue={user.data.address ?? ""} label="Địa chỉ" name="address" /></div>
+          <div className="md:col-span-2"><Textarea defaultValue={user.data.bio ?? ""} label="Giới thiệu" name="bio" rows={5} /></div>
+          {save.isSuccess && <p className="text-emerald-700 md:col-span-2">Đã lưu hồ sơ.</p>}
+          {save.isError && <p className="text-rose-600 md:col-span-2">Không thể lưu hồ sơ.</p>}
+          <div className="md:col-span-2"><Button leftIcon={<Save className="size-4" />} loading={save.isPending}>Lưu thay đổi</Button></div>
+        </form>
       </Card>
     </div>
   );

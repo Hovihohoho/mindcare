@@ -24,6 +24,18 @@ public class KnowledgeDocument {
     private String documentType;
     @Column(name = "is_active", nullable = false)
     private Boolean active = true;
+    @Column(name = "original_filename")
+    private String originalFilename;
+    @Column(name = "mime_type")
+    private String mimeType;
+    @Column(name = "file_size")
+    private Long fileSize;
+    @Column(name = "processing_status", nullable = false)
+    private String processingStatus = "PROCESSING";
+    @Column(name = "processing_error", length = 2000)
+    private String processingError;
+    @Column(name = "indexed_at")
+    private Instant indexedAt;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)

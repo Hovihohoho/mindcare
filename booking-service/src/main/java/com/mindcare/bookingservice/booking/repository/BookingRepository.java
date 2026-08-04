@@ -97,4 +97,6 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findExpiredPaymentBookingsForUpdate(
             @Param("now") OffsetDateTime now,
             Pageable pageable);
+
+    long countByExpertUserIdAndStatusAndDeletedAtIsNull(UUID expertUserId, BookingStatus status);
 }

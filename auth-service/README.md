@@ -1,6 +1,6 @@
 # MindCare Auth Service
 
-New registrations require email verification before login. Verification tokens expire after 30 minutes and are stored only as SHA-256 hashes. A pending user cannot log in until the mailbox owner clicks the verification link.
+New registrations require a six-digit email verification code before login. Codes expire after 30 minutes, are bound to the receiving email address, and are stored only as SHA-256 hashes. A pending user cannot log in until the mailbox owner enters the code.
 
 For local development, start Mailpit from `infrastructure`:
 
@@ -30,4 +30,6 @@ $env:FRONTEND_URL="http://localhost:5173"
 
 The `real-email` profile uses `smtp.gmail.com:587`, SMTP authentication, required STARTTLS, network timeouts, and verifies the SMTP connection during startup. It has no default credentials, so the service refuses to start when credentials are missing or Gmail rejects them.
 
-Registration and verification-mail delivery run in one database transaction. If Gmail rejects the send immediately, registration is rolled back. An SMTP server may still accept a message for a syntactically valid but nonexistent mailbox and bounce it later; that pending account cannot activate or log in because nobody can receive and click its verification link.
+Registration and verification-mail delivery run in one database transaction. If Gmail rejects the send immediately, registration is rolled back. An SMTP server may still accept a message for a syntactically valid but nonexistent mailbox and bounce it later; that pending account cannot activate or log in because nobody can receive its verification code.
+
+From the repository root, `run-all.ps1` honors `SPRING_PROFILES_ACTIVE=real-email` in `.env`. Use `-UseRealEmail` to force Gmail SMTP or `-UseMailpit` to force local Mailpit. Mailpit is started automatically when selected.

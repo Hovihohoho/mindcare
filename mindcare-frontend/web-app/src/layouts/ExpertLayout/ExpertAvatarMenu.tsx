@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar, cn } from "@/shared";
 import { tokenStorage } from "@/shared/lib/storage";
+import { authApi } from "@/features/auth";
 
 interface ExpertAvatarMenuProps {
   displayName: string;
@@ -33,11 +34,18 @@ export function ExpertAvatarMenu({ displayName }: ExpertAvatarMenuProps) {
     };
   }, [open]);
 
-  const logout = () => {
-    tokenStorage.clear();
-    queryClient.clear();
-    setOpen(false);
-    navigate("/login", { replace: true });
+  const logout = async () => {
+    if (!window.confirm("Bạn có chắc muốn đăng xuất không?")) return;
+    try {
+      await authApi.logout();
+    } catch {
+      // Local logout must still complete if the server session already expired.
+    } finally {
+      tokenStorage.clear();
+      queryClient.clear();
+      setOpen(false);
+      navigate("/login", { replace: true });
+    }
   };
 
   return (

@@ -9,6 +9,7 @@ node_modules/
 dist/
 build/
 *.log
+uploads/
 
 # IDEs and OS
 .idea/

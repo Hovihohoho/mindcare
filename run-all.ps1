@@ -1,7 +1,8 @@
 param(
     [switch]$SkipAi,
     [switch]$RestartExisting,
-    [switch]$UseRealEmail
+    [switch]$UseRealEmail,
+    [switch]$UseMailpit
 )
 
 $ErrorActionPreference = "Stop"
@@ -113,7 +114,13 @@ function Start-LoggedProcess {
 
 Import-DotEnv -Path $envFile
 
-if ($UseRealEmail) {
+if ($UseRealEmail -and $UseMailpit) {
+    throw "Use only one email mode: -UseRealEmail or -UseMailpit."
+}
+$realEmailEnabled = $UseRealEmail -or
+    (-not $UseMailpit -and $env:SPRING_PROFILES_ACTIVE -eq "real-email")
+
+if ($realEmailEnabled) {
     $env:SPRING_PROFILES_ACTIVE = "real-email"
     Require-EnvironmentValue "SMTP_USERNAME"
     Require-EnvironmentValue "SMTP_PASSWORD"
@@ -154,7 +161,7 @@ $databaseName = if ([string]::IsNullOrWhiteSpace($env:POSTGRES_DB)) {
 }
 $env:DB_URL = "jdbc:postgresql://127.0.0.1:$databasePort/$databaseName"
 if ([string]::IsNullOrWhiteSpace($env:BOOKING_AUTH_ADAPTER_MODE)) {
-    $env:BOOKING_AUTH_ADAPTER_MODE = "local"
+    $env:BOOKING_AUTH_ADAPTER_MODE = "http"
 }
 if ([string]::IsNullOrWhiteSpace($env:BOOKING_PAYMENT_REQUIRED)) {
     $env:BOOKING_PAYMENT_REQUIRED = "false"
@@ -186,7 +193,11 @@ if ($occupied.Count -gt 0) {
 New-Item -ItemType Directory -Path $runDirectory -Force | Out-Null
 
 Write-Host "Starting PostgreSQL on port $databasePort and pgAdmin..."
-& docker compose --file (Join-Path $projectRoot "infrastructure\docker-compose.yml") up -d postgres pgadmin
+$infrastructureServices = @("postgres", "pgadmin")
+if (-not $realEmailEnabled) {
+    $infrastructureServices += "mailpit"
+}
+& docker compose --file (Join-Path $projectRoot "infrastructure\docker-compose.yml") up -d $infrastructureServices
 if ($LASTEXITCODE -ne 0) {
     throw "Could not start Docker infrastructure."
 }
@@ -266,5 +277,9 @@ Write-Host "  Frontend:    http://localhost:5173"
 Write-Host "  API Gateway: http://localhost:8079"
 Write-Host "  pgAdmin:     http://localhost:5050"
 Write-Host "Frontend API URL: $env:VITE_API_URL"
-Write-Host "Real SMTP sender: $env:SMTP_USERNAME"
+if ($realEmailEnabled) {
+    Write-Host "Email mode:   Gmail SMTP ($env:SMTP_USERNAME)"
+} else {
+    Write-Host "Email mode:   Mailpit (http://localhost:8025)"
+}
 Write-Host "Stop application processes with: .\stop-all.ps1"

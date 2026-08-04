@@ -17,7 +17,6 @@ public class EmbeddingService {
     private final KnowledgeVectorRepository vectorRepository;
     private final KnowledgeDocumentRepository documentRepository;
 
-    @Transactional
     public void embed(KnowledgeDocument document) {
         String input = document.getTitle() + "\n\n" + document.getContent();
         vectorRepository.updateEmbedding(document.getId(), geminiClient.embed(input, "RETRIEVAL_DOCUMENT"));

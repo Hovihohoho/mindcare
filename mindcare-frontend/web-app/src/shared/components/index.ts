@@ -8,3 +8,4 @@ export { Textarea } from "./Input/Textarea";
 export { Loading } from "./Loading/Loading";
 export { Logo } from "./Logo/Logo";
 export { PageHeader } from "./PageHeader/PageHeader";
+export { ToastHost } from "./Toast/ToastHost";

@@ -13,7 +13,12 @@ public record ExpertSummaryResponse(
         BigDecimal consultationFee,
         String currency,
         BigDecimal averageRating,
-        long reviewCount) {
+        long reviewCount,
+        long consultationCount,
+        String avatarUrl,
+        String bio,
+        String location,
+        String education) {
 
     public ExpertSummaryResponse {
         specialties = List.copyOf(specialties);

@@ -1,12 +1,13 @@
 import { BrainCircuit, Search } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button, EmptyState, Input, Loading } from "@/shared";
 import { ExpertCard } from "../components/ExpertCard";
 import { useExperts } from "../hooks/useExperts";
 
 export function ExpertDirectoryPage() {
-  const [keyword, setKeyword] = useState("");
+  const [params] = useSearchParams();
+  const [keyword, setKeyword] = useState(params.get("keyword") ?? "");
   const [specialty, setSpecialty] = useState("");
   const catalog = useExperts("", "");
   const experts = useExperts(keyword, specialty);

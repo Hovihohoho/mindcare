@@ -13,7 +13,12 @@ public record ExpertDirectoryItem(
         BigDecimal consultationFee,
         String currency,
         BigDecimal averageRating,
-        long reviewCount) {
+        long reviewCount,
+        long consultationCount,
+        String avatarUrl,
+        String bio,
+        String workplace,
+        String education) {
 
     public ExpertDirectoryItem {
         specialties = List.copyOf(specialties);

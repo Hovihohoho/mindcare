@@ -7,5 +7,6 @@ export function useCurrentUser() {
     queryKey: ["current-user"],
     queryFn: authApi.me,
     enabled: Boolean(tokenStorage.get()),
+    retry: false,
   });
 }

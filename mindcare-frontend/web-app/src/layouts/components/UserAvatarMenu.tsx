@@ -4,9 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar, cn } from "@/shared";
 import { tokenStorage } from "@/shared/lib/storage";
+import { authApi } from "@/features/auth";
 
 interface UserAvatarMenuProps {
   fallback: string;
+  avatarUrl?: string;
 }
 
 const menuItems = [
@@ -15,7 +17,7 @@ const menuItems = [
   { label: "Cài đặt", to: "/settings", icon: Settings },
 ];
 
-export function UserAvatarMenu({ fallback }: UserAvatarMenuProps) {
+export function UserAvatarMenu({ fallback, avatarUrl }: UserAvatarMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -39,11 +41,23 @@ export function UserAvatarMenu({ fallback }: UserAvatarMenuProps) {
     };
   }, [open]);
 
-  const logout = () => {
-    tokenStorage.clear();
-    queryClient.clear();
-    setOpen(false);
-    navigate("/login", { replace: true });
+  const logout = async () => {
+    if (!window.confirm("Bạn có chắc muốn đăng xuất không?")) return;
+    try {
+      await authApi.logout();
+    } catch (error) {
+      const status = (error as { response?: { status?: number } }).response?.status;
+      // A revoked or expired session is already logged out on the server.
+      if (status !== 401 && status !== 403) {
+        // The interceptor has already shown the server/network error. Local logout
+        // still has to finish so the user is never trapped in a broken session.
+      }
+    } finally {
+      tokenStorage.clear();
+      queryClient.clear();
+      setOpen(false);
+      navigate("/login", { replace: true });
+    }
   };
 
   return (
@@ -56,7 +70,7 @@ export function UserAvatarMenu({ fallback }: UserAvatarMenuProps) {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <Avatar className="ring-2 ring-sky-200" fallback={fallback} />
+        <Avatar className="ring-2 ring-sky-200" fallback={fallback} src={avatarUrl} />
       </button>
 
       <div

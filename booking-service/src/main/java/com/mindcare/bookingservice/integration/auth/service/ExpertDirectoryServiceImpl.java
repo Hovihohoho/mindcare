@@ -44,7 +44,12 @@ public class ExpertDirectoryServiceImpl implements ExpertDirectoryService {
                 item.consultationFee(),
                 item.currency(),
                 item.averageRating(),
-                item.reviewCount());
+                item.reviewCount(),
+                item.consultationCount(),
+                item.avatarUrl(),
+                item.bio(),
+                item.workplace(),
+                item.education());
     }
 
     private String normalize(String value) {

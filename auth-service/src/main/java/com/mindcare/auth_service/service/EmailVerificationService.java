@@ -17,7 +17,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Base64;
 
 @Service
 @RequiredArgsConstructor
@@ -27,42 +26,44 @@ public class EmailVerificationService {
     private final JavaMailSender mailSender;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    @Value("${app.frontend-url}") private String frontendUrl;
     @Value("${app.mail-from}") private String mailFrom;
     @Value("${app.verification-expiration-minutes:30}") private long expirationMinutes;
 
     @Transactional
     public void sendVerification(User user) {
         tokenRepository.deleteByUserId(user.getId());
-        byte[] bytes = new byte[32];
-        secureRandom.nextBytes(bytes);
-        String rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        String verificationCode = String.format("%06d", secureRandom.nextInt(1_000_000));
         EmailVerificationToken token = new EmailVerificationToken();
         token.setUser(user);
-        token.setTokenHash(hash(rawToken));
+        token.setTokenHash(hash(codeKey(user.getEmail(), verificationCode)));
         token.setExpiresAt(Instant.now().plus(expirationMinutes, ChronoUnit.MINUTES));
         tokenRepository.save(token);
 
-        String link = frontendUrl.replaceAll("/$", "") + "/verify-email?token=" + rawToken;
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(mailFrom);
         message.setTo(user.getEmail());
-        message.setSubject("Xác thực tài khoản MindCare");
+        message.setSubject("Mã xác thực tài khoản MindCare");
         message.setText("Xin chào " + user.getFullName() + ",\n\n"
-                + "Vui lòng xác thực email bằng liên kết sau (có hiệu lực " + expirationMinutes + " phút):\n"
-                + link + "\n\nNếu bạn không đăng ký MindCare, hãy bỏ qua email này.");
+                + "Mã xác thực MindCare của bạn là: " + verificationCode + "\n\n"
+                + "Mã có hiệu lực " + expirationMinutes + " phút. Không chia sẻ mã này với bất kỳ ai.\n\n"
+                + "Nếu bạn không đăng ký MindCare, hãy bỏ qua email này.");
         mailSender.send(message);
     }
 
     @Transactional
-    public void verify(String rawToken) {
-        EmailVerificationToken token = tokenRepository.findByTokenHash(hash(rawToken))
-                .orElseThrow(() -> new RuntimeException("Liên kết xác thực không hợp lệ"));
+    public void verify(String email, String verificationCode) {
+        if (verificationCode == null || !verificationCode.matches("\\d{6}")) {
+            throw new RuntimeException("Mã xác thực phải gồm đúng 6 chữ số");
+        }
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
+        EmailVerificationToken token = tokenRepository
+                .findByTokenHash(hash(codeKey(normalizedEmail, verificationCode)))
+                .orElseThrow(() -> new RuntimeException("Mã xác thực không hợp lệ"));
         if (token.getUsedAt() != null && Boolean.TRUE.equals(token.getUser().getEmailVerified())) {
             return;
         }
-        if (token.getUsedAt() != null) throw new RuntimeException("Liên kết xác thực đã được sử dụng");
-        if (token.getExpiresAt().isBefore(Instant.now())) throw new RuntimeException("Liên kết xác thực đã hết hạn");
+        if (token.getUsedAt() != null) throw new RuntimeException("Mã xác thực đã được sử dụng");
+        if (token.getExpiresAt().isBefore(Instant.now())) throw new RuntimeException("Mã xác thực đã hết hạn");
         User user = token.getUser();
         user.setEmailVerified(true);
         userRepository.save(user);
@@ -84,5 +85,9 @@ public class EmailVerificationService {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(exception);
         }
+    }
+
+    private String codeKey(String email, String verificationCode) {
+        return email.trim().toLowerCase() + ":" + verificationCode;
     }
 }

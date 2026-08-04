@@ -53,6 +53,7 @@ logging:
 booking:
   auth-adapter:
     mode: ${BOOKING_AUTH_ADAPTER_MODE:unconfigured}
+    base-url: ${AUTH_SERVICE_URI:http://localhost:8081}
   payment:
     required: ${BOOKING_PAYMENT_REQUIRED:true}
   maintenance:
