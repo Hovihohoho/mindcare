@@ -121,7 +121,8 @@ REST phục vụ bootstrap/history:
 
 | Method | Path | Role |
 |---|---|---|
-| POST | `/bookings/{bookingId}/conversation` | USER/EXPERT participant |
+| GET | `/conversations` | USER/EXPERT; lịch sử conversation của actor, keyset pagination |
+| POST | `/bookings/{bookingId}/conversation` | USER/EXPERT participant; conversation đã có vẫn trả về ngoài write window |
 | GET | `/conversations/{conversationId}/messages` | Participant |
 | POST | `/conversations/{conversationId}/messages` | Participant; fallback/non-realtime |
 | POST | `/conversations/{conversationId}:read` | Participant |

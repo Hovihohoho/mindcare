@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.mindcare.bookingservice.booking.service.BookingMaintenanceService;
+import com.mindcare.bookingservice.booking.entity.BookingStatus;
+import com.mindcare.bookingservice.chat.dto.ConversationHistoryResponse;
 import com.mindcare.bookingservice.chat.dto.ConversationResponse;
 import com.mindcare.bookingservice.chat.dto.MessageResponse;
 import com.mindcare.bookingservice.chat.entity.MessageType;
@@ -51,7 +53,8 @@ class ChatControllerIntegrationTest {
                         conversationId,
                         bookingId,
                         OffsetDateTime.parse("2026-07-25T00:00:00Z"),
-                        null));
+                        null,
+                        true));
 
         mockMvc.perform(post(
                         "/api/v1/bookings/{bookingId}/conversation",
@@ -110,6 +113,42 @@ class ChatControllerIntegrationTest {
                 conversationId,
                 "cursor-1",
                 20);
+    }
+
+    @Test
+    void participantCanListConversationHistory() throws Exception {
+        UUID actorId = UUID.randomUUID();
+        UUID bookingId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+        UUID expertId = UUID.randomUUID();
+        OffsetDateTime startAt = OffsetDateTime.parse("2026-07-25T00:00:00Z");
+        ConversationHistoryResponse conversation = new ConversationHistoryResponse(
+                conversationId,
+                bookingId,
+                actorId,
+                expertId,
+                BookingStatus.COMPLETED,
+                startAt,
+                startAt.plusHours(1),
+                startAt.minusHours(2));
+        when(chatService.getConversationHistory(actorId, null, 20))
+                .thenReturn(new CursorPageResponse<>(
+                        List.of(conversation),
+                        null,
+                        false));
+
+        mockMvc.perform(get("/api/v1/conversations")
+                        .header("X-User-Id", actorId)
+                        .header("X-User-Role", "ROLE_USER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].id")
+                        .value(conversationId.toString()))
+                .andExpect(jsonPath("$.items[0].expertUserId")
+                        .value(expertId.toString()))
+                .andExpect(jsonPath("$.items[0].bookingStatus")
+                        .value("COMPLETED"));
+
+        verify(chatService).getConversationHistory(actorId, null, 20);
     }
 
     @Test

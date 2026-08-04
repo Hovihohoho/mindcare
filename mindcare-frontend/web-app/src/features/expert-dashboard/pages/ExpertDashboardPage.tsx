@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { CalendarCheck, ClipboardPlus, UsersRound } from "lucide-react";
-import { Badge, Card, Loading } from "@/shared";
+import { CalendarCheck, ClipboardPlus, MessageSquareText, UsersRound } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Badge, Button, Card, Loading } from "@/shared";
 import { getExpertBookings } from "../api/expertDashboard.api";
 import { ExpertMetricCard } from "../components/ExpertMetricCard";
 
@@ -36,6 +37,9 @@ export function ExpertDashboardPage() {
               <div className="text-right">
                 <Badge tone={item.status === "CONFIRMED" ? "success" : "neutral"}>{item.status}</Badge>
                 <p className="mt-2 text-sm font-semibold">{Number(item.price).toLocaleString("vi-VN")} {item.currency}</p>
+                <Link className="mt-3 inline-block" to={`/expert/chat/${item.id}`}>
+                  <Button size="sm" variant="outline" leftIcon={<MessageSquareText className="size-4" />}>Chat</Button>
+                </Link>
               </div>
             </article>
           ))}

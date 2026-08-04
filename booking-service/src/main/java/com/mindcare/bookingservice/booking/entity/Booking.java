@@ -85,6 +85,9 @@ public class Booking extends AuditableEntity {
     @Column(name = "canceled_at")
     private OffsetDateTime canceledAt;
 
+    @Column(name = "reminder_sent_at")
+    private OffsetDateTime reminderSentAt;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -227,6 +230,11 @@ public class Booking extends AuditableEntity {
             throw invalidTransition("Booking is not eligible for refund completion");
         }
         paymentStatus = BookingPaymentStatus.REFUNDED;
+    }
+
+    public void markReminderSent(OffsetDateTime now) {
+        requireStatus(BookingStatus.CONFIRMED);
+        if (reminderSentAt == null) reminderSentAt = now;
     }
 
     private void requireStatus(BookingStatus expected) {

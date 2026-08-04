@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Button, EmptyState, Input, Loading } from "@/shared";
 import { ExpertCard } from "../components/ExpertCard";
 import { useExperts } from "../hooks/useExperts";
+import { ChatHistoryShortcut } from "@/features/expert-chat/components/ChatHistoryShortcut";
 
 export function ExpertDirectoryPage() {
   const [keyword, setKeyword] = useState("");
@@ -19,6 +20,7 @@ export function ExpertDirectoryPage() {
         <h1 className="text-lg font-medium text-slate-800">Kết nối với Chuyên gia</h1>
         <p className="mt-4 leading-6 text-slate-500">Tìm kiếm sự đồng hành từ các chuyên gia tâm lý hàng đầu để bắt đầu hành trình chăm sóc sức khỏe tinh thần của bạn một cách an toàn và hiệu quả.</p>
       </header>
+      <ChatHistoryShortcut />
       <section className="mt-14 grid gap-4 rounded-xl border border-line bg-white p-5 lg:grid-cols-[1fr_175px_150px_145px] lg:items-end">
         <Input label="Tìm theo tên hoặc chuyên môn" leading={<Search className="size-4" />} placeholder="Tìm kiếm chuyên gia..." value={keyword} onChange={(event) => setKeyword(event.target.value)} />
         <label className="space-y-2 text-sm font-medium">Chuyên môn<select className="mt-2 h-11 w-full rounded-xl border border-line bg-white px-3" value={specialty} onChange={(event) => setSpecialty(event.target.value)}><option value="">Tất cả</option>{specialties.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>

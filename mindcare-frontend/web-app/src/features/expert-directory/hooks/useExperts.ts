@@ -6,5 +6,5 @@ export function useExperts(keyword: string, specialty: string) {
 }
 
 export function useExpert(id: string) {
-  return useQuery({ queryKey: ["experts", id], queryFn: () => expertApi.getById(id) });
+  return useQuery({ queryKey: ["experts", id], queryFn: () => expertApi.getById(id), enabled: Boolean(id) });
 }

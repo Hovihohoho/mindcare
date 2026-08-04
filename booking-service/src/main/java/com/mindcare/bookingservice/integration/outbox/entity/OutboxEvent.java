@@ -64,4 +64,16 @@ public class OutboxEvent extends AuditableEntity {
         event.attemptCount = 0;
         return event;
     }
+
+    public void markPublished(OffsetDateTime now) {
+        status = OutboxStatus.PUBLISHED;
+        publishedAt = now;
+        nextAttemptAt = null;
+    }
+
+    public void markFailed(OffsetDateTime nextAttemptAt) {
+        status = OutboxStatus.FAILED;
+        attemptCount++;
+        this.nextAttemptAt = nextAttemptAt;
+    }
 }

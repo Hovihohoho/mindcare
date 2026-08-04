@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 @Data
 @Entity
@@ -34,4 +35,16 @@ public class User {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(length = 255)
+    private String headline;
+
+    @Column(columnDefinition = "TEXT")
+    private String specialties;
+
+    @Column(name = "years_of_experience")
+    private Integer yearsOfExperience;
+
+    @Column(name = "consultation_fee", precision = 12, scale = 2)
+    private BigDecimal consultationFee;
 }

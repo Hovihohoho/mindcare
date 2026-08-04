@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Bell, Menu, Search, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import { Button, Logo, cn } from "@/shared";
 import { userNavigation } from "@/shared/constants/navigation";
 import { useCurrentUser } from "@/features/auth";
 import { UserAvatarMenu } from "./UserAvatarMenu";
+import { HeaderSearch } from "@/features/search";
+import { NotificationPopover } from "@/features/notification";
 
 export function UserHeader() {
   const [open, setOpen] = useState(false);
@@ -28,18 +30,18 @@ export function UserHeader() {
             </NavLink>
           ))}
         </nav>
-        <div className="hidden items-center gap-2 sm:flex">
-          <button className="focus-ring rounded-full p-2 text-slate-500 hover:bg-white/50" aria-label="Tìm kiếm"><Search className="size-5" /></button>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <HeaderSearch />
           <span className="mx-1 h-8 w-px bg-slate-300/40" />
           {isAuthenticated ? (
             <>
-              <button className="focus-ring rounded-full p-2 text-slate-500 hover:bg-white/50" aria-label="Thông báo"><Bell className="size-5" /></button>
-              <UserAvatarMenu fallback={currentUser.data?.fullName ?? "MT"} />
+              <NotificationPopover />
+              <span className="hidden sm:block"><UserAvatarMenu fallback={currentUser.data?.fullName ?? "MT"} /></span>
             </>
           ) : (
             <>
-              <Link to="/login"><Button className="px-4 text-brand-700" variant="ghost">Đăng nhập</Button></Link>
-              <Link to="/register"><Button className="h-12 px-6">Đăng ký</Button></Link>
+              <Link className="hidden sm:block" to="/login"><Button className="px-4 text-brand-700" variant="ghost">Đăng nhập</Button></Link>
+              <Link className="hidden sm:block" to="/register"><Button className="h-12 px-6">Đăng ký</Button></Link>
             </>
           )}
         </div>
@@ -54,10 +56,10 @@ export function UserHeader() {
               <Icon className="size-4 text-brand-600" />{item.label}
             </NavLink>
           ))}
-          <div className="mt-3 flex gap-2 border-t border-line pt-3">
+          {!isAuthenticated && <div className="mt-3 flex gap-2 border-t border-line pt-3">
             <Link className="flex-1" to="/login"><Button className="w-full" variant="outline">Đăng nhập</Button></Link>
             <Link className="flex-1" to="/register"><Button className="w-full">Đăng ký</Button></Link>
-          </div>
+          </div>}
         </nav>
       )}
     </header>

@@ -1,6 +1,7 @@
-import { Bookmark, BrainCircuit, ListChecks } from "lucide-react";
+import { BrainCircuit, ListChecks } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button, Card } from "@/shared";
+import { BookmarkButton } from "@/features/bookmark";
 import type { Assessment } from "../types/assessment.types";
 
 export function AssessmentCard({ assessment }: { assessment: Assessment }) {
@@ -8,7 +9,7 @@ export function AssessmentCard({ assessment }: { assessment: Assessment }) {
     <Card className="group flex min-h-[350px] flex-col p-6">
       <div className="flex items-start justify-between">
         <span className="grid size-12 place-items-center rounded-xl bg-sky-100 text-brand-700"><BrainCircuit className="size-5" /></span>
-        <button className="grid size-10 place-items-center rounded-full bg-white text-brand-700 shadow-sm" aria-label="Lưu bài đánh giá"><Bookmark className="size-5 fill-current" /></button>
+        <BookmarkButton type="ASSESSMENT" targetId={assessment.code} />
       </div>
       <h3 className="mt-5 text-lg font-semibold text-slate-800">{assessment.title}</h3>
       <p className="mt-3 flex-1 leading-6 text-muted">{assessment.description}</p>

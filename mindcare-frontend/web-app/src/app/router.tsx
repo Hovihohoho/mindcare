@@ -7,6 +7,7 @@ import { BookmarkPage } from "@/features/bookmark";
 import { ClientRecordPage } from "@/features/client-record";
 import { EmotionDiaryPage, EmotionHistoryPage } from "@/features/emotion";
 import { ExpertCalendarPage } from "@/features/expert-calendar";
+import { ChatHistoryPage, ExpertChatPage } from "@/features/expert-chat";
 import { ExpertDashboardPage } from "@/features/expert-dashboard";
 import { ExpertDirectoryPage, ExpertProfilePage } from "@/features/expert-directory";
 import { ExpertManageProfilePage } from "@/features/expert-profile";
@@ -33,8 +34,11 @@ export const appRouter = createBrowserRouter([
           { path: "emotion", element: <EmotionDiaryPage /> },
           { path: "emotion/history", element: <EmotionHistoryPage /> },
           { path: "experts", element: <ExpertDirectoryPage /> },
+          { path: "experts/chat-history", element: <ChatHistoryPage /> },
           { path: "experts/:id", element: <ExpertProfilePage /> },
           { path: "booking/:expertId", element: <BookingPage /> },
+          { path: "chat", element: <ExpertChatPage /> },
+          { path: "chat/:bookingId", element: <ExpertChatPage /> },
           { path: "payment", element: <PaymentPage /> },
           { path: "ai-chat", element: <AiChatPage /> },
           { path: "bookmarks", element: <BookmarkPage /> },
@@ -65,6 +69,7 @@ export const appRouter = createBrowserRouter([
     children: [
       { index: true, element: <ExpertDashboardPage /> },
       { path: "calendar", element: <ExpertCalendarPage /> },
+      { path: "chat/:bookingId", element: <ExpertChatPage /> },
       { path: "profile", element: <ExpertManageProfilePage /> },
       { path: "statistics", element: <ExpertDashboardPage /> },
       { path: "clients/:id", element: <ClientRecordPage /> },

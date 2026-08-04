@@ -34,6 +34,10 @@ spring:
               uri: ${AI_SERVICE_URI:http://localhost:8084}
               predicates:
                 - Path=/api/ai/**
+            - id: user-engagement
+              uri: ${AUTH_SERVICE_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/v1/notifications/**,/api/v1/bookmarks/**
             - id: ai-websocket
               uri: ${AI_WEBSOCKET_URI:ws://localhost:8084}
               predicates:
@@ -42,6 +46,10 @@ spring:
               uri: ${BOOKING_WEBSOCKET_URI:ws://localhost:8082}
               predicates:
                 - Path=/ws/expert/**
+            - id: notification-websocket
+              uri: ${AUTH_WEBSOCKET_URI:ws://localhost:8081}
+              predicates:
+                - Path=/ws/notifications/**
 
 security:
   jwt:

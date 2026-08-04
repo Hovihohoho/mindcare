@@ -34,6 +34,7 @@
 | `booking.cancellation-rejected` | Expert từ chối hoặc timeout | bookingId, userId, reasonCode nếu có |
 | `booking.canceled` | Actor/system hủy | bookingId, userId, expertUserId, actor, reasonCode |
 | `booking.completed` | Tư vấn hoàn tất | bookingId, userId, expertUserId, completedAt |
+| `booking.reminder-due` | Booking `CONFIRMED` còn tối đa 30 phút trước giờ bắt đầu và chưa nhắc | bookingId, userId, expertUserId, startAt |
 | `payment.succeeded` | Callback hợp lệ | paymentId, bookingId, amount, currency, provider |
 | `payment.failed` | Failed/expired | paymentId, bookingId, provider, reasonCode |
 | `payment.refunded` | Refund provider thành công | paymentId, bookingId, refundId |

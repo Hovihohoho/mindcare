@@ -1,7 +1,20 @@
-import { Outlet } from "react-router-dom";
-import { Logo } from "@/shared";
+import { Navigate, Outlet } from "react-router-dom";
+import { useCurrentUser } from "@/features/auth";
+import { Loading, Logo } from "@/shared";
+import { tokenStorage } from "@/shared/lib/storage";
 
 export function AuthLayout() {
+  const currentUser = useCurrentUser();
+  const hasStoredSession = Boolean(tokenStorage.get());
+
+  if (hasStoredSession && currentUser.isLoading) {
+    return <div className="grid min-h-screen place-items-center"><Loading /></div>;
+  }
+
+  if (currentUser.data) {
+    return <Navigate to={currentUser.data.role === "ROLE_EXPERT" ? "/expert" : "/"} replace />;
+  }
+
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#126d77] p-4 md:p-10 lg:p-16">
       <div className="absolute -left-20 -top-10 size-[360px] rounded-full bg-white/5" />

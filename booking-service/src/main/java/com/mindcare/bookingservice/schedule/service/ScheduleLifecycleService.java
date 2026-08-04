@@ -2,6 +2,7 @@ package com.mindcare.bookingservice.schedule.service;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.util.List;
 
 public interface ScheduleLifecycleService {
 
@@ -14,4 +15,6 @@ public interface ScheduleLifecycleService {
     void releaseBooking(UUID scheduleId);
 
     ScheduleSnapshot get(UUID scheduleId);
+
+    List<ScheduleSnapshot> findBookedStartingBetween(OffsetDateTime from, OffsetDateTime to, int limit);
 }

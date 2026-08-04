@@ -52,11 +52,18 @@ logging:
 
 booking:
   auth-adapter:
-    mode: ${BOOKING_AUTH_ADAPTER_MODE:unconfigured}
+    mode: ${BOOKING_AUTH_ADAPTER_MODE:auth}
+    base-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+    internal-secret: ${INTERNAL_SERVICE_SECRET:mindcare-local-internal}
   payment:
     required: ${BOOKING_PAYMENT_REQUIRED:true}
   maintenance:
     fixed-delay: ${BOOKING_MAINTENANCE_FIXED_DELAY_MS:30000}
+  notification:
+    enabled: ${BOOKING_NOTIFICATION_ENABLED:true}
+    base-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+    internal-secret: ${INTERNAL_SERVICE_SECRET:mindcare-local-internal}
+    fixed-delay: ${BOOKING_NOTIFICATION_FIXED_DELAY_MS:5000}
   policy:
     slot-hold-duration: ${BOOKING_SLOT_HOLD_DURATION:15m}
     automatic-refund-cutoff: ${BOOKING_AUTOMATIC_REFUND_CUTOFF:24h}

@@ -177,12 +177,15 @@ public class BookingServiceImpl implements BookingService {
             String cursor,
             int limit) {
         PageCursor decoded = cursorCodec.decode(cursor);
-        List<Booking> bookings = bookingRepository.findUserHistory(
-                userId,
-                status,
-                decoded.createdAt(),
-                decoded.id(),
-                PageRequest.of(0, normalizeLimit(limit) + 1));
+        PageRequest pageRequest = PageRequest.of(0, normalizeLimit(limit) + 1);
+        List<Booking> bookings = decoded.createdAt() == null
+                ? bookingRepository.findUserHistory(userId, status, pageRequest)
+                : bookingRepository.findUserHistoryAfter(
+                        userId,
+                        status,
+                        decoded.createdAt(),
+                        decoded.id(),
+                        pageRequest);
         return toPage(bookings, limit);
     }
 
@@ -194,12 +197,15 @@ public class BookingServiceImpl implements BookingService {
             String cursor,
             int limit) {
         PageCursor decoded = cursorCodec.decode(cursor);
-        List<Booking> bookings = bookingRepository.findExpertHistory(
-                expertUserId,
-                status,
-                decoded.createdAt(),
-                decoded.id(),
-                PageRequest.of(0, normalizeLimit(limit) + 1));
+        PageRequest pageRequest = PageRequest.of(0, normalizeLimit(limit) + 1);
+        List<Booking> bookings = decoded.createdAt() == null
+                ? bookingRepository.findExpertHistory(expertUserId, status, pageRequest)
+                : bookingRepository.findExpertHistoryAfter(
+                        expertUserId,
+                        status,
+                        decoded.createdAt(),
+                        decoded.id(),
+                        pageRequest);
         return toPage(bookings, limit);
     }
 

@@ -30,6 +30,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -136,6 +138,53 @@ class BookingServiceImplTest {
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any());
         verify(reservationService, never()).failCheckout(bookingId);
+    }
+
+    @Test
+    void userHistoryWithoutCursorUsesQueryWithoutNullableCursorParameters() {
+        UUID userId = UUID.randomUUID();
+        PageRequest pageRequest = PageRequest.of(0, 21);
+        when(bookingRepository.findUserHistory(userId, null, pageRequest))
+                .thenReturn(List.of());
+
+        service.getUserHistory(userId, null, null, 20);
+
+        verify(bookingRepository).findUserHistory(userId, null, pageRequest);
+        verify(bookingRepository, never()).findUserHistoryAfter(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void userHistoryWithCursorUsesKeysetQuery() {
+        UUID userId = UUID.randomUUID();
+        UUID cursorId = UUID.randomUUID();
+        OffsetDateTime cursorCreatedAt = NOW.minusDays(1);
+        String cursor = new CursorCodec().encode(cursorCreatedAt, cursorId);
+        PageRequest pageRequest = PageRequest.of(0, 21);
+        when(bookingRepository.findUserHistoryAfter(
+                        userId,
+                        null,
+                        cursorCreatedAt,
+                        cursorId,
+                        pageRequest))
+                .thenReturn(List.of());
+
+        service.getUserHistory(userId, null, cursor, 20);
+
+        verify(bookingRepository).findUserHistoryAfter(
+                userId,
+                null,
+                cursorCreatedAt,
+                cursorId,
+                pageRequest);
+        verify(bookingRepository, never()).findUserHistory(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any());
     }
 
     private BookingServiceImpl createService(boolean paymentRequired) {

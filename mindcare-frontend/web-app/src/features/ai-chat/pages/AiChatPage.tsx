@@ -1,6 +1,7 @@
 import { Bot, Menu, Plus, Send, Sparkles } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Button, Card } from "@/shared";
+import { realtimeClient } from "@/shared/realtime/realtimeClient";
 import { askMindCare } from "../api/chat.api";
 import { ChatBubble } from "../components/ChatBubble";
 import type { ChatMessage } from "../types/chat.types";
@@ -20,7 +21,9 @@ export function AiChatPage() {
     setMessages((items) => [...items, { id: crypto.randomUUID(), role: "user", content: question, createdAt: "Bây giờ" }]);
     setInput(""); setLoading(true);
     try {
-      const response = await askMindCare(question);
+      const response = realtimeClient.isOpen("ai")
+        ? await realtimeClient.askAi(question)
+        : await askMindCare(question);
       setMessages((items) => [...items, { id: crypto.randomUUID(), role: "assistant", content: response.answer, sources: response.sources, createdAt: "Bây giờ" }]);
     } catch {
       setMessages((items) => [...items, { id: crypto.randomUUID(), role: "assistant", content: "Không thể kết nối với AI Service. Vui lòng thử lại sau.", createdAt: "Bây giờ" }]);

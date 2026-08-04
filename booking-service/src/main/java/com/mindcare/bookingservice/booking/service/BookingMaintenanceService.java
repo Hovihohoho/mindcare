@@ -5,4 +5,6 @@ public interface BookingMaintenanceService {
     int expirePaymentHolds();
 
     int expireCancellationRequests();
+
+    int createConsultationReminders();
 }

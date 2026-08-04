@@ -7,5 +7,6 @@ public record ConversationResponse(
         UUID id,
         UUID bookingId,
         OffsetDateTime openedAt,
-        OffsetDateTime closedAt) {
+        OffsetDateTime closedAt,
+        boolean writable) {
 }

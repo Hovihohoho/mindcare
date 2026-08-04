@@ -4,6 +4,7 @@ import com.mindcare.bookingservice.booking.entity.BookingStatus;
 import com.mindcare.bookingservice.booking.service.BookingAccessService;
 import com.mindcare.bookingservice.booking.service.BookingAccessSnapshot;
 import com.mindcare.bookingservice.chat.dto.ConversationResponse;
+import com.mindcare.bookingservice.chat.dto.ConversationHistoryResponse;
 import com.mindcare.bookingservice.chat.dto.MessageResponse;
 import com.mindcare.bookingservice.chat.dto.SendMessageRequest;
 import com.mindcare.bookingservice.chat.entity.Conversation;
@@ -11,6 +12,7 @@ import com.mindcare.bookingservice.chat.entity.Message;
 import com.mindcare.bookingservice.chat.mapper.ChatMapper;
 import com.mindcare.bookingservice.chat.repository.ConversationRepository;
 import com.mindcare.bookingservice.chat.repository.MessageRepository;
+import com.mindcare.bookingservice.chat.websocket.ExpertChatSocketHub;
 import com.mindcare.bookingservice.integration.outbox.service.OutboxService;
 import com.mindcare.bookingservice.shared.config.BookingPolicyProperties;
 import com.mindcare.bookingservice.shared.dto.CursorPageResponse;
@@ -39,6 +41,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMapper chatMapper;
     private final CursorCodec cursorCodec;
     private final OutboxService outboxService;
+    private final ExpertChatSocketHub expertChatSocketHub;
     private final BookingPolicyProperties policy;
     private final Clock clock;
 
@@ -49,12 +52,57 @@ public class ChatServiceImpl implements ChatService {
         if (!access.isParticipant(actorId)) {
             throw new ResourceNotFoundException();
         }
-        requireWritableWindow(access);
         Conversation conversation = conversationRepository
                 .findByBookingIdAndDeletedAtIsNull(bookingId)
-                .orElseGet(() -> conversationRepository.save(
-                        Conversation.create(bookingId, OffsetDateTime.now(clock))));
-        return chatMapper.toResponse(conversation);
+                .orElse(null);
+        if (conversation != null) {
+            return toConversationResponse(conversation, access);
+        }
+        requireWritableWindow(access);
+        conversation = conversationRepository.save(
+                Conversation.create(bookingId, OffsetDateTime.now(clock)));
+        return toConversationResponse(conversation, access);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CursorPageResponse<ConversationHistoryResponse> getConversationHistory(
+            UUID actorId,
+            String cursor,
+            int limit) {
+        PageCursor decoded = cursorCodec.decode(cursor);
+        int pageSize = normalizeLimit(limit);
+        PageRequest pageRequest = PageRequest.of(0, pageSize + 1);
+        List<Conversation> source = decoded.createdAt() == null
+                ? conversationRepository.findHistoryForParticipant(actorId, pageRequest)
+                : conversationRepository.findHistoryForParticipantAfter(
+                        actorId,
+                        decoded.createdAt(),
+                        decoded.id(),
+                        pageRequest);
+        boolean hasMore = source.size() > pageSize;
+        List<Conversation> page = hasMore ? source.subList(0, pageSize) : source;
+        String nextCursor = null;
+        if (hasMore && !page.isEmpty()) {
+            Conversation last = page.get(page.size() - 1);
+            nextCursor = cursorCodec.encode(last.getOpenedAt(), last.getId());
+        }
+        return new CursorPageResponse<>(
+                page.stream().map(conversation -> {
+                    BookingAccessSnapshot access =
+                            bookingAccessService.getRequired(conversation.getBookingId());
+                    return new ConversationHistoryResponse(
+                            conversation.getId(),
+                            conversation.getBookingId(),
+                            access.userId(),
+                            access.expertUserId(),
+                            access.status(),
+                            access.startAt(),
+                            access.endAt(),
+                            conversation.getOpenedAt());
+                }).toList(),
+                nextCursor,
+                hasMore);
     }
 
     @Override
@@ -68,11 +116,14 @@ public class ChatServiceImpl implements ChatService {
         requireParticipant(actorId, conversation.getBookingId());
         PageCursor decoded = cursorCodec.decode(cursor);
         int pageSize = normalizeLimit(limit);
-        List<Message> source = messageRepository.findHistory(
-                conversationId,
-                decoded.createdAt(),
-                decoded.id(),
-                PageRequest.of(0, pageSize + 1));
+        PageRequest pageRequest = PageRequest.of(0, pageSize + 1);
+        List<Message> source = decoded.createdAt() == null
+                ? messageRepository.findHistory(conversationId, pageRequest)
+                : messageRepository.findHistoryAfter(
+                        conversationId,
+                        decoded.createdAt(),
+                        decoded.id(),
+                        pageRequest);
         boolean hasMore = source.size() > pageSize;
         List<Message> page = hasMore ? source.subList(0, pageSize) : source;
         String nextCursor = null;
@@ -116,7 +167,10 @@ public class ChatServiceImpl implements ChatService {
                         "conversationId", conversationId,
                         "senderId", actorId,
                         "recipientId", recipientId));
-        return chatMapper.toResponse(message);
+        MessageResponse response = chatMapper.toResponse(message);
+        expertChatSocketHub.publish(actorId, response);
+        expertChatSocketHub.publish(recipientId, response);
+        return response;
     }
 
     @Override
@@ -144,18 +198,33 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private void requireWritableWindow(BookingAccessSnapshot access) {
+        if (!isWritableWindow(access)) {
+            throw new BusinessException(
+                    "CHAT_WINDOW_CLOSED",
+                    HttpStatus.CONFLICT,
+                    "Chat is read-only outside the consultation window");
+        }
+    }
+
+    private boolean isWritableWindow(BookingAccessSnapshot access) {
         OffsetDateTime now = OffsetDateTime.now(clock);
         boolean validStatus = access.status() == BookingStatus.CONFIRMED
                 || access.status() == BookingStatus.CANCELLATION_PENDING
                 || access.status() == BookingStatus.COMPLETED;
         boolean inWindow = !now.isBefore(access.startAt().minus(policy.chatOpenBefore()))
                 && !now.isAfter(access.endAt().plus(policy.chatCloseAfter()));
-        if (!validStatus || !inWindow) {
-            throw new BusinessException(
-                    "CHAT_WINDOW_CLOSED",
-                    HttpStatus.CONFLICT,
-                    "Chat is read-only outside the consultation window");
-        }
+        return validStatus && inWindow;
+    }
+
+    private ConversationResponse toConversationResponse(
+            Conversation conversation,
+            BookingAccessSnapshot access) {
+        return new ConversationResponse(
+                conversation.getId(),
+                conversation.getBookingId(),
+                conversation.getOpenedAt(),
+                conversation.getClosedAt(),
+                isWritableWindow(access));
     }
 
     private int normalizeLimit(int limit) {
