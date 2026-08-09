@@ -16,8 +16,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Conversation extends AuditableEntity {
 
-    @Column(name = "booking_id", nullable = false, updatable = false)
+    @Column(name = "booking_id", updatable = false)
     private UUID bookingId;
+
+    @Column(name = "user_id", nullable = false, updatable = false)
+    private UUID userId;
+
+    @Column(name = "expert_user_id", nullable = false, updatable = false)
+    private UUID expertUserId;
 
     @Column(name = "opened_at", nullable = false)
     private OffsetDateTime openedAt;
@@ -25,11 +31,16 @@ public class Conversation extends AuditableEntity {
     @Column(name = "closed_at")
     private OffsetDateTime closedAt;
 
-    public static Conversation create(UUID bookingId, OffsetDateTime openedAt) {
+    public static Conversation create(UUID userId, UUID expertUserId, OffsetDateTime openedAt) {
         Conversation conversation = new Conversation();
-        conversation.bookingId = bookingId;
+        conversation.userId = userId;
+        conversation.expertUserId = expertUserId;
         conversation.openedAt = openedAt;
         return conversation;
+    }
+
+    public boolean isParticipant(UUID actorId) {
+        return userId.equals(actorId) || expertUserId.equals(actorId);
     }
 
     public void close(OffsetDateTime now) {

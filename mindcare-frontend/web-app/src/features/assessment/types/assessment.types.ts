@@ -16,6 +16,17 @@ export interface Assessment {
   assessmentVersion: number;
   title: string;
   description: string;
+  evidence: {
+    publisher: string;
+    sourceTitle: string;
+    sourceUrl: string;
+    publicationYear: number;
+    instrumentVersion: string;
+    license: string;
+    scoringRuleVersion: string;
+    purpose: string;
+    limitation: string;
+  };
   questions?: AssessmentQuestion[];
 }
 

@@ -148,7 +148,8 @@ public class AuthController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         boolean eligible = Boolean.TRUE.equals(user.getIsActive())
                 && Boolean.TRUE.equals(user.getEmailVerified())
-                && "ROLE_EXPERT".equals(user.getRole().getName());
+                && "ROLE_EXPERT".equals(user.getRole().getName())
+                && "APPROVED".equals(user.getExpertStatus());
         return new ExpertBookingProfile(user.getId(), eligible,
                 user.getConsultationFee() == null ? defaultFee : user.getConsultationFee(), "VND");
     }
@@ -189,13 +190,16 @@ public class AuthController {
         }
         return userRepository.findByRoleNameAndIsActiveTrueOrderByFullNameAsc("ROLE_EXPERT").stream()
                 .filter(user -> Boolean.TRUE.equals(user.getEmailVerified()))
+                .filter(user -> "APPROVED".equals(user.getExpertStatus()))
                 .map(user -> new InternalExpert(user.getId(), user.getFullName(),
                         user.getHeadline(), user.getSpecialties(), user.getYearsOfExperience(),
-                        user.getConsultationFee() == null ? defaultFee : user.getConsultationFee(), "VND"))
+                        user.getConsultationFee() == null ? defaultFee : user.getConsultationFee(), "VND",
+                        user.getAvatarUrl(), user.getBio(), user.getWorkplace(), user.getEducation()))
                 .toList();
     }
 
     public record InternalExpert(UUID expertUserId, String displayName, String headline,
                                  String specialties, Integer yearsOfExperience,
-                                 BigDecimal consultationFee, String currency) {}
+                                 BigDecimal consultationFee, String currency, String avatarUrl,
+                                 String bio, String workplace, String education) {}
 }

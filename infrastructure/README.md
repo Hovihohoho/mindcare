@@ -39,3 +39,26 @@ production.
 - SMTP: `localhost:1025`
 
 Mailpit captures local verification emails and does not deliver them to the public internet.
+
+## Demo data
+
+Start the complete application and load the idempotent demo dataset with:
+
+```powershell
+.\run-all.ps1 -SeedDemo
+```
+
+Re-running the command updates the same demo records instead of duplicating them. Demo accounts
+use the password `MindCare@123`. Useful logins include:
+
+| Role | Email |
+| --- | --- |
+| Admin | `admin@mindcare.local` |
+| User | `user1@mindcare.local` through `user6@mindcare.local` |
+| Expert | `expert1@mindcare.local` through `expert8@mindcare.local` |
+| Pending applicant | `pending.expert@mindcare.local` |
+| Rejected applicant | `rejected.expert@mindcare.local` |
+
+The dataset includes approved expert profiles, future schedules, representative booking and
+payment states, reviews, notifications, bookmarks, emotion journals, health metrics, PHQ-9
+results, and AI knowledge documents.

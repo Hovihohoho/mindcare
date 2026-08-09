@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router-dom";
 import { queryClient } from "./providers/queryClient";
@@ -11,7 +12,9 @@ export function App() {
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <RealtimeProvider>
-          <RouterProvider router={appRouter} />
+          <Suspense fallback={<div className="grid min-h-screen place-items-center text-sm text-muted">Đang tải...</div>}>
+            <RouterProvider router={appRouter} />
+          </Suspense>
           <ToastHost />
         </RealtimeProvider>
       </QueryClientProvider>

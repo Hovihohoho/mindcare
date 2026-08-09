@@ -23,13 +23,6 @@ import java.util.List;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface AssessmentMapper {
 
-    AssessmentSummaryResponse toSummaryResponse(AssessmentEntity entity);
-
-    AssessmentDetailResponse toDetailResponse(
-            AssessmentEntity entity,
-            List<QuestionResponse> questions
-    );
-
     QuestionResponse toQuestionResponse(
             QuestionEntity entity,
             List<AnswerOptionResponse> answerOptions

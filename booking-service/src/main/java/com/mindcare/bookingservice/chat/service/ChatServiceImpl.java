@@ -1,8 +1,5 @@
 package com.mindcare.bookingservice.chat.service;
 
-import com.mindcare.bookingservice.booking.entity.BookingStatus;
-import com.mindcare.bookingservice.booking.service.BookingAccessService;
-import com.mindcare.bookingservice.booking.service.BookingAccessSnapshot;
 import com.mindcare.bookingservice.chat.dto.ConversationResponse;
 import com.mindcare.bookingservice.chat.dto.ConversationHistoryResponse;
 import com.mindcare.bookingservice.chat.dto.MessageResponse;
@@ -14,7 +11,8 @@ import com.mindcare.bookingservice.chat.repository.ConversationRepository;
 import com.mindcare.bookingservice.chat.repository.MessageRepository;
 import com.mindcare.bookingservice.chat.websocket.ExpertChatSocketHub;
 import com.mindcare.bookingservice.integration.outbox.service.OutboxService;
-import com.mindcare.bookingservice.shared.config.BookingPolicyProperties;
+import com.mindcare.bookingservice.integration.auth.ExpertBookingProfile;
+import com.mindcare.bookingservice.integration.auth.ExpertProfileGateway;
 import com.mindcare.bookingservice.shared.dto.CursorPageResponse;
 import com.mindcare.bookingservice.shared.dto.PageCursor;
 import com.mindcare.bookingservice.shared.exception.BusinessException;
@@ -37,31 +35,43 @@ public class ChatServiceImpl implements ChatService {
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
-    private final BookingAccessService bookingAccessService;
+    private final ExpertProfileGateway expertProfileGateway;
     private final ChatMapper chatMapper;
     private final CursorCodec cursorCodec;
     private final OutboxService outboxService;
     private final ExpertChatSocketHub expertChatSocketHub;
-    private final BookingPolicyProperties policy;
     private final Clock clock;
 
     @Override
     @Transactional
-    public ConversationResponse getOrCreate(UUID actorId, UUID bookingId) {
-        BookingAccessSnapshot access = bookingAccessService.getRequiredForUpdate(bookingId);
-        if (!access.isParticipant(actorId)) {
+    public ConversationResponse getOrCreate(UUID userId, UUID expertUserId) {
+        if (userId.equals(expertUserId)) {
+            throw new BusinessException(
+                    "INVALID_CONVERSATION_PARTICIPANTS",
+                    HttpStatus.BAD_REQUEST,
+                    "User and expert must be different accounts");
+        }
+        ExpertBookingProfile expert = expertProfileGateway.getBookingProfile(expertUserId);
+        if (!expert.eligible()) {
             throw new ResourceNotFoundException();
         }
         Conversation conversation = conversationRepository
-                .findByBookingIdAndDeletedAtIsNull(bookingId)
+                .findByUserIdAndExpertUserIdAndDeletedAtIsNull(userId, expertUserId)
                 .orElse(null);
         if (conversation != null) {
-            return toConversationResponse(conversation, access);
+            return toConversationResponse(conversation);
         }
-        requireWritableWindow(access);
         conversation = conversationRepository.save(
-                Conversation.create(bookingId, OffsetDateTime.now(clock)));
-        return toConversationResponse(conversation, access);
+                Conversation.create(userId, expertUserId, OffsetDateTime.now(clock)));
+        return toConversationResponse(conversation);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ConversationResponse getConversation(UUID actorId, UUID conversationId) {
+        Conversation conversation = getConversationEntity(conversationId);
+        requireParticipant(actorId, conversation);
+        return toConversationResponse(conversation);
     }
 
     @Override
@@ -88,19 +98,13 @@ public class ChatServiceImpl implements ChatService {
             nextCursor = cursorCodec.encode(last.getOpenedAt(), last.getId());
         }
         return new CursorPageResponse<>(
-                page.stream().map(conversation -> {
-                    BookingAccessSnapshot access =
-                            bookingAccessService.getRequired(conversation.getBookingId());
-                    return new ConversationHistoryResponse(
-                            conversation.getId(),
-                            conversation.getBookingId(),
-                            access.userId(),
-                            access.expertUserId(),
-                            access.status(),
-                            access.startAt(),
-                            access.endAt(),
-                            conversation.getOpenedAt());
-                }).toList(),
+                page.stream().map(conversation -> new ConversationHistoryResponse(
+                        conversation.getId(),
+                        conversation.getUserId(),
+                        conversation.getExpertUserId(),
+                        conversation.getOpenedAt(),
+                        conversation.getClosedAt(),
+                        conversation.getClosedAt() == null)).toList(),
                 nextCursor,
                 hasMore);
     }
@@ -112,8 +116,8 @@ public class ChatServiceImpl implements ChatService {
             UUID conversationId,
             String cursor,
             int limit) {
-        Conversation conversation = getConversation(conversationId);
-        requireParticipant(actorId, conversation.getBookingId());
+        Conversation conversation = getConversationEntity(conversationId);
+        requireParticipant(actorId, conversation);
         PageCursor decoded = cursorCodec.decode(cursor);
         int pageSize = normalizeLimit(limit);
         PageRequest pageRequest = PageRequest.of(0, pageSize + 1);
@@ -143,10 +147,9 @@ public class ChatServiceImpl implements ChatService {
             UUID actorId,
             UUID conversationId,
             SendMessageRequest request) {
-        Conversation conversation = getConversation(conversationId);
-        BookingAccessSnapshot access =
-                requireParticipant(actorId, conversation.getBookingId());
-        requireWritableWindow(access);
+        Conversation conversation = getConversationEntity(conversationId);
+        requireParticipant(actorId, conversation);
+        requireWritable(conversation);
         if (request.content() == null || request.content().isBlank()) {
             throw new BusinessException(
                     "MESSAGE_CONTENT_REQUIRED",
@@ -155,9 +158,9 @@ public class ChatServiceImpl implements ChatService {
         }
         Message message = messageRepository.save(
                 Message.text(conversationId, actorId, request.content()));
-        UUID recipientId = access.userId().equals(actorId)
-                ? access.expertUserId()
-                : access.userId();
+        UUID recipientId = conversation.getUserId().equals(actorId)
+                ? conversation.getExpertUserId()
+                : conversation.getUserId();
         outboxService.append(
                 "MESSAGE",
                 message.getId(),
@@ -176,55 +179,42 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional
     public int markRead(UUID actorId, UUID conversationId) {
-        Conversation conversation = getConversation(conversationId);
-        requireParticipant(actorId, conversation.getBookingId());
+        Conversation conversation = getConversationEntity(conversationId);
+        requireParticipant(actorId, conversation);
         return messageRepository.markConversationRead(
                 conversationId,
                 actorId,
                 OffsetDateTime.now(clock));
     }
 
-    private Conversation getConversation(UUID conversationId) {
+    private Conversation getConversationEntity(UUID conversationId) {
         return conversationRepository.findByIdAndDeletedAtIsNull(conversationId)
                 .orElseThrow(ResourceNotFoundException::new);
     }
 
-    private BookingAccessSnapshot requireParticipant(UUID actorId, UUID bookingId) {
-        BookingAccessSnapshot access = bookingAccessService.getRequired(bookingId);
-        if (!access.isParticipant(actorId)) {
+    private void requireParticipant(UUID actorId, Conversation conversation) {
+        if (!conversation.isParticipant(actorId)) {
             throw new ResourceNotFoundException();
         }
-        return access;
     }
 
-    private void requireWritableWindow(BookingAccessSnapshot access) {
-        if (!isWritableWindow(access)) {
+    private void requireWritable(Conversation conversation) {
+        if (conversation.getClosedAt() != null) {
             throw new BusinessException(
-                    "CHAT_WINDOW_CLOSED",
+                    "CONVERSATION_CLOSED",
                     HttpStatus.CONFLICT,
-                    "Chat is read-only outside the consultation window");
+                    "Conversation is read-only because it has been closed");
         }
     }
 
-    private boolean isWritableWindow(BookingAccessSnapshot access) {
-        OffsetDateTime now = OffsetDateTime.now(clock);
-        boolean validStatus = access.status() == BookingStatus.CONFIRMED
-                || access.status() == BookingStatus.CANCELLATION_PENDING
-                || access.status() == BookingStatus.COMPLETED;
-        boolean inWindow = !now.isBefore(access.startAt().minus(policy.chatOpenBefore()))
-                && !now.isAfter(access.endAt().plus(policy.chatCloseAfter()));
-        return validStatus && inWindow;
-    }
-
-    private ConversationResponse toConversationResponse(
-            Conversation conversation,
-            BookingAccessSnapshot access) {
+    private ConversationResponse toConversationResponse(Conversation conversation) {
         return new ConversationResponse(
                 conversation.getId(),
-                conversation.getBookingId(),
+                conversation.getUserId(),
+                conversation.getExpertUserId(),
                 conversation.getOpenedAt(),
                 conversation.getClosedAt(),
-                isWritableWindow(access));
+                conversation.getClosedAt() == null);
     }
 
     private int normalizeLimit(int limit) {

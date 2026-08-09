@@ -5,6 +5,7 @@ import com.mindcare.bookingservice.chat.dto.ConversationHistoryResponse;
 import com.mindcare.bookingservice.chat.dto.MessageResponse;
 import com.mindcare.bookingservice.chat.dto.SendMessageRequest;
 import com.mindcare.bookingservice.chat.dto.MarkConversationReadResponse;
+import com.mindcare.bookingservice.chat.dto.StartConversationRequest;
 import com.mindcare.bookingservice.chat.service.ChatService;
 import com.mindcare.bookingservice.shared.dto.CursorPageResponse;
 import com.mindcare.bookingservice.shared.security.CurrentUserProvider;
@@ -34,12 +35,13 @@ public class ChatController {
     private final ChatService chatService;
     private final CurrentUserProvider currentUserProvider;
 
-    @PostMapping("/bookings/{bookingId}/conversation")
+    @PostMapping("/conversations")
+    @PreAuthorize("hasRole('USER')")
     public ConversationResponse getOrCreateConversation(
-            @PathVariable UUID bookingId) {
+            @Valid @RequestBody StartConversationRequest request) {
         return chatService.getOrCreate(
                 currentUserProvider.getRequiredUserId(),
-                bookingId);
+                request.expertUserId());
     }
 
     @GetMapping("/conversations")
@@ -50,6 +52,13 @@ public class ChatController {
                 currentUserProvider.getRequiredUserId(),
                 cursor,
                 limit);
+    }
+
+    @GetMapping("/conversations/{conversationId}")
+    public ConversationResponse getConversation(@PathVariable UUID conversationId) {
+        return chatService.getConversation(
+                currentUserProvider.getRequiredUserId(),
+                conversationId);
     }
 
     @GetMapping("/conversations/{conversationId}/messages")

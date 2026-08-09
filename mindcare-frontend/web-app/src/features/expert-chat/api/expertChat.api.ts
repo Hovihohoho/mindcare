@@ -9,8 +9,12 @@ export const expertChatApi = {
     );
     return data;
   },
-  async getOrCreateConversation(bookingId: string): Promise<Conversation> {
-    const { data } = await httpClient.post<Conversation>(`/api/v1/bookings/${bookingId}/conversation`);
+  async getOrCreateConversation(expertUserId: string): Promise<Conversation> {
+    const { data } = await httpClient.post<Conversation>("/api/v1/conversations", { expertUserId });
+    return data;
+  },
+  async conversation(conversationId: string): Promise<Conversation> {
+    const { data } = await httpClient.get<Conversation>(`/api/v1/conversations/${conversationId}`);
     return data;
   },
   async messages(conversationId: string): Promise<CursorPage<ExpertChatMessage>> {

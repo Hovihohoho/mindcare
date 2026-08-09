@@ -5,7 +5,8 @@ import java.util.UUID;
 
 public record ConversationResponse(
         UUID id,
-        UUID bookingId,
+        UUID userId,
+        UUID expertUserId,
         OffsetDateTime openedAt,
         OffsetDateTime closedAt,
         boolean writable) {

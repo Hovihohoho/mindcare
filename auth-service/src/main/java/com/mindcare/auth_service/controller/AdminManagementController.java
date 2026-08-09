@@ -1,21 +1,37 @@
 package com.mindcare.auth_service.controller;
 
-import com.mindcare.auth_service.dto.*;
+import com.mindcare.auth_service.dto.AccountRequests;
+import com.mindcare.auth_service.dto.ApiResponse;
+import com.mindcare.auth_service.dto.UserSummary;
 import com.mindcare.auth_service.entity.AdminAuditLog;
 import com.mindcare.auth_service.entity.Role;
 import com.mindcare.auth_service.entity.User;
-import com.mindcare.auth_service.repository.*;
-import com.mindcare.auth_service.service.AuditService;
+import com.mindcare.auth_service.repository.AdminAuditLogRepository;
+import com.mindcare.auth_service.repository.ExpertDocumentRepository;
+import com.mindcare.auth_service.repository.RoleRepository;
+import com.mindcare.auth_service.repository.UserRepository;
 import com.mindcare.auth_service.service.AccountService;
+import com.mindcare.auth_service.service.AuditService;
+import com.mindcare.auth_service.service.ExpertReviewService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth/admin/management")
@@ -25,9 +41,9 @@ public class AdminManagementController {
     private final RoleRepository roleRepository;
     private final AdminAuditLogRepository auditRepository;
     private final ExpertDocumentRepository documentRepository;
-    private final NotificationRepository notificationRepository;
     private final AuditService auditService;
     private final AccountService accountService;
+    private final ExpertReviewService expertReviewService;
 
     @GetMapping("/dashboard")
     public ApiResponse<Map<String, Long>> dashboard() {
@@ -35,8 +51,7 @@ public class AdminManagementController {
                 "totalUsers", userRepository.count(),
                 "activeUsers", userRepository.countByIsActiveTrue(),
                 "experts", userRepository.countByRoleName("ROLE_EXPERT"),
-                "pendingExperts", userRepository.countByExpertStatus("PENDING")
-        ));
+                "pendingExperts", userRepository.countByExpertStatus("PENDING")));
     }
 
     @GetMapping("/users")
@@ -104,36 +119,16 @@ public class AdminManagementController {
             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.success("Hồ sơ chuyên gia",
                 userRepository.findByExpertStatus(status,
-                        PageRequest.of(page, Math.min(Math.max(size, 1), 100),
+                        PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
                                 Sort.by(Sort.Direction.DESC, "expertSubmittedAt"))).map(UserSummary::from));
     }
 
     @PatchMapping("/experts/{id}/review")
     public ApiResponse<UserSummary> review(Authentication auth, @PathVariable UUID id,
             @Valid @RequestBody AccountRequests.ExpertReviewRequest request) {
-        User user = find(id);
-        if (!"PENDING".equals(user.getExpertStatus())) {
-            throw new RuntimeException("Hồ sơ không ở trạng thái chờ duyệt");
-        }
-        user.setExpertStatus(request.status());
-        user.setExpertReviewReason(request.reason());
-        user.setExpertReviewedAt(OffsetDateTime.now());
-        if ("APPROVED".equals(request.status())) {
-            user.setRole(roleRepository.findByName("ROLE_EXPERT")
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy ROLE_EXPERT")));
-        }
-        User saved = userRepository.save(user);
-        com.mindcare.auth_service.entity.Notification notification =
-                com.mindcare.auth_service.entity.Notification.create(saved.getId(), null, "EXPERT_REVIEW",
-                "Kết quả duyệt hồ sơ chuyên gia", "APPROVED".equals(request.status())
-                ? "Hồ sơ chuyên gia của bạn đã được duyệt. Vui lòng đăng nhập lại để sử dụng quyền chuyên gia."
-                : "Hồ sơ chuyên gia cần được bổ sung. Lý do: " + request.reason(),
-                "APPROVED".equals(request.status()) ? "/expert" : "/expert/register");
-        notificationRepository.save(notification);
-        if ("APPROVED".equals(request.status())) accountService.revokeAllSessions(id);
-        auditService.record(auth.getName(), "REVIEW_EXPERT", "USER", id.toString(),
-                request.status() + ": " + request.reason());
-        return ApiResponse.success("Đã duyệt hồ sơ", UserSummary.from(saved));
+        User saved = expertReviewService.reviewPending(
+                id, request.status(), request.reason(), auth.getName());
+        return ApiResponse.success("Đã lưu kết quả duyệt hồ sơ", UserSummary.from(saved));
     }
 
     @GetMapping("/experts/{id}")
@@ -151,8 +146,8 @@ public class AdminManagementController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "30") int size) {
         return ApiResponse.success("Nhật ký quản trị",
-                auditRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, Math.min(size, 100)))
-                        .map(AuditResponse::from));
+                auditRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(
+                        Math.max(page, 0), Math.min(Math.max(size, 1), 100))).map(AuditResponse::from));
     }
 
     private User find(UUID id) {

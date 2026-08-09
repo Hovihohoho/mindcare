@@ -453,29 +453,14 @@ class AssessmentServiceImplTest {
                 2
         );
         phq9.publish();
-        AssessmentSummaryResponse gad7Summary = new AssessmentSummaryResponse(
-                null,
-                AssessmentCode.GAD_7,
-                1,
-                "GAD-7",
-                "Anxiety screening"
-        );
-        AssessmentSummaryResponse phq9Summary = new AssessmentSummaryResponse(
-                null,
-                AssessmentCode.PHQ_9,
-                2,
-                "PHQ-9",
-                "Mood screening"
-        );
         when(assessmentRepository.findByStatusAndDeletedAtIsNullOrderByCodeAsc(
                 AssessmentStatus.PUBLISHED
         )).thenReturn(List.of(gad7, phq9));
-        when(mapper.toSummaryResponse(gad7)).thenReturn(gad7Summary);
-        when(mapper.toSummaryResponse(phq9)).thenReturn(phq9Summary);
-
         List<AssessmentSummaryResponse> result = service.getPublishedAssessments();
 
-        assertEquals(List.of(gad7Summary, phq9Summary), result);
+        assertEquals(List.of(AssessmentCode.GAD_7, AssessmentCode.PHQ_9),
+                result.stream().map(AssessmentSummaryResponse::code).toList());
+        assertNotNull(result.get(0).evidence());
         verify(assessmentRepository)
                 .findByStatusAndDeletedAtIsNullOrderByCodeAsc(AssessmentStatus.PUBLISHED);
     }
@@ -516,12 +501,12 @@ class AssessmentServiceImplTest {
                 .thenReturn(List.of(option));
         when(mapper.toAnswerOptionResponse(option)).thenReturn(optionResponse);
         when(mapper.toQuestionResponse(question, List.of(optionResponse))).thenReturn(questionResponse);
-        when(mapper.toDetailResponse(assessment, List.of(questionResponse))).thenReturn(expected);
-
         AssessmentDetailResponse result =
                 service.getPublishedAssessment(AssessmentCode.PHQ_9);
 
-        assertSame(expected, result);
+        assertEquals(expected.code(), result.code());
+        assertEquals(expected.questions(), result.questions());
+        assertNotNull(result.evidence());
     }
 
     @Test

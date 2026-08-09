@@ -1,11 +1,9 @@
 import {
   Bot,
-  CalendarDays,
-  ChartNoAxesColumn,
   ClipboardCheck,
   HeartPulse,
   Home,
-  LayoutDashboard,
+  MessageCircleMore,
   Settings,
   UserRound,
   UsersRound,
@@ -20,10 +18,8 @@ export const userNavigation = [
 ] as const;
 
 export const expertNavigation = [
-  { label: "Dashboard", to: "/expert", icon: LayoutDashboard },
-  { label: "Lịch làm việc", to: "/expert/calendar", icon: CalendarDays },
+  { label: "Trò chuyện", to: "/expert", icon: MessageCircleMore },
   { label: "Hồ sơ chuyên gia", to: "/expert/profile", icon: UserRound },
-  { label: "Thống kê", to: "/expert/statistics", icon: ChartNoAxesColumn },
 ] as const;
 
 export const expertUtilityNavigation = [

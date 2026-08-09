@@ -1,26 +1,41 @@
+import { lazy } from "react";
 import { createBrowserRouter } from "react-router-dom";
-import { AiChatPage } from "@/features/ai-chat";
-import { AdminAiDocumentsPage, AdminAuditPage, AdminContentPage, AdminDashboardPage, AdminExpertsPage, AdminLayout, AdminNotificationsPage, AdminUsersPage } from "@/features/admin";
-import { AssessmentLibraryPage, AssessmentOverviewPage, AssessmentProcessPage, AssessmentResultPage } from "@/features/assessment";
-import { ForgotPasswordPage, LoginPage, RegisterPage, RequireRole, ResetPasswordPage, VerifyEmailPage } from "@/features/auth";
-import { BookingPage } from "@/features/booking";
-import { BookmarkPage } from "@/features/bookmark";
-import { ClientRecordPage } from "@/features/client-record";
-import { EmotionDiaryPage, EmotionHistoryPage } from "@/features/emotion";
-import { ExpertCalendarPage } from "@/features/expert-calendar";
-import { ChatHistoryPage, ExpertChatPage } from "@/features/expert-chat";
-import { ExpertDashboardPage } from "@/features/expert-dashboard";
-import { ExpertDirectoryPage, ExpertProfilePage } from "@/features/expert-directory";
-import { ExpertManageProfilePage } from "@/features/expert-profile";
-import { ExpertRegistrationPage } from "@/features/expert-registration";
-import { HomePage } from "@/features/home";
-import { NotificationsPage } from "@/features/notifications";
-import { PaymentPage } from "@/features/payment";
-import { ProfilePage } from "@/features/profile";
-import { SettingsPage } from "@/features/settings";
+import { RequireRole } from "@/features/auth";
+import { AdminLayout } from "@/features/admin";
 import { AssessmentFocusLayout, AuthLayout, ExpertLayout, PublicLayout, UserLayout } from "@/layouts";
-import { NotFoundPage } from "./pages/NotFoundPage";
-import { ForbiddenPage } from "./pages/ForbiddenPage";
+
+const AiChatPage = lazy(() => import("@/features/ai-chat").then((module) => ({ default: module.AiChatPage })));
+const AdminAiDocumentsPage = lazy(() => import("@/features/admin").then((module) => ({ default: module.AdminAiDocumentsPage })));
+const AdminAuditPage = lazy(() => import("@/features/admin").then((module) => ({ default: module.AdminAuditPage })));
+const AdminContentPage = lazy(() => import("@/features/admin").then((module) => ({ default: module.AdminContentPage })));
+const AdminDashboardPage = lazy(() => import("@/features/admin").then((module) => ({ default: module.AdminDashboardPage })));
+const AdminExpertsPage = lazy(() => import("@/features/admin").then((module) => ({ default: module.AdminExpertsPage })));
+const AdminNotificationsPage = lazy(() => import("@/features/admin").then((module) => ({ default: module.AdminNotificationsPage })));
+const AdminUsersPage = lazy(() => import("@/features/admin").then((module) => ({ default: module.AdminUsersPage })));
+const AssessmentLibraryPage = lazy(() => import("@/features/assessment").then((module) => ({ default: module.AssessmentLibraryPage })));
+const AssessmentOverviewPage = lazy(() => import("@/features/assessment").then((module) => ({ default: module.AssessmentOverviewPage })));
+const AssessmentProcessPage = lazy(() => import("@/features/assessment").then((module) => ({ default: module.AssessmentProcessPage })));
+const AssessmentResultPage = lazy(() => import("@/features/assessment").then((module) => ({ default: module.AssessmentResultPage })));
+const ForgotPasswordPage = lazy(() => import("@/features/auth").then((module) => ({ default: module.ForgotPasswordPage })));
+const LoginPage = lazy(() => import("@/features/auth").then((module) => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import("@/features/auth").then((module) => ({ default: module.RegisterPage })));
+const ResetPasswordPage = lazy(() => import("@/features/auth").then((module) => ({ default: module.ResetPasswordPage })));
+const VerifyEmailPage = lazy(() => import("@/features/auth").then((module) => ({ default: module.VerifyEmailPage })));
+const BookmarkPage = lazy(() => import("@/features/bookmark").then((module) => ({ default: module.BookmarkPage })));
+const EmotionDiaryPage = lazy(() => import("@/features/emotion").then((module) => ({ default: module.EmotionDiaryPage })));
+const EmotionHistoryPage = lazy(() => import("@/features/emotion").then((module) => ({ default: module.EmotionHistoryPage })));
+const ChatHistoryPage = lazy(() => import("@/features/expert-chat").then((module) => ({ default: module.ChatHistoryPage })));
+const ExpertChatPage = lazy(() => import("@/features/expert-chat").then((module) => ({ default: module.ExpertChatPage })));
+const ExpertDirectoryPage = lazy(() => import("@/features/expert-directory").then((module) => ({ default: module.ExpertDirectoryPage })));
+const ExpertProfilePage = lazy(() => import("@/features/expert-directory").then((module) => ({ default: module.ExpertProfilePage })));
+const ExpertManageProfilePage = lazy(() => import("@/features/expert-profile").then((module) => ({ default: module.ExpertManageProfilePage })));
+const ExpertRegistrationPage = lazy(() => import("@/features/expert-registration").then((module) => ({ default: module.ExpertRegistrationPage })));
+const HomePage = lazy(() => import("@/features/home").then((module) => ({ default: module.HomePage })));
+const NotificationsPage = lazy(() => import("@/features/notifications").then((module) => ({ default: module.NotificationsPage })));
+const ProfilePage = lazy(() => import("@/features/profile").then((module) => ({ default: module.ProfilePage })));
+const SettingsPage = lazy(() => import("@/features/settings").then((module) => ({ default: module.SettingsPage })));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
+const ForbiddenPage = lazy(() => import("./pages/ForbiddenPage").then((module) => ({ default: module.ForbiddenPage })));
 
 export const appRouter = createBrowserRouter([
   {
@@ -39,10 +54,8 @@ export const appRouter = createBrowserRouter([
           { path: "experts", element: <ExpertDirectoryPage /> },
           { path: "experts/chat-history", element: <ChatHistoryPage /> },
           { path: "experts/:id", element: <ExpertProfilePage /> },
-          { path: "booking/:expertId", element: <BookingPage /> },
           { path: "chat", element: <ExpertChatPage /> },
-          { path: "chat/:bookingId", element: <ExpertChatPage /> },
-          { path: "payment", element: <PaymentPage /> },
+          { path: "chat/:conversationId", element: <ExpertChatPage /> },
           { path: "ai-chat", element: <AiChatPage /> },
           { path: "bookmarks", element: <BookmarkPage /> },
           { path: "profile", element: <ProfilePage /> },
@@ -71,12 +84,9 @@ export const appRouter = createBrowserRouter([
     path: "/expert",
     element: <RequireRole roles={["ROLE_EXPERT"]}><ExpertLayout /></RequireRole>,
     children: [
-      { index: true, element: <ExpertDashboardPage /> },
-      { path: "calendar", element: <ExpertCalendarPage /> },
-      { path: "chat/:bookingId", element: <ExpertChatPage /> },
+      { index: true, element: <ChatHistoryPage /> },
+      { path: "chat/:conversationId", element: <ExpertChatPage /> },
       { path: "profile", element: <ExpertManageProfilePage /> },
-      { path: "statistics", element: <ExpertDashboardPage /> },
-      { path: "clients/:id", element: <ClientRecordPage /> },
       { path: "settings", element: <SettingsPage /> },
     ],
   },

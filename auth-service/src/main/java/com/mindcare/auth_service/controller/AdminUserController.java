@@ -8,18 +8,24 @@ import com.mindcare.auth_service.entity.User;
 import com.mindcare.auth_service.repository.RoleRepository;
 import com.mindcare.auth_service.repository.UserRepository;
 import com.mindcare.auth_service.service.EmailVerificationService;
-import com.mindcare.auth_service.entity.Notification;
-import com.mindcare.auth_service.repository.NotificationRepository;
-import com.mindcare.auth_service.dto.NotificationDtos;
-import com.mindcare.auth_service.notification.NotificationSocketHub;
+import com.mindcare.auth_service.service.ExpertReviewService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
-
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth/admin/users")
@@ -29,8 +35,7 @@ public class AdminUserController {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailVerificationService emailVerificationService;
-    private final NotificationRepository notificationRepository;
-    private final NotificationSocketHub notificationSocketHub;
+    private final ExpertReviewService expertReviewService;
 
     @GetMapping
     public ApiResponse<List<UserSummary>> findUsers() {
@@ -58,16 +63,22 @@ public class AdminUserController {
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setRole(expert);
         user.setEmailVerified(false);
+        user.setExpertStatus("APPROVED");
+        user.setExpertReviewedAt(OffsetDateTime.now());
         User saved = userRepository.save(user);
         emailVerificationService.sendVerification(saved);
-        return ResponseEntity.ok(ApiResponse.success("Tạo tài khoản chuyên gia thành công. Email xác thực đã được gửi",
-                UserSummary.from(saved)));
+        return ResponseEntity.ok(ApiResponse.success(
+                "Tạo tài khoản chuyên gia thành công. Email xác thực đã được gửi", UserSummary.from(saved)));
     }
 
     @PutMapping("/{userId}")
-    public ApiResponse<UserSummary> update(@PathVariable UUID userId,
+    public ApiResponse<UserSummary> update(Authentication auth, @PathVariable UUID userId,
                                             @Valid @RequestBody AdminUserRequest.Update request) {
         User user = findUser(userId);
+        if (user.getEmail().equalsIgnoreCase(auth.getName())
+                && (!request.active() || !"ROLE_ADMIN".equals(request.role()))) {
+            throw new RuntimeException("Admin không thể tự khóa hoặc tự hạ quyền tài khoản đang sử dụng");
+        }
         String email = request.email().trim().toLowerCase();
         userRepository.findByEmail(email)
                 .filter(existing -> !existing.getId().equals(userId))
@@ -83,45 +94,27 @@ public class AdminUserController {
     }
 
     @DeleteMapping("/{userId}")
-    public ApiResponse<Void> delete(@PathVariable UUID userId) {
-        userRepository.delete(findUser(userId));
+    public ApiResponse<Void> delete(Authentication auth, @PathVariable UUID userId) {
+        User user = findUser(userId);
+        if (user.getEmail().equalsIgnoreCase(auth.getName())) {
+            throw new RuntimeException("Admin không thể tự xóa tài khoản đang sử dụng");
+        }
+        userRepository.delete(user);
         return ApiResponse.success("Xóa người dùng thành công", null);
     }
 
     @PatchMapping("/{userId}/expert")
-    public ResponseEntity<ApiResponse<Void>> grantExpert(@PathVariable UUID userId) {
-        User user = findUser(userId);
-        Role expert = roleRepository.findByName("ROLE_EXPERT")
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy ROLE_EXPERT"));
-        user.setRole(expert);
-        userRepository.save(user);
-        Notification notification = notificationRepository.save(Notification.create(user.getId(), null, "EXPERT_APPROVED",
-                "Hồ sơ chuyên gia đã được duyệt",
-                "Bạn đã có thể tạo lịch tư vấn và sử dụng các chức năng dành cho chuyên gia.",
-                "/expert/calendar"));
-        notificationSocketHub.publish(user.getId(), NotificationDtos.Item.from(notification));
+    public ResponseEntity<ApiResponse<Void>> grantExpert(
+            Authentication auth, @PathVariable UUID userId) {
+        expertReviewService.grantExpert(userId, auth.getName());
         return ResponseEntity.ok(ApiResponse.success("Đã cấp quyền chuyên gia", null));
     }
 
     @PostMapping("/{userId}/expert-review")
-    public ApiResponse<Void> reviewExpert(
-            @PathVariable UUID userId,
+    public ApiResponse<Void> reviewExpert(Authentication auth, @PathVariable UUID userId,
             @Valid @RequestBody AdminUserRequest.ExpertReview request) {
-        User user = findUser(userId);
-        Role targetRole = roleRepository.findByName(request.approved() ? "ROLE_EXPERT" : "ROLE_USER")
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy vai trò"));
-        user.setRole(targetRole);
-        userRepository.save(user);
-        Notification notification = notificationRepository.save(Notification.create(user.getId(), null,
-                request.approved() ? "EXPERT_APPROVED" : "EXPERT_REJECTED",
-                request.approved() ? "Hồ sơ chuyên gia đã được duyệt" : "Hồ sơ chuyên gia chưa được duyệt",
-                request.approved()
-                        ? "Bạn đã có thể tạo lịch tư vấn và sử dụng các chức năng dành cho chuyên gia."
-                        : (request.reason() == null || request.reason().isBlank()
-                                ? "Vui lòng kiểm tra và bổ sung thông tin hồ sơ chuyên gia."
-                                : request.reason().trim()),
-                request.approved() ? "/expert/calendar" : "/expert/register"));
-        notificationSocketHub.publish(user.getId(), NotificationDtos.Item.from(notification));
+        expertReviewService.reviewPending(userId,
+                request.approved() ? "APPROVED" : "REJECTED", request.reason(), auth.getName());
         return ApiResponse.success("Đã lưu kết quả duyệt chuyên gia", null);
     }
 

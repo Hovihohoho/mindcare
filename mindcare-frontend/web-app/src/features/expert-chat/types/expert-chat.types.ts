@@ -1,6 +1,7 @@
 export interface Conversation {
   id: string;
-  bookingId: string;
+  userId: string;
+  expertUserId: string;
   openedAt: string;
   closedAt?: string | null;
   writable: boolean;
@@ -8,13 +9,11 @@ export interface Conversation {
 
 export interface ConversationHistoryItem {
   id: string;
-  bookingId: string;
   userId: string;
   expertUserId: string;
-  bookingStatus: string;
-  startAt: string;
-  endAt: string;
   openedAt: string;
+  closedAt?: string | null;
+  writable: boolean;
 }
 
 export type MessageType = "TEXT" | "SYSTEM";

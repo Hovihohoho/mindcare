@@ -1,6 +1,7 @@
 param(
     [switch]$SkipAi,
     [switch]$RestartExisting,
+    [switch]$SeedDemo,
     [switch]$UseRealEmail,
     [switch]$UseMailpit
 )
@@ -10,6 +11,10 @@ $projectRoot = $PSScriptRoot
 $envFile = Join-Path $projectRoot ".env"
 $runDirectory = Join-Path $projectRoot ".run"
 $frontendDirectory = Join-Path $projectRoot "mindcare-frontend\web-app"
+
+if ($SeedDemo) {
+    $env:SEED_ASSESSMENTS = "true"
+}
 
 if (-not (Test-Path -LiteralPath (Join-Path $frontendDirectory "package.json"))) {
     throw "Missing frontend project at $frontendDirectory."
@@ -114,6 +119,11 @@ function Start-LoggedProcess {
 
 Import-DotEnv -Path $envFile
 
+# Spring Boot interprets a machine-level DEBUG variable as its global debug
+# switch. Override it for local runs to keep demo logs concise and avoid
+# logging sensitive WebSocket query parameters.
+$env:DEBUG = "false"
+
 if ($UseRealEmail -and $UseMailpit) {
     throw "Use only one email mode: -UseRealEmail or -UseMailpit."
 }
@@ -165,6 +175,12 @@ if ([string]::IsNullOrWhiteSpace($env:BOOKING_AUTH_ADAPTER_MODE)) {
 }
 if ([string]::IsNullOrWhiteSpace($env:AUTH_SERVICE_URL)) {
     $env:AUTH_SERVICE_URL = "http://localhost:8081"
+}
+if ([string]::IsNullOrWhiteSpace($env:JWT_SECRET)) {
+    $env:JWT_SECRET = "TWluZENhcmUtTG9jYWwtT25seS1KV1QtU2VjcmV0LTIwMjYh"
+}
+if ([string]::IsNullOrWhiteSpace($env:INTERNAL_SERVICE_SECRET)) {
+    $env:INTERNAL_SERVICE_SECRET = "mindcare-local-internal"
 }
 if ([string]::IsNullOrWhiteSpace($env:BOOKING_PAYMENT_REQUIRED)) {
     $env:BOOKING_PAYMENT_REQUIRED = "false"
@@ -274,6 +290,16 @@ if ($waiting.Count -gt 0) {
     exit 1
 }
 
+if ($SeedDemo) {
+    Write-Host "Loading idempotent demo data..."
+    $databaseUser = if ([string]::IsNullOrWhiteSpace($env:POSTGRES_USER)) { "postgres_admin" } else { $env:POSTGRES_USER }
+    $databaseName = if ([string]::IsNullOrWhiteSpace($env:POSTGRES_DB)) { "mindcare_db" } else { $env:POSTGRES_DB }
+    & docker exec mindcare_postgres psql -v ON_ERROR_STOP=1 -U $databaseUser -d $databaseName -f /opt/mindcare/seed-data.sql
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not load demo seed data. Check that every service completed its Flyway migrations."
+    }
+}
+
 Write-Host ""
 Write-Host "MindCare is ready:"
 Write-Host "  Frontend:    http://localhost:5173"
@@ -286,3 +312,6 @@ if ($realEmailEnabled) {
     Write-Host "Email mode:   Mailpit (http://localhost:8025)"
 }
 Write-Host "Stop application processes with: .\stop-all.ps1"
+if (-not $SeedDemo) {
+    Write-Host "Tip: run with -SeedDemo to load local demo accounts and sample activity."
+}

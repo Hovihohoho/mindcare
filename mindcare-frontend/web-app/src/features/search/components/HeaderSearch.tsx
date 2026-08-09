@@ -21,7 +21,6 @@ const extraFunctions: SearchResult[] = [
 ];
 
 const expertExtraFunctions: SearchResult[] = [
-  { key: "expert-calendar", label: "Lịch làm việc chuyên gia", description: "Tạo và quản lý khung giờ tư vấn", to: "/expert/calendar", group: "Chức năng" },
 ];
 
 function normalize(value: string) {
@@ -97,7 +96,6 @@ export function HeaderSearch() {
     return [...functions, ...expertResults, ...assessmentResults].slice(0, 12);
   }, [assessments.data, debounced, enabled, experts.data, isExpert]);
 
-  useEffect(() => setActive(0), [debounced]);
   const choose = (result: SearchResult) => {
     const expertOnlyRoute = result.to === "/expert" || result.to.startsWith("/expert/");
     if (expertOnlyRoute && !isExpert) return;
@@ -116,7 +114,10 @@ export function HeaderSearch() {
         <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-white/30 bg-white shadow-2xl">
           <div className="flex items-center gap-3 border-b border-line px-4">
             <Search className="size-5 shrink-0 text-brand-700" />
-            <input ref={input} className="h-16 min-w-0 flex-1 bg-transparent text-base outline-none" placeholder="Tìm chức năng, chuyên gia, bài đánh giá..." value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
+            <input ref={input} className="h-16 min-w-0 flex-1 bg-transparent text-base outline-none" placeholder="Tìm chức năng, chuyên gia, bài đánh giá..." value={query} onChange={(event) => {
+              setQuery(event.target.value);
+              setActive(0);
+            }} onKeyDown={(event) => {
               if (event.key === "ArrowDown") { event.preventDefault(); setActive((value) => Math.min(value + 1, results.length - 1)); }
               if (event.key === "ArrowUp") { event.preventDefault(); setActive((value) => Math.max(value - 1, 0)); }
               if (event.key === "Enter" && results[active]) choose(results[active]);

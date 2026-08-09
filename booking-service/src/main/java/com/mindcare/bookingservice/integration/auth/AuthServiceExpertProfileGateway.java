@@ -1,5 +1,8 @@
 package com.mindcare.bookingservice.integration.auth;
 
+import com.mindcare.bookingservice.booking.entity.BookingStatus;
+import com.mindcare.bookingservice.booking.repository.BookingRepository;
+import com.mindcare.bookingservice.review.repository.ExpertReviewRepository;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -18,12 +21,18 @@ public class AuthServiceExpertProfileGateway
         implements ExpertProfileGateway, ExpertDirectoryGateway, ClientProfileGateway {
     private final RestClient client;
     private final String internalSecret;
+    private final ExpertReviewRepository reviewRepository;
+    private final BookingRepository bookingRepository;
 
     public AuthServiceExpertProfileGateway(
             @Value("${booking.auth-adapter.base-url}") String baseUrl,
-            @Value("${booking.auth-adapter.internal-secret}") String internalSecret) {
+            @Value("${booking.auth-adapter.internal-secret}") String internalSecret,
+            ExpertReviewRepository reviewRepository,
+            BookingRepository bookingRepository) {
         this.client = RestClient.builder().baseUrl(baseUrl).build();
         this.internalSecret = internalSecret;
+        this.reviewRepository = reviewRepository;
+        this.bookingRepository = bookingRepository;
     }
 
     @Override
@@ -68,19 +77,31 @@ public class AuthServiceExpertProfileGateway
                         + (item.headline() == null ? "" : item.headline()) + " "
                         + (item.specialties() == null ? "" : item.specialties()))
                         .toLowerCase(Locale.ROOT).contains(keyword))
-                .map(item -> new ExpertDirectoryItem(item.expertUserId(), item.displayName(),
-                        item.headline() == null ? "Chuyên gia tư vấn tâm lý" : item.headline(),
-                        item.specialties() == null || item.specialties().isBlank()
-                                ? List.of("TƯ VẤN TÂM LÝ")
-                                : Arrays.stream(item.specialties().split(",")).map(String::trim).toList(),
-                        item.yearsOfExperience() == null ? 0 : item.yearsOfExperience(),
-                        item.consultationFee(), item.currency(), BigDecimal.ZERO, 0))
+                .map(this::directoryItem)
                 .toList();
         int offset = decodeCursor(query.cursor());
         int end = Math.min(values.size(), offset + Math.max(1, Math.min(query.limit(), 100)));
         boolean hasMore = end < values.size();
         return new ExpertDirectoryPage(values.subList(Math.min(offset, values.size()), end),
                 hasMore ? encodeCursor(end) : null, hasMore);
+    }
+
+    private ExpertDirectoryItem directoryItem(InternalExpert item) {
+        var rating = reviewRepository.aggregateForExpert(item.expertUserId());
+        BigDecimal average = rating == null || rating.getRatingAverage() == null
+                ? BigDecimal.ZERO : rating.getRatingAverage();
+        long reviews = rating == null ? 0 : rating.getReviewCount();
+        long consultations = bookingRepository.countByExpertUserIdAndStatusAndDeletedAtIsNull(
+                item.expertUserId(), BookingStatus.COMPLETED);
+        List<String> specialties = item.specialties() == null || item.specialties().isBlank()
+                ? List.of("TƯ VẤN TÂM LÝ")
+                : Arrays.stream(item.specialties().split(","))
+                        .map(String::trim).filter(value -> !value.isBlank()).toList();
+        return new ExpertDirectoryItem(item.expertUserId(), item.displayName(),
+                item.headline() == null ? "Chuyên gia tư vấn tâm lý" : item.headline(),
+                specialties, item.yearsOfExperience() == null ? 0 : item.yearsOfExperience(),
+                item.consultationFee(), item.currency(), average, reviews, consultations,
+                item.avatarUrl(), item.bio(), item.workplace(), item.education());
     }
 
     private int decodeCursor(String cursor) {
@@ -102,7 +123,8 @@ public class AuthServiceExpertProfileGateway
                                    BigDecimal consultationFee, String currency) {}
     private record InternalExpert(UUID expertUserId, String displayName, String headline,
                                   String specialties, Integer yearsOfExperience,
-                                  BigDecimal consultationFee, String currency) {}
+                                  BigDecimal consultationFee, String currency, String avatarUrl,
+                                  String bio, String workplace, String education) {}
     private record InternalClientProfile(
             UUID userId,
             String fullName,

@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BadgeCheck, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Loading } from "@/shared";
 import { assessmentApi } from "../api/assessment.api";
@@ -36,6 +36,13 @@ export function AssessmentProcessPage() {
         <p className="shrink-0 text-sm font-semibold text-muted">Câu hỏi {index + 1} / {questions.length}</p>
       </div>
       <div className="mb-10 h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-emerald-700 transition-all" style={{ width: `${((index + 1) / questions.length) * 100}%` }} /></div>
+      <div className="mb-6 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="flex items-center gap-2 font-bold"><BadgeCheck className="size-4" />{assessment.data.evidence.publisher}</p>
+          <p className="mt-1 text-xs">{assessment.data.evidence.instrumentVersion} · Quy tắc {assessment.data.evidence.scoringRuleVersion}</p>
+        </div>
+        <a className="inline-flex shrink-0 items-center gap-1 font-semibold underline" href={assessment.data.evidence.sourceUrl} target="_blank" rel="noreferrer">Xem nguồn gốc <ExternalLink className="size-4" /></a>
+      </div>
       <Card className="p-7 md:p-10">
         <QuestionPanel question={question} value={answers[question.id]} onChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))} />
         <div className="mt-10 flex justify-between pt-2">
@@ -52,6 +59,7 @@ export function AssessmentProcessPage() {
         </div>
         {submit.isError && <p className="mt-4 text-sm text-rose-700">Không thể gửi bài đánh giá. Vui lòng thử lại.</p>}
       </Card>
+      <p className="mt-5 text-sm leading-6 text-slate-500">{assessment.data.evidence.limitation}</p>
     </div>
   );
 }

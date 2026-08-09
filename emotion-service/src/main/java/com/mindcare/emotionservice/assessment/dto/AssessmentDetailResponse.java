@@ -11,9 +11,16 @@ public record AssessmentDetailResponse(
         Integer assessmentVersion,
         String title,
         String description,
+        AssessmentEvidenceResponse evidence,
         List<QuestionResponse> questions
 ) {
     public AssessmentDetailResponse {
         questions = List.copyOf(questions);
+    }
+
+    public AssessmentDetailResponse(
+            UUID id, AssessmentCode code, Integer assessmentVersion,
+            String title, String description, List<QuestionResponse> questions) {
+        this(id, code, assessmentVersion, title, description, null, questions);
     }
 }

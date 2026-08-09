@@ -42,6 +42,12 @@ public class ExpertAccountController {
     @PostMapping("/submit")
     public ApiResponse<ExpertProfileResponse> submit(Authentication authentication) {
         User user = accountService.current(authentication.getName());
+        if ("PENDING".equals(user.getExpertStatus())) {
+            throw new RuntimeException("Hồ sơ đang chờ duyệt");
+        }
+        if ("APPROVED".equals(user.getExpertStatus())) {
+            throw new RuntimeException("Hồ sơ chuyên gia đã được duyệt");
+        }
         if (user.getHeadline() == null || user.getHeadline().isBlank()
                 || user.getSpecialties() == null || user.getSpecialties().isBlank()
                 || user.getYearsOfExperience() == null || user.getConsultationFee() == null) {
@@ -53,6 +59,7 @@ public class ExpertAccountController {
         user.setExpertStatus("PENDING");
         user.setExpertReviewReason(null);
         user.setExpertSubmittedAt(OffsetDateTime.now());
+        user.setExpertReviewedAt(null);
         return ApiResponse.success("Hồ sơ đã được gửi duyệt", response(userRepository.save(user)));
     }
 

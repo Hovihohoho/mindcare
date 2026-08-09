@@ -25,4 +25,12 @@ class AssessmentScoringPolicyRegistryTest {
         assertEquals("MODERATE", registry.score(AssessmentCode.GAD_7, 10).riskLevel());
         assertEquals("SEVERE", registry.score(AssessmentCode.GAD_7, 15).riskLevel());
     }
+
+    @Test
+    void who5BoundaryScoresTreatHigherWellbeingAsLowerRisk() {
+        assertEquals("MODERATE", registry.score(AssessmentCode.WHO_5, 0).riskLevel());
+        assertEquals("MODERATE", registry.score(AssessmentCode.WHO_5, 12).riskLevel());
+        assertEquals("NORMAL", registry.score(AssessmentCode.WHO_5, 13).riskLevel());
+        assertEquals("NORMAL", registry.score(AssessmentCode.WHO_5, 25).riskLevel());
+    }
 }

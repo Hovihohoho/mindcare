@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface ConversationRepository extends JpaRepository<Conversation, UUID> {
 
-    Optional<Conversation> findByBookingIdAndDeletedAtIsNull(UUID bookingId);
+    Optional<Conversation> findByUserIdAndExpertUserIdAndDeletedAtIsNull(UUID userId, UUID expertUserId);
 
     Optional<Conversation> findByIdAndDeletedAtIsNull(UUID id);
 
@@ -20,12 +20,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
             SELECT conversation
             FROM Conversation conversation
             WHERE conversation.deletedAt IS NULL
-              AND conversation.bookingId IN (
-                  SELECT booking.id
-                  FROM Booking booking
-                  WHERE booking.deletedAt IS NULL
-                    AND (booking.userId = :actorId OR booking.expertUserId = :actorId)
-              )
+              AND (conversation.userId = :actorId OR conversation.expertUserId = :actorId)
             ORDER BY conversation.openedAt DESC, conversation.id DESC
             """)
     List<Conversation> findHistoryForParticipant(
@@ -36,12 +31,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
             SELECT conversation
             FROM Conversation conversation
             WHERE conversation.deletedAt IS NULL
-              AND conversation.bookingId IN (
-                  SELECT booking.id
-                  FROM Booking booking
-                  WHERE booking.deletedAt IS NULL
-                    AND (booking.userId = :actorId OR booking.expertUserId = :actorId)
-              )
+              AND (conversation.userId = :actorId OR conversation.expertUserId = :actorId)
               AND (conversation.openedAt < :cursorOpenedAt
                     OR (conversation.openedAt = :cursorOpenedAt
                         AND conversation.id < :cursorId))

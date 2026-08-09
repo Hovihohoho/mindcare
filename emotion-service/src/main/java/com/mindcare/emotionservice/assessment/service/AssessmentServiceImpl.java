@@ -60,6 +60,7 @@ public class AssessmentServiceImpl implements AssessmentService {
     private final AssessmentMapper mapper;
     private final AssessmentDefinitionRegistry assessmentDefinitions;
     private final AssessmentScoringPolicyRegistry scoringPolicies;
+    private final AssessmentEvidenceRegistry evidenceRegistry;
     private final CursorCodec cursorCodec;
     private final ObjectMapper objectMapper;
     private final Clock clock;
@@ -83,6 +84,7 @@ public class AssessmentServiceImpl implements AssessmentService {
         this.mapper = mapper;
         this.assessmentDefinitions = assessmentDefinitions;
         this.scoringPolicies = scoringPolicies;
+        this.evidenceRegistry = new AssessmentEvidenceRegistry();
         this.cursorCodec = cursorCodec;
         this.objectMapper = objectMapper;
         this.clock = clock;
@@ -92,7 +94,10 @@ public class AssessmentServiceImpl implements AssessmentService {
     public List<AssessmentSummaryResponse> getPublishedAssessments() {
         return assessmentRepository.findByStatusAndDeletedAtIsNullOrderByCodeAsc(AssessmentStatus.PUBLISHED)
                 .stream()
-                .map(mapper::toSummaryResponse)
+                .map(assessment -> new AssessmentSummaryResponse(
+                        assessment.getId(), assessment.getCode(), assessment.getAssessmentVersion(),
+                        assessment.getTitle(), assessment.getDescription(),
+                        evidenceRegistry.getRequired(assessment.getCode())))
                 .toList();
     }
 
@@ -404,7 +409,10 @@ public class AssessmentServiceImpl implements AssessmentService {
                         activeOptions(question.getId()).stream().map(mapper::toAnswerOptionResponse).toList()
                 ))
                 .toList();
-        return mapper.toDetailResponse(assessment, questions);
+        return new AssessmentDetailResponse(
+                assessment.getId(), assessment.getCode(), assessment.getAssessmentVersion(),
+                assessment.getTitle(), assessment.getDescription(),
+                evidenceRegistry.getRequired(assessment.getCode()), questions);
     }
 
     private AdminAssessmentResponse toAdminResponse(AssessmentEntity assessment) {
@@ -462,6 +470,7 @@ public class AssessmentServiceImpl implements AssessmentService {
                     "Assessment cannot be published without an approved scoring policy"
             );
         }
+        evidenceRegistry.getRequired(assessment.getCode());
     }
 
     private boolean matchesDefinition(

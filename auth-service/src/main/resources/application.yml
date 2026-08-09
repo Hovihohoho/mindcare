@@ -29,12 +29,12 @@ spring:
 
 security:
   jwt:
-    secret: ${JWT_SECRET:TWluZENhcmUtRGV2ZWxvcG1lbnQtSldULVNlY3JldC0yMDI2IQ==}
+    secret: ${JWT_SECRET}
     expiration-ms: 86400000
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   mail-from: ${MAIL_FROM:no-reply@mindcare.local}
   verification-expiration-minutes: 30
-  internal-secret: ${INTERNAL_SERVICE_SECRET:mindcare-local-internal}
+  internal-secret: ${INTERNAL_SERVICE_SECRET}
   default-consultation-fee: ${DEFAULT_CONSULTATION_FEE:300000}

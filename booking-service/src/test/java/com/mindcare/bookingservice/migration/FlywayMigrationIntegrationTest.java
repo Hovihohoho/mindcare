@@ -31,7 +31,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void flywayCreatesInstantBookingSchema() {
+    void flywayAppliesAllBookingMigrations() {
         String version = jdbcTemplate.queryForObject(
                 """
                 SELECT version
@@ -50,7 +50,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
                 """,
                 String.class);
 
-        assertThat(version).isEqualTo("1");
+        assertThat(version).isEqualTo("3");
         assertThat(flyway.info().pending()).isEmpty();
         assertThat(tables).containsAll(BUSINESS_TABLES);
         assertThat(tables).doesNotContain("expert_profiles");

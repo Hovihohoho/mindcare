@@ -9,7 +9,9 @@ import java.util.UUID;
 
 public interface ChatService {
 
-    ConversationResponse getOrCreate(UUID actorId, UUID bookingId);
+    ConversationResponse getOrCreate(UUID userId, UUID expertUserId);
+
+    ConversationResponse getConversation(UUID actorId, UUID conversationId);
 
     CursorPageResponse<ConversationHistoryResponse> getConversationHistory(
             UUID actorId,

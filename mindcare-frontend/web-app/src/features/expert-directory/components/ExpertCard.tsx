@@ -38,7 +38,7 @@ export function ExpertCard({ expert }: { expert: ExpertSummary }) {
           </span>
         </div>
         <div className="mt-auto flex shrink-0 gap-3 pt-4">
-          <Link className="flex-1" to={profilePath}><Button className="w-full">Đặt lịch</Button></Link>
+          <Link className="flex-1" to={profilePath}><Button className="w-full">Xem hồ sơ</Button></Link>
           <button
             type="button"
             className="focus-ring grid size-11 shrink-0 place-items-center rounded-full border border-brand-700 text-brand-700 hover:bg-brand-50 active:bg-brand-100"
