@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { useCurrentUser } from "@/features/auth";
 import { Loading } from "@/shared";
 import { tokenStorage } from "@/shared/lib/storage";
@@ -13,9 +13,6 @@ export function PublicLayout() {
     return <div className="grid min-h-screen place-items-center"><Loading /></div>;
   }
 
-  if (currentUser.data?.role === "ROLE_EXPERT") {
-    return <Navigate to="/expert" replace />;
-  }
 
   return (
     <div className="min-h-screen bg-white">

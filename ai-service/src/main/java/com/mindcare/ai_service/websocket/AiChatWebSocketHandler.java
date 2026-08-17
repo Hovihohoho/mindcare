@@ -59,7 +59,7 @@ public class AiChatWebSocketHandler extends TextWebSocketHandler {
         CompletableFuture.runAsync(() -> {
             try {
                 RagChatResponse response = ragChatService.chat(
-                        new RagChatRequest(request.question(), request.topK()));
+                        new RagChatRequest(request.question(), request.topK(), request.history()));
                 send(session, Map.of(
                         "type", "AI_RESPONSE",
                         "requestId", request.requestId(),
@@ -93,5 +93,6 @@ public class AiChatWebSocketHandler extends TextWebSocketHandler {
             String type,
             String requestId,
             String question,
-            Integer topK) {}
+            Integer topK,
+            java.util.List<RagChatRequest.ConversationMessage> history) {}
 }

@@ -57,7 +57,8 @@ export function AdminUsersPage() {
                   onChange={(event) => adminApi.setRole(user.id, event.target.value as UserRole)
                     .then(() => users.refetch()).catch((error) => setActionError(errorMessage(error)))}
                 >
-                  <option>ROLE_USER</option><option>ROLE_EXPERT</option><option>ROLE_ADMIN</option>
+                  <option value="ROLE_USER">Người sử dụng</option>
+                  <option value="ROLE_ADMIN">Quản trị viên</option>
                 </select>
               </td>
               <td>{user.active ? "Hoạt động" : "Đã khóa"}</td>

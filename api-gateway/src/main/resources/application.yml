@@ -33,14 +33,10 @@ spring:
               uri: ${AUTH_SERVICE_URI:http://localhost:8081}
               predicates:
                 - Path=/api/auth/**
-            - id: booking-service
-              uri: ${BOOKING_SERVICE_URI:http://localhost:8082}
-              predicates:
-                - Path=/api/v1/experts/**,/api/v1/conversations/**
             - id: emotion-service
               uri: ${EMOTION_SERVICE_URI:http://localhost:8083}
               predicates:
-                - Path=/api/v1/emotion-journals/**,/api/v1/emotion-trends/**,/api/v1/assessments/**,/api/v1/assessment-results/**,/api/v1/admin/assessments/**
+                - Path=/api/v1/emotion-journals/**,/api/v1/emotion-trends/**,/api/v1/assessments/**,/api/v1/assessment-results/**,/api/v1/risk-alerts/**,/api/v1/health-metrics/**,/api/v1/admin/assessments/**
             - id: ai-service
               uri: ${AI_SERVICE_URI:http://localhost:8084}
               predicates:
@@ -53,10 +49,6 @@ spring:
               uri: ${AI_WEBSOCKET_URI:ws://localhost:8084}
               predicates:
                 - Path=/ws/ai/**
-            - id: expert-websocket
-              uri: ${BOOKING_WEBSOCKET_URI:ws://localhost:8082}
-              predicates:
-                - Path=/ws/expert/**
             - id: notification-websocket
               uri: ${AUTH_WEBSOCKET_URI:ws://localhost:8081}
               predicates:

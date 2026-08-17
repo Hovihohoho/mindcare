@@ -1,8 +1,7 @@
-import type { ExpertChatMessage } from "@/features/expert-chat/types/expert-chat.types";
 import type { NotificationItem } from "@/features/notification/types/notification.types";
 import type { ChatSource } from "@/features/ai-chat/types/chat.types";
 
-type RealtimeChannel = "ai" | "expert" | "notifications";
+type RealtimeChannel = "ai" | "notifications";
 type Listener = (payload: unknown) => void;
 
 interface AiResponseEvent {
@@ -17,11 +16,6 @@ interface AiErrorEvent {
   message: string;
 }
 
-export interface ExpertMessageEvent {
-  type: "EXPERT_MESSAGE_CREATED";
-  message: ExpertChatMessage;
-}
-
 export interface NotificationEvent {
   type: "NOTIFICATION_CREATED";
   notification: NotificationItem;
@@ -29,7 +23,6 @@ export interface NotificationEvent {
 
 const paths: Record<RealtimeChannel, string> = {
   ai: "/ws/ai",
-  expert: "/ws/expert",
   notifications: "/ws/notifications",
 };
 
@@ -42,7 +35,7 @@ class RealtimeClient {
   private generation = 0;
 
   connect(token: string) {
-    if (this.token === token && this.sockets.size === 3) return;
+    if (this.token === token && this.sockets.size === 2) return;
     this.disconnect();
     this.token = token;
     this.generation += 1;
@@ -74,7 +67,7 @@ class RealtimeClient {
     return this.sockets.get(channel)?.readyState === WebSocket.OPEN;
   }
 
-  askAi(question: string, topK = 5) {
+  askAi(question: string, history: Array<{ role: "user" | "assistant"; content: string }> = [], topK = 5) {
     const socket = this.sockets.get("ai");
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       return Promise.reject(new Error("AI WebSocket is not connected"));
@@ -99,6 +92,7 @@ class RealtimeClient {
           requestId,
           question,
           topK,
+          history,
         }));
       },
     );

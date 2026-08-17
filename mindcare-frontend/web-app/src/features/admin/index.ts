@@ -1,7 +1,6 @@
 export { AdminLayout } from "./components/AdminLayout";
 export { AdminDashboardPage } from "./pages/AdminDashboardPage";
 export { AdminUsersPage } from "./pages/AdminUsersPage";
-export { AdminExpertsPage } from "./pages/AdminExpertsPage";
 export { AdminContentPage } from "./pages/AdminContentPage";
 export { AdminNotificationsPage } from "./pages/AdminNotificationsPage";
 export { AdminAuditPage } from "./pages/AdminAuditPage";

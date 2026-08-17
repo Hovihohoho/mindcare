@@ -12,7 +12,7 @@ export function AuthLayout() {
   }
 
   if (currentUser.data) {
-    return <Navigate to={currentUser.data.role === "ROLE_EXPERT" ? "/expert" : "/"} replace />;
+    return <Navigate to="/" replace />;
   }
 
   return (

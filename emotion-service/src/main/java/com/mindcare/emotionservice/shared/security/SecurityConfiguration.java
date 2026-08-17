@@ -55,6 +55,10 @@ public class SecurityConfiguration {
                         .hasAuthority(UserRole.ROLE_USER.name())
                         .requestMatchers("/api/v1/assessment-results", "/api/v1/assessment-results/**")
                         .hasAuthority(UserRole.ROLE_USER.name())
+                        .requestMatchers("/api/v1/risk-alerts", "/api/v1/risk-alerts/**")
+                        .hasAuthority(UserRole.ROLE_USER.name())
+                        .requestMatchers("/api/v1/health-metrics", "/api/v1/health-metrics/**")
+                        .hasAuthority(UserRole.ROLE_USER.name())
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)

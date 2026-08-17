@@ -53,10 +53,14 @@ class RiskServiceImplTest {
     }
 
     @Test
-    void analyzeRiskCreatesHighAlertForExtremeScreeningResult() {
+    void analyzeRiskCreatesHighAlertForIndependentSelfHarmSignal() {
         UUID userId = UUID.randomUUID();
         AssessmentResultResponse result = new AssessmentResultResponse(
-                UUID.randomUUID(), AssessmentCode.PHQ_9, 1, 22, "EXTREME", "notice", List.of(), null
+                UUID.randomUUID(), AssessmentCode.PHQ_9, 1, 1, "MINIMAL", null, "MINIMAL",
+                "PHQ9_SCORE", "1.0", "PHQ9_KROENKE_2001", "1.0",
+                List.of(new AssessmentResultResponse.RiskSignalResponse(
+                        "SELF_HARM_ITEM", "PHQ9_ITEM_9", 1, "risk-phq9-item9-v1")),
+                "notice", List.of(), null
         );
         when(assessmentService.getAssessmentHistory(eq(userId), any(), any(), eq(null), anyInt()))
                 .thenReturn(new CursorPageResponse<>(List.of(result), null, false));
@@ -65,7 +69,8 @@ class RiskServiceImplTest {
         )).thenReturn(false);
         when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(mapper.toResponse(any())).thenReturn(new RiskAlertResponse(
-                null, "HIGH", "safe", false, null
+                null, "HIGH", "safe", "risk-signal-v2", "PHQ9_SELF_HARM_ITEM",
+                result.resultId(), false, null
         ));
 
         assertTrue(service.analyzeRisk(userId).isPresent());

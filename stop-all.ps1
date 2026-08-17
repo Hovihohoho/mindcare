@@ -35,11 +35,6 @@ $managedPorts = @(
         CommandPattern = "com.mindcare.auth_service.AuthServiceApplication"
     },
     [PSCustomObject]@{
-        Name = "booking-service"
-        Port = 8082
-        CommandPattern = "com.mindcare.bookingservice.BookingServiceApplication"
-    },
-    [PSCustomObject]@{
         Name = "emotion-service"
         Port = 8083
         CommandPattern = "com.mindcare.emotionservice.EmotionServiceApplication"

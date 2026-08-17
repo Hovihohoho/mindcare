@@ -26,7 +26,7 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class RiskServiceImpl implements RiskService {
 
-    private static final String RULE_VERSION = "risk-v1";
+    private static final String RULE_VERSION = "risk-signal-v2";
 
     private final PsychologicalAlertLogRepository repository;
     private final RiskAlertMapper mapper;
@@ -64,7 +64,7 @@ public class RiskServiceImpl implements RiskService {
             return Optional.empty();
         }
         AssessmentResultResponse result = results.items().get(0);
-        AlertDecision decision = decisionFor(result.riskLevel());
+        AlertDecision decision = decisionFor(result.riskSignals());
         if (decision == null) {
             return Optional.empty();
         }
@@ -143,22 +143,16 @@ public class RiskServiceImpl implements RiskService {
         }
     }
 
-    private AlertDecision decisionFor(String screeningLevel) {
-        return switch (screeningLevel) {
-            case "SEVERE" -> new AlertDecision(
-                    "ELEVATED",
-                    "ASSESSMENT_SEVERE",
-                    "Kết quả sàng lọc gần đây cho thấy bạn nên sớm trao đổi với chuyên gia sức khỏe tinh thần.",
-                    Duration.ofHours(72)
-            );
-            case "EXTREME" -> new AlertDecision(
-                    "HIGH",
-                    "ASSESSMENT_EXTREME",
-                    "Kết quả sàng lọc gần đây cho thấy bạn nên liên hệ chuyên gia sức khỏe tinh thần hoặc cơ sở y tế để được hỗ trợ trực tiếp.",
-                    Duration.ofHours(24)
-            );
-            default -> null;
-        };
+    private AlertDecision decisionFor(List<AssessmentResultResponse.RiskSignalResponse> signals) {
+        if (signals == null || signals.stream().noneMatch(signal -> "SELF_HARM_ITEM".equals(signal.type()))) {
+            return null;
+        }
+        return new AlertDecision(
+                "HIGH",
+                "PHQ9_SELF_HARM_ITEM",
+                "Câu trả lời gần đây cho thấy bạn có thể cần được hỗ trợ an toàn. Nếu bạn đang có ý định tự làm hại mình hoặc không thể giữ an toàn, hãy liên hệ dịch vụ cấp cứu tại địa phương, đến khoa cấp cứu gần nhất và nhờ một người tin cậy ở bên.",
+                Duration.ofHours(24)
+        );
     }
 
     private record AlertDecision(

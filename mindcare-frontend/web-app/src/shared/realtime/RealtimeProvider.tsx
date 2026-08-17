@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { tokenStorage } from "@/shared/lib/storage";
 import {
   realtimeClient,
-  type ExpertMessageEvent,
   type NotificationEvent,
 } from "./realtimeClient";
 
@@ -36,16 +35,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         }
       },
     );
-    const unsubscribeExpert = realtimeClient.subscribe("expert", (payload) => {
-      const event = payload as ExpertMessageEvent;
-      if (event.type !== "EXPERT_MESSAGE_CREATED") return;
-      queryClient.invalidateQueries({
-        queryKey: ["conversation-messages", event.message.conversationId],
-      });
-    });
     return () => {
       unsubscribeNotifications();
-      unsubscribeExpert();
     };
   }, [queryClient]);
 

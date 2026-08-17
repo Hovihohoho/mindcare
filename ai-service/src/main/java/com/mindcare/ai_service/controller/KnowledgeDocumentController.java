@@ -2,6 +2,7 @@ package com.mindcare.ai_service.controller;
 
 import com.mindcare.ai_service.dto.ApiResponse;
 import com.mindcare.ai_service.dto.KnowledgeDocumentRequest;
+import com.mindcare.ai_service.security.AuthenticatedUser;
 import com.mindcare.ai_service.entity.KnowledgeDocument;
 import com.mindcare.ai_service.service.EmbeddingService;
 import com.mindcare.ai_service.service.KnowledgeDocumentService;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,7 +43,7 @@ public class KnowledgeDocumentController {
     ResponseEntity<ApiResponse<KnowledgeDocument>> upload(
             @RequestPart("file") MultipartFile file,
             @RequestPart(value = "title", required = false) String title,
-            @RequestPart(value = "sourceUrl", required = false) String sourceUrl,
+            @RequestPart("sourceUrl") String sourceUrl,
             @RequestPart(value = "documentType", required = false) String documentType) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Đã tải tài liệu lên",
@@ -63,6 +65,20 @@ public class KnowledgeDocumentController {
     @PostMapping("/{id}/reindex")
     ApiResponse<KnowledgeDocument> reindex(@PathVariable UUID id) {
         return ApiResponse.success("Đã tạo lại embedding", service.reindex(id));
+    }
+
+    @PostMapping("/{id}/enable")
+    ApiResponse<KnowledgeDocument> enable(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ApiResponse.success("Đã cho phép AI sử dụng tài liệu", service.enableForAi(id, user.getName()));
+    }
+
+    @PostMapping("/{id}/reject")
+    ApiResponse<KnowledgeDocument> reject(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ApiResponse.success("Đã ngừng cho AI sử dụng tài liệu", service.reject(id, user.getName()));
     }
 
     @PostMapping("/reindex-all")

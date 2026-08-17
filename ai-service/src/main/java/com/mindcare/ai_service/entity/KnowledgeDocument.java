@@ -36,6 +36,24 @@ public class KnowledgeDocument {
     private String processingError;
     @Column(name = "indexed_at")
     private Instant indexedAt;
+    @Column(length = 255)
+    private String publisher;
+    @Column(name = "publication_year")
+    private Integer publicationYear;
+    @Column(name = "source_tier", nullable = false, length = 10)
+    private String sourceTier = "UNRATED";
+    @Column(name = "review_status", nullable = false, length = 30)
+    private String reviewStatus = "NEEDS_REVIEW";
+    @Column(name = "reviewed_by", length = 255)
+    private String reviewedBy;
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+    @Column(name = "expires_at")
+    private Instant expiresAt;
+    @Column(name = "evidence_scope", length = 1000)
+    private String evidenceScope;
+    @Column(length = 1000)
+    private String limitation;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)

@@ -36,7 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login", "/api/auth/register",
                                 "/api/auth/verify-email", "/api/auth/resend-verification",
                                 "/api/auth/forgot-password", "/api/auth/reset-password",
-                                "/api/auth/files/avatars/**", "/api/auth/public/experts/**",
+                                "/api/auth/files/avatars/**",
                                 "/api/auth/internal/**").permitAll()
                         .requestMatchers("/api/auth/admin/**",
                                 "/api/auth/notifications/admin/**").hasRole("ADMIN")

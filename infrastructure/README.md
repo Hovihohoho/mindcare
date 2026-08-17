@@ -55,10 +55,7 @@ use the password `MindCare@123`. Useful logins include:
 | --- | --- |
 | Admin | `admin@mindcare.local` |
 | User | `user1@mindcare.local` through `user6@mindcare.local` |
-| Expert | `expert1@mindcare.local` through `expert8@mindcare.local` |
-| Pending applicant | `pending.expert@mindcare.local` |
-| Rejected applicant | `rejected.expert@mindcare.local` |
 
-The dataset includes approved expert profiles, future schedules, representative booking and
-payment states, reviews, notifications, bookmarks, emotion journals, health metrics, PHQ-9
+The dataset includes user/admin accounts. Application seeders and migrations provide
+assessment, AI knowledge, notification, bookmark, emotion journal, and health metric
 results, and AI knowledge documents.

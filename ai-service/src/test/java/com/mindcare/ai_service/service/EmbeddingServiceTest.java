@@ -47,6 +47,8 @@ class EmbeddingServiceTest {
         document.setTitle(title);
         document.setContent("Knowledge content");
         document.setActive(true);
+        document.setReviewStatus("APPROVED");
+        document.setSourceTier("A");
         return document;
     }
 }

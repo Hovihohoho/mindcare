@@ -7,6 +7,9 @@ public record RiskAlertResponse(
         UUID id,
         String alertLevel,
         String triggerReason,
+        String ruleVersion,
+        String reasonCode,
+        UUID sourceResultId,
         Boolean notified,
         OffsetDateTime createdAt
 ) {

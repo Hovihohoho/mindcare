@@ -75,7 +75,7 @@ class NotificationRepositoryIntegrationTest extends AbstractPostgreSqlIntegratio
     }
 
     private Notification notification(UUID userId, UUID eventId) {
-        return Notification.create(userId, eventId, "BOOKING_REMINDER", "Nhắc lịch",
-                "Bạn có một lịch tư vấn sắp tới.", "/bookings");
+        return Notification.create(userId, eventId, "ASSESSMENT_REMINDER", "Nhắc đánh giá",
+                "Bạn có một bài đánh giá cần hoàn thành.", "/assessments");
     }
 }

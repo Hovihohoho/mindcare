@@ -49,6 +49,28 @@ public class AssessmentResultEntity {
     @Column(name = "risk_level", nullable = false, updatable = false, length = 50)
     private String riskLevel;
 
+    @Column(name = "normalized_score", updatable = false)
+    private Integer normalizedScore;
+
+    @Column(name = "interpretation_level", updatable = false, length = 50)
+    private String interpretationLevel;
+
+    @Column(name = "scoring_policy_key", updatable = false, length = 100)
+    private String scoringPolicyKey;
+
+    @Column(name = "scoring_policy_version", updatable = false, length = 30)
+    private String scoringPolicyVersion;
+
+    @Column(name = "benchmark_policy_key", updatable = false, length = 100)
+    private String benchmarkPolicyKey;
+
+    @Column(name = "benchmark_policy_version", updatable = false, length = 30)
+    private String benchmarkPolicyVersion;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "risk_signals", updatable = false, columnDefinition = "JSONB")
+    private JsonNode riskSignals;
+
     @Column(name = "assessment_version", nullable = false, updatable = false)
     private Integer assessmentVersion;
 
@@ -95,6 +117,13 @@ public class AssessmentResultEntity {
             String submissionHash,
             String screeningNotice,
             JsonNode recommendations
+            , Integer normalizedScore
+            , String interpretationLevel
+            , String scoringPolicyKey
+            , String scoringPolicyVersion
+            , String benchmarkPolicyKey
+            , String benchmarkPolicyVersion
+            , JsonNode riskSignals
     ) {
         this.userId = Objects.requireNonNull(userId, "userId must not be null");
         this.assessment = Objects.requireNonNull(assessment, "assessment must not be null");
@@ -107,6 +136,23 @@ public class AssessmentResultEntity {
         this.submissionHash = submissionHash;
         this.screeningNotice = Objects.requireNonNull(screeningNotice, "screeningNotice must not be null");
         this.recommendations = Objects.requireNonNull(recommendations, "recommendations must not be null");
+        this.normalizedScore = normalizedScore;
+        this.interpretationLevel = Objects.requireNonNull(interpretationLevel, "interpretationLevel must not be null");
+        this.scoringPolicyKey = Objects.requireNonNull(scoringPolicyKey, "scoringPolicyKey must not be null");
+        this.scoringPolicyVersion = Objects.requireNonNull(scoringPolicyVersion, "scoringPolicyVersion must not be null");
+        this.benchmarkPolicyKey = Objects.requireNonNull(benchmarkPolicyKey, "benchmarkPolicyKey must not be null");
+        this.benchmarkPolicyVersion = Objects.requireNonNull(benchmarkPolicyVersion, "benchmarkPolicyVersion must not be null");
+        this.riskSignals = Objects.requireNonNull(riskSignals, "riskSignals must not be null");
+    }
+
+    public AssessmentResultEntity(UUID userId, AssessmentEntity assessment, Integer totalScore,
+            String riskLevel, JsonNode answersDetail, Integer assessmentVersion,
+            String scoringRuleVersion, String idempotencyKey, String submissionHash,
+            String screeningNotice, JsonNode recommendations) {
+        this(userId, assessment, totalScore, riskLevel, answersDetail, assessmentVersion,
+                scoringRuleVersion, idempotencyKey, submissionHash, screeningNotice, recommendations,
+                null, riskLevel, scoringRuleVersion, "legacy", "LEGACY", "legacy",
+                com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.arrayNode());
     }
 
     public void softDelete(OffsetDateTime deletedAt) {

@@ -1,6 +1,9 @@
 export interface ChatSource {
+  citationNumber: number;
+  id?: string;
   title: string;
-  excerpt?: string;
+  sourceUrl: string;
+  similarity?: number;
 }
 
 export interface ChatMessage {

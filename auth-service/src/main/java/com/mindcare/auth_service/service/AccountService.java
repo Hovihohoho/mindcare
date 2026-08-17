@@ -57,14 +57,6 @@ public class AccountService {
         user.setGender(blankToNull(request.gender()));
         user.setAddress(blankToNull(request.address()));
         user.setBio(blankToNull(request.bio()));
-        if ("ROLE_EXPERT".equals(user.getRole().getName()) || !"NONE".equals(user.getExpertStatus())) {
-            user.setHeadline(blankToNull(request.headline()));
-            user.setSpecialties(blankToNull(request.specialties()));
-            user.setYearsOfExperience(request.yearsOfExperience());
-            user.setConsultationFee(request.consultationFee());
-            user.setWorkplace(blankToNull(request.workplace()));
-            user.setEducation(blankToNull(request.education()));
-        }
         return UserSummary.from(userRepository.save(user));
     }
 

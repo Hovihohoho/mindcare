@@ -23,7 +23,12 @@ public class KnowledgeVectorRepository {
                 SELECT id, title, content, source_url,
                        1 - (embedding OPERATOR(public.<=>) ?::public.vector) AS similarity
                 FROM ai_schema.knowledge_documents
-                WHERE is_active = TRUE AND embedding IS NOT NULL
+                WHERE is_active = TRUE
+                  AND review_status = 'APPROVED'
+                  AND source_tier IN ('A', 'B')
+                  AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+                  AND source_url LIKE 'https://%'
+                  AND embedding IS NOT NULL
                   AND 1 - (embedding OPERATOR(public.<=>) ?::public.vector) >= ?
                 ORDER BY embedding OPERATOR(public.<=>) ?::public.vector
                 LIMIT ?

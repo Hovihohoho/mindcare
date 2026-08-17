@@ -90,7 +90,7 @@ class VerifiedIdentityGlobalFilterTest {
         server.start();
         var filter = new VerifiedIdentityGlobalFilter(
                 "http://127.0.0.1:" + server.getAddress().getPort());
-        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/bookings")
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/assessments")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer revoked-token")
                 .build());
         AtomicBoolean forwarded = new AtomicBoolean();

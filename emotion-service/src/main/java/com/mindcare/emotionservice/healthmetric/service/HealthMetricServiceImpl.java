@@ -42,7 +42,7 @@ import java.util.UUID;
 public class HealthMetricServiceImpl implements HealthMetricService {
 
     private static final int MAX_BATCH_SIZE = 100;
-    private static final Set<String> SOURCE_TYPES = Set.of("APPLE_HEALTH", "GOOGLE_HEALTH", "MANUAL");
+    private static final Set<String> SOURCE_TYPES = Set.of("APPLE_HEALTH", "HEALTH_CONNECT", "GOOGLE_HEALTH", "MANUAL");
 
     private final HealthMetricRepository repository;
     private final HealthMetricSyncRequestRepository syncRequestRepository;
@@ -292,6 +292,9 @@ public class HealthMetricServiceImpl implements HealthMetricService {
 
     private String normalizeSource(String sourceType) {
         String normalized = ServiceValidator.requireText(sourceType, "sourceType", 50).toUpperCase(Locale.ROOT);
+        if ("GOOGLE_HEALTH".equals(normalized)) {
+            normalized = "HEALTH_CONNECT";
+        }
         if (!SOURCE_TYPES.contains(normalized)) {
             throw new InvalidRequestException("INVALID_SOURCE_TYPE", "unsupported sourceType");
         }

@@ -5,7 +5,7 @@ import type { AuthUser } from "@/features/auth";
 
 export function ForbiddenPage() {
   const role = userStorage.get<AuthUser>()?.role;
-  const destination = role === "ROLE_ADMIN" ? "/admin" : role === "ROLE_EXPERT" ? "/expert" : "/";
+  const destination = role === "ROLE_ADMIN" ? "/admin" : "/";
   return (
     <main className="grid min-h-screen place-items-center bg-slate-50 px-5 text-center">
       <div>

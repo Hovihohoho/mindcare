@@ -14,9 +14,7 @@ export function useLogin(returnTo?: string) {
       const roleDestination =
         session.user.role === "ROLE_ADMIN"
           ? "/admin"
-          : session.user.role === "ROLE_EXPERT"
-            ? "/expert"
-            : "/";
+          : "/";
       const destination = returnTo?.startsWith("/") && !returnTo.startsWith("//")
         ? returnTo
         : roleDestination;

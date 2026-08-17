@@ -35,15 +35,15 @@ public class AssessmentCatalogSeeder implements ApplicationRunner {
                 "Trong hai tuần vừa qua, hãy chọn mức độ thường xuyên bạn gặp từng vấn đề. "
                         + "Kết quả chỉ mang tính sàng lọc, không thay thế chẩn đoán y khoa.",
                 List.of(
-                        "Ít hứng thú hoặc không còn thấy vui khi làm mọi việc",
-                        "Cảm thấy buồn bã, chán nản hoặc tuyệt vọng",
-                        "Khó ngủ, ngủ không sâu hoặc ngủ quá nhiều",
-                        "Cảm thấy mệt mỏi hoặc thiếu năng lượng",
-                        "Ăn kém ngon hoặc ăn quá nhiều",
-                        "Cảm thấy bản thân tồi tệ, thất bại hoặc làm gia đình thất vọng",
-                        "Khó tập trung vào công việc, đọc sách hoặc xem truyền hình",
-                        "Di chuyển hoặc nói chậm, hoặc bồn chồn nhiều hơn bình thường",
-                        "Có ý nghĩ rằng thà mình không còn sống hoặc muốn làm tổn thương bản thân"));
+                        "Ít hứng thú hoặc không còn thấy vui khi làm mọi việc.",
+                        "Cảm thấy buồn bã, chán nản hoặc tuyệt vọng.",
+                        "Khó ngủ, ngủ không sâu hoặc ngủ quá nhiều.",
+                        "Cảm thấy mệt mỏi hoặc thiếu năng lượng.",
+                        "Ăn kém ngon hoặc ăn quá nhiều.",
+                        "Cảm thấy bản thân tồi tệ, thất bại hoặc làm gia đình thất vọng.",
+                        "Khó tập trung vào công việc, đọc sách hoặc xem truyền hình.",
+                        "Di chuyển hoặc nói chậm, hoặc bồn chồn nhiều hơn bình thường.",
+                        "Có ý nghĩ rằng thà mình không còn sống hoặc muốn làm tổn thương bản thân."));
         seedIfMissing(
                 AssessmentCode.GAD_7,
                 "GAD-7 - Sàng lọc triệu chứng lo âu",

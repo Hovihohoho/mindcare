@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Bell, BrainCircuit, FileText, LayoutDashboard, LogOut, ScrollText, UserCheck, Users } from "lucide-react";
+import { Bell, BrainCircuit, FileText, LayoutDashboard, LogOut, ScrollText, Users } from "lucide-react";
 import { authApi } from "@/features/auth";
 import { Button, Logo, cn } from "@/shared";
 import { tokenStorage } from "@/shared/lib/storage";
@@ -7,7 +7,6 @@ import { tokenStorage } from "@/shared/lib/storage";
 const links = [
   ["/admin", "Dashboard", LayoutDashboard],
   ["/admin/users", "Người dùng", Users],
-  ["/admin/experts", "Duyệt chuyên gia", UserCheck],
   ["/admin/content", "Nội dung", FileText],
   ["/admin/ai-documents", "Tài liệu AI", BrainCircuit],
   ["/admin/notifications", "Thông báo", Bell],

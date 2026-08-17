@@ -5,6 +5,7 @@ import { Badge, Card, Loading } from "@/shared";
 import { assessmentApi } from "../api/assessment.api";
 import { AssessmentCard } from "../components/AssessmentCard";
 import { useAssessments } from "../hooks/useAssessments";
+import { resultInterpretation, riskLevelLabel } from "../utils/riskLevel";
 
 const historyTo = new Date();
 const historyFrom = new Date(historyTo);
@@ -64,7 +65,7 @@ export function AssessmentOverviewPage() {
             <div className="grid gap-3 border-t border-line px-8 py-5 md:grid-cols-[1.25fr_1fr_1fr_1fr] md:items-center" key={item.resultId}>
               <b>{item.assessmentCode}</b>
               <span className="text-slate-500">{new Date(item.createdAt).toLocaleString("vi-VN")}</span>
-              <Badge className="w-fit" tone={item.riskLevel === "NORMAL" ? "success" : "warning"}>{item.riskLevel}</Badge>
+              <Badge className="w-fit" tone={["MINIMAL", "NORMAL", "ADEQUATE_WELL_BEING", "TRACKING_ONLY"].includes(resultInterpretation(item)) ? "success" : "warning"}>{riskLevelLabel[resultInterpretation(item)]}</Badge>
               <Link className="text-brand-700" to={`/assessments/${item.assessmentCode}/result?resultId=${item.resultId}`}>Xem chi tiết ↗</Link>
             </div>
           ))}

@@ -23,8 +23,13 @@ class KnowledgeVectorRepositoryTests {
     @Test
     void stores768DimensionsAndReturnsClosestDocument() {
         UUID id = UUID.randomUUID();
-        jdbcTemplate.update("INSERT INTO ai_schema.knowledge_documents(id,title,content) VALUES (?,?,?)",
-                id, "Vector repository test", "Test content");
+        jdbcTemplate.update("""
+                        INSERT INTO ai_schema.knowledge_documents
+                            (id,title,content,source_url,source_tier,review_status,is_active)
+                        VALUES (?,?,?,?,?,?,TRUE)
+                        """,
+                id, "Vector repository test", "Test content", "https://www.who.int/",
+                "A", "APPROVED");
         List<Double> vector = new ArrayList<>(Collections.nCopies(768, 0.0));
         vector.set(0, 1.0);
         vectorRepository.updateEmbedding(id, vector);

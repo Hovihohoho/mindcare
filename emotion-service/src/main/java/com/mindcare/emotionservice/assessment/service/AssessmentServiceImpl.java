@@ -94,6 +94,7 @@ public class AssessmentServiceImpl implements AssessmentService {
     public List<AssessmentSummaryResponse> getPublishedAssessments() {
         return assessmentRepository.findByStatusAndDeletedAtIsNullOrderByCodeAsc(AssessmentStatus.PUBLISHED)
                 .stream()
+                .filter(assessment -> assessment.getCode() != AssessmentCode.DASS_21)
                 .map(assessment -> new AssessmentSummaryResponse(
                         assessment.getId(), assessment.getCode(), assessment.getAssessmentVersion(),
                         assessment.getTitle(), assessment.getDescription(),
@@ -103,6 +104,9 @@ public class AssessmentServiceImpl implements AssessmentService {
 
     @Override
     public AssessmentDetailResponse getPublishedAssessment(AssessmentCode assessmentCode) {
+        if (assessmentCode == AssessmentCode.DASS_21) {
+            throw new ResourceNotFoundException("Published assessment");
+        }
         AssessmentEntity assessment = assessmentRepository
                 .findByCodeAndStatusAndDeletedAtIsNull(
                         requireAssessmentCode(assessmentCode),
@@ -122,6 +126,9 @@ public class AssessmentServiceImpl implements AssessmentService {
     ) {
         ServiceValidator.requireUserId(userId);
         AssessmentCode code = requireAssessmentCode(assessmentCode);
+        if (code == AssessmentCode.DASS_21) {
+            throw new ResourceNotFoundException("Published assessment");
+        }
         String key = ServiceValidator.requireText(idempotencyKey, "idempotencyKey", 255);
         if (request == null || request.assessmentVersion() == null || request.answers() == null) {
             throw new InvalidRequestException("INVALID_SUBMISSION", "version and answers are required");
@@ -157,7 +164,7 @@ public class AssessmentServiceImpl implements AssessmentService {
             throw new InvalidRequestException("INCOMPLETE_ASSESSMENT", "Every question must have exactly one answer");
         }
         ArrayNode answerSnapshot = objectMapper.createArrayNode();
-        int totalScore = 0;
+        List<Integer> rawAnswers = new ArrayList<>();
         for (QuestionEntity question : questions) {
             UUID selectedOptionId = submittedAnswers.remove(question.getId());
             if (selectedOptionId == null) {
@@ -170,7 +177,7 @@ public class AssessmentServiceImpl implements AssessmentService {
                             "INVALID_ANSWER_OPTION",
                             "Selected option does not belong to the question"
                     ));
-            totalScore += selectedOption.getScoreValue();
+            rawAnswers.add(selectedOption.getScoreValue());
             ObjectNode snapshotItem = answerSnapshot.addObject();
             snapshotItem.put("questionId", question.getId().toString());
             snapshotItem.put("optionId", selectedOption.getId().toString());
@@ -180,11 +187,11 @@ public class AssessmentServiceImpl implements AssessmentService {
             throw new InvalidRequestException("INVALID_QUESTION", "Submission contains a question outside assessment");
         }
 
-        AssessmentScoringPolicyRegistry.ScoringOutcome outcome = scoringPolicies.score(code, totalScore);
+        AssessmentScoringPolicyRegistry.ScoringOutcome outcome = scoringPolicies.score(code, rawAnswers);
         AssessmentResultEntity result = new AssessmentResultEntity(
                 userId,
                 assessment,
-                totalScore,
+                outcome.rawScore(),
                 outcome.riskLevel(),
                 answerSnapshot,
                 assessment.getAssessmentVersion(),
@@ -192,7 +199,14 @@ public class AssessmentServiceImpl implements AssessmentService {
                 key,
                 submissionHash,
                 outcome.screeningNotice(),
-                objectMapper.valueToTree(outcome.recommendations())
+                objectMapper.valueToTree(outcome.recommendations()),
+                outcome.normalizedScore(),
+                outcome.interpretationLevel(),
+                outcome.scoringPolicyKey(),
+                outcome.scoringPolicyVersion(),
+                outcome.benchmarkPolicyKey(),
+                outcome.benchmarkPolicyVersion(),
+                objectMapper.valueToTree(outcome.riskSignals())
         );
         return toResultResponse(resultRepository.saveAndFlush(result));
     }
@@ -433,13 +447,16 @@ public class AssessmentServiceImpl implements AssessmentService {
         if (result.getRecommendations() != null && result.getRecommendations().isArray()) {
             result.getRecommendations().forEach(node -> recommendations.add(node.asText()));
         }
-        return mapper.toResultResponse(
-                result,
-                recommendations
-        );
+        return mapper.toResultResponse(result, recommendations);
     }
 
     private void validatePublishable(AssessmentEntity assessment) {
+        if (assessment.getCode() == AssessmentCode.DASS_21) {
+            throw new InvalidRequestException(
+                    "ASSESSMENT_REVIEW_REQUIRED",
+                    "DASS-21 is not available for automated public interpretation"
+            );
+        }
         AssessmentDefinition definition = assessmentDefinitions.getRequired(assessment.getCode());
         List<QuestionEntity> questions = activeQuestions(assessment.getId());
         if (questions.size() != definition.requiredQuestionCount()) {

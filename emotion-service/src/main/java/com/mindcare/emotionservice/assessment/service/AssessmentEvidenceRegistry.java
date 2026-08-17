@@ -45,6 +45,16 @@ public class AssessmentEvidenceRegistry {
                 "gad-7-scoring-v1",
                 "Sàng lọc mức độ thường gặp của các triệu chứng lo âu.",
                 LIMITATION));
+        configured.put(AssessmentCode.PSS_10, new AssessmentEvidenceResponse(
+                "Carnegie Mellon University",
+                "PSS Scoring",
+                "https://www.cmu.edu/dietrich/psychology/stress-immunity-disease-lab/scales/html/pssscoring.html",
+                2010,
+                "PSS-10",
+                "See source",
+                "PSS10_SCORE-1.0",
+                "Theo dõi stress cảm nhận; các câu 4, 5, 7 và 8 được đảo điểm.",
+                LIMITATION));
         evidence = Map.copyOf(configured);
     }
 

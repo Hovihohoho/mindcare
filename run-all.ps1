@@ -170,26 +170,13 @@ $databaseName = if ([string]::IsNullOrWhiteSpace($env:POSTGRES_DB)) {
     $env:POSTGRES_DB
 }
 $env:DB_URL = "jdbc:postgresql://127.0.0.1:$databasePort/$databaseName"
-if ([string]::IsNullOrWhiteSpace($env:BOOKING_AUTH_ADAPTER_MODE)) {
-    $env:BOOKING_AUTH_ADAPTER_MODE = "auth"
-}
-if ([string]::IsNullOrWhiteSpace($env:AUTH_SERVICE_URL)) {
-    $env:AUTH_SERVICE_URL = "http://localhost:8081"
-}
 if ([string]::IsNullOrWhiteSpace($env:JWT_SECRET)) {
     $env:JWT_SECRET = "TWluZENhcmUtTG9jYWwtT25seS1KV1QtU2VjcmV0LTIwMjYh"
-}
-if ([string]::IsNullOrWhiteSpace($env:INTERNAL_SERVICE_SECRET)) {
-    $env:INTERNAL_SERVICE_SECRET = "mindcare-local-internal"
-}
-if ([string]::IsNullOrWhiteSpace($env:BOOKING_PAYMENT_REQUIRED)) {
-    $env:BOOKING_PAYMENT_REQUIRED = "false"
 }
 
 $ports = [ordered]@{
     "API Gateway" = 8079
     "Auth Service" = 8081
-    "Booking Service" = 8082
     "Emotion Service" = 8083
     "AI Service" = 8084
     "Frontend" = 5173
@@ -225,9 +212,6 @@ $maven = Get-MavenExecutable
 $processes = @()
 $processes += Start-LoggedProcess -Name "auth-service" -FilePath $maven `
     -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "auth-service")
-
-$processes += Start-LoggedProcess -Name "booking-service" -FilePath $maven `
-    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "booking-service")
 
 $processes += Start-LoggedProcess -Name "emotion-service" -FilePath $maven `
     -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "emotion-service")

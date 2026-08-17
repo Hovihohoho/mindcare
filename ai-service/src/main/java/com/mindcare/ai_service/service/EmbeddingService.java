@@ -33,6 +33,9 @@ public class EmbeddingService {
     public int reindexAll() {
         List<KnowledgeDocument> documents = documentRepository.findAll().stream()
                 .filter(document -> Boolean.TRUE.equals(document.getActive()))
+                .filter(document -> "APPROVED".equals(document.getReviewStatus()))
+                .filter(document -> List.of("A", "B").contains(document.getSourceTier()))
+                .filter(document -> document.getExpiresAt() == null || document.getExpiresAt().isAfter(Instant.now()))
                 .toList();
         int indexed = 0;
         for (KnowledgeDocument document : documents) {
@@ -51,6 +54,13 @@ public class EmbeddingService {
     }
 
     private boolean reindexDocument(KnowledgeDocument document) {
+        if (!"APPROVED".equals(document.getReviewStatus())
+                || !List.of("A", "B").contains(document.getSourceTier())) {
+            document.setActive(false);
+            document.setProcessingStatus("PENDING_REVIEW");
+            documentRepository.save(document);
+            return false;
+        }
         document.setProcessingStatus("PROCESSING");
         document.setProcessingError(null);
         documentRepository.saveAndFlush(document);

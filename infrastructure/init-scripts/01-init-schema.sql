@@ -4,6 +4,5 @@ CREATE SCHEMA IF NOT EXISTS auth_schema;
 
 CREATE SCHEMA IF NOT EXISTS emotion_schema;
 
-CREATE SCHEMA IF NOT EXISTS booking_schema;
 
 CREATE SCHEMA IF NOT EXISTS ai_schema;

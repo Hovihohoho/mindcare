@@ -114,5 +114,21 @@ WHERE id IN (
     md5('demo-ai-gad7')::UUID,
     md5('demo-ai-breathing')::UUID
 );
+
+-- Các bản tóm tắt demo chỉ phục vụ nhập liệu ban đầu. Một URL hợp lệ không đồng nghĩa
+-- toàn bộ nội dung đã được nguồn trực tiếp chứng minh, nên không cho RAG sử dụng tự động.
+UPDATE ai_schema.knowledge_documents
+SET is_active = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id IN (
+    md5('demo-ai-safety-crisis')::UUID,
+    md5('demo-ai-stress')::UUID,
+    md5('demo-ai-depression')::UUID,
+    md5('demo-ai-anxiety')::UUID,
+    md5('demo-ai-sleep')::UUID,
+    md5('demo-ai-grounding')::UUID,
+    md5('demo-ai-screening')::UUID,
+    md5('demo-ai-professional-help')::UUID
+);
 END IF;
 END $$;

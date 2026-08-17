@@ -4,7 +4,6 @@ import java.util.Locale;
 
 public enum UserRole {
     ROLE_USER,
-    ROLE_EXPERT,
     ROLE_ADMIN;
 
     public static UserRole parse(String value) {

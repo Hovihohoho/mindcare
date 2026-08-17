@@ -6,7 +6,6 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.math.BigDecimal;
 
 @Data
 @Entity
@@ -47,25 +46,6 @@ public class User {
     private String address;
     @Column(columnDefinition = "TEXT")
     private String bio;
-    @Column(length = 255)
-    private String headline;
-    @Column(columnDefinition = "TEXT")
-    private String specialties;
-    @Column(name = "years_of_experience")
-    private Integer yearsOfExperience;
-    @Column(name = "consultation_fee", precision = 12, scale = 2)
-    private BigDecimal consultationFee;
-    private String workplace;
-    @Column(columnDefinition = "TEXT")
-    private String education;
-    @Column(name = "expert_status", nullable = false)
-    private String expertStatus = "NONE";
-    @Column(name = "expert_review_reason", columnDefinition = "TEXT")
-    private String expertReviewReason;
-    @Column(name = "expert_submitted_at")
-    private OffsetDateTime expertSubmittedAt;
-    @Column(name = "expert_reviewed_at")
-    private OffsetDateTime expertReviewedAt;
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 }

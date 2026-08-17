@@ -173,9 +173,12 @@ class AssessmentServiceImplTest {
         assertEquals(userId, persisted.getUserId());
         assertSame(assessment, persisted.getAssessment());
         assertEquals(2, persisted.getTotalScore());
-        assertEquals("NORMAL", persisted.getRiskLevel());
+        assertEquals("MINIMAL", persisted.getRiskLevel());
+        assertEquals("MINIMAL", persisted.getInterpretationLevel());
+        assertEquals("PHQ9_SCORE", persisted.getScoringPolicyKey());
+        assertEquals("PHQ9_KROENKE_2001", persisted.getBenchmarkPolicyKey());
         assertEquals(1, persisted.getAssessmentVersion());
-        assertEquals("phq-9-scoring-v1", persisted.getScoringRuleVersion());
+        assertEquals("PHQ9_SCORE-1.0", persisted.getScoringRuleVersion());
         assertEquals("submission-happy", persisted.getIdempotencyKey());
         assertNotNull(persisted.getSubmissionHash());
         assertEquals(questionId.toString(), persisted.getAnswersDetail().get(0).get("questionId").asText());

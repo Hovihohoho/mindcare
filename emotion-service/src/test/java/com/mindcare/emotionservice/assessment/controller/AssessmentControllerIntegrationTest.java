@@ -166,7 +166,7 @@ class AssessmentControllerIntegrationTest {
     void nonUserRoleCannotReadPublishedAssessmentDetail() throws Exception {
         mockMvc.perform(get(ENDPOINT + "/PHQ-9")
                         .header(USER_ID_HEADER, UUID.randomUUID())
-                        .header(USER_ROLE_HEADER, "ROLE_EXPERT"))
+                        .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
 

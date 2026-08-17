@@ -1,4 +1,4 @@
-export type UserRole = "ROLE_USER" | "ROLE_EXPERT" | "ROLE_ADMIN";
+export type UserRole = "ROLE_USER" | "ROLE_ADMIN";
 
 export interface AuthUser {
   id: string;
@@ -14,22 +14,10 @@ export interface AuthUser {
   gender?: string | null;
   address?: string | null;
   bio?: string | null;
-  headline?: string | null;
-  specialties?: string | null;
-  yearsOfExperience?: number | null;
-  consultationFee?: number | null;
-  workplace?: string | null;
-  education?: string | null;
-  expertStatus?: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
-  expertReviewReason?: string | null;
-  expertSubmittedAt?: string | null;
-  expertReviewedAt?: string | null;
 }
 
 export type UpdateProfilePayload = Pick<AuthUser, "fullName"> &
-  Partial<Pick<AuthUser, "phone" | "birthDate" | "gender" | "address" | "bio" |
-    "headline" | "specialties" | "yearsOfExperience" | "consultationFee" |
-    "workplace" | "education">>;
+  Partial<Pick<AuthUser, "phone" | "birthDate" | "gender" | "address" | "bio">>;
 
 export interface LoginSession {
   id: string;

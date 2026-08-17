@@ -1,19 +1,15 @@
 package com.mindcare.auth_service.controller;
 
-import com.mindcare.auth_service.dto.AccountRequests;
 import com.mindcare.auth_service.dto.ApiResponse;
 import com.mindcare.auth_service.dto.UserSummary;
 import com.mindcare.auth_service.entity.AdminAuditLog;
 import com.mindcare.auth_service.entity.Role;
 import com.mindcare.auth_service.entity.User;
 import com.mindcare.auth_service.repository.AdminAuditLogRepository;
-import com.mindcare.auth_service.repository.ExpertDocumentRepository;
 import com.mindcare.auth_service.repository.RoleRepository;
 import com.mindcare.auth_service.repository.UserRepository;
 import com.mindcare.auth_service.service.AccountService;
 import com.mindcare.auth_service.service.AuditService;
-import com.mindcare.auth_service.service.ExpertReviewService;
-import jakarta.validation.Valid;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -40,18 +36,14 @@ public class AdminManagementController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final AdminAuditLogRepository auditRepository;
-    private final ExpertDocumentRepository documentRepository;
     private final AuditService auditService;
     private final AccountService accountService;
-    private final ExpertReviewService expertReviewService;
 
     @GetMapping("/dashboard")
     public ApiResponse<Map<String, Long>> dashboard() {
         return ApiResponse.success("Thống kê quản trị", Map.of(
                 "totalUsers", userRepository.count(),
-                "activeUsers", userRepository.countByIsActiveTrue(),
-                "experts", userRepository.countByRoleName("ROLE_EXPERT"),
-                "pendingExperts", userRepository.countByExpertStatus("PENDING")));
+                "activeUsers", userRepository.countByIsActiveTrue()));
     }
 
     @GetMapping("/users")
@@ -85,6 +77,9 @@ public class AdminManagementController {
     @PatchMapping("/users/{id}/role")
     public ApiResponse<UserSummary> role(Authentication auth, @PathVariable UUID id,
                                           @RequestBody RoleRequest request) {
+        if (!"ROLE_USER".equals(request.role()) && !"ROLE_ADMIN".equals(request.role())) {
+            throw new RuntimeException("Vai trò không hợp lệ");
+        }
         Role role = roleRepository.findByName(request.role())
                 .orElseThrow(() -> new RuntimeException("Vai trò không hợp lệ"));
         User user = find(id);
@@ -110,35 +105,6 @@ public class AdminManagementController {
         userRepository.delete(user);
         userRepository.flush();
         return ApiResponse.success("Đã xóa người dùng", null);
-    }
-
-    @GetMapping("/experts")
-    public ApiResponse<Page<UserSummary>> experts(
-            @RequestParam(defaultValue = "PENDING") String status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.success("Hồ sơ chuyên gia",
-                userRepository.findByExpertStatus(status,
-                        PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
-                                Sort.by(Sort.Direction.DESC, "expertSubmittedAt"))).map(UserSummary::from));
-    }
-
-    @PatchMapping("/experts/{id}/review")
-    public ApiResponse<UserSummary> review(Authentication auth, @PathVariable UUID id,
-            @Valid @RequestBody AccountRequests.ExpertReviewRequest request) {
-        User saved = expertReviewService.reviewPending(
-                id, request.status(), request.reason(), auth.getName());
-        return ApiResponse.success("Đã lưu kết quả duyệt hồ sơ", UserSummary.from(saved));
-    }
-
-    @GetMapping("/experts/{id}")
-    public ApiResponse<ExpertAccountController.ExpertProfileResponse> expert(@PathVariable UUID id) {
-        User user = find(id);
-        return ApiResponse.success("Chi tiết hồ sơ chuyên gia",
-                new ExpertAccountController.ExpertProfileResponse(
-                        UserSummary.from(user),
-                        documentRepository.findByUserIdOrderByCreatedAtDesc(id).stream()
-                                .map(ExpertAccountController.DocumentResponse::from).toList()));
     }
 
     @GetMapping("/audit-logs")
