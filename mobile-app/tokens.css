@@ -1,0 +1,43 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Index-First · tone: soft clinical · anchor hue: MindCare blue */
+:root {
+  --color-canvas: #f8fbfd;
+  --color-surface: #ffffff;
+  --color-surface-muted: #edf8fc;
+  --color-ink: #1e293b;
+  --color-ink-soft: #475569;
+  --color-muted: #64748b;
+  --color-line: #dce4ec;
+  --color-brand: #0e86ad;
+  --color-brand-dark: #075f80;
+  --color-brand-deep: #064767;
+  --color-brand-soft: #c6e7ff;
+  --color-mint: #d8f7e8;
+  --color-mint-ink: #1b6b4e;
+  --color-danger: #b4233d;
+  --font-display: "Be Vietnam Pro", sans-serif;
+  --font-body: "Be Vietnam Pro", sans-serif;
+  --space-xxs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-xxl: 2.5rem;
+  --text-caption: 0.75rem;
+  --text-label: 0.8125rem;
+  --text-body: 0.9375rem;
+  --text-card-title: 1rem;
+  --text-section: 1.25rem;
+  --text-title: 1.75rem;
+  --radius-sm: 0.625rem;
+  --radius-input: 0.75rem;
+  --radius-card: 1rem;
+  --radius-sheet: 1.5rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+  --rule-subtle: 1px;
+}

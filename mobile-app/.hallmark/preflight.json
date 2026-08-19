@@ -1,0 +1,10 @@
+{
+  "date": "2026-08-11",
+  "source": "../mindcare-frontend/web-app",
+  "font": "Be Vietnam Pro",
+  "palette": "MindCare blue, cool white, mint support",
+  "motion": "motion-cut",
+  "spacing": "4-point scale",
+  "framework": "Expo SDK 54, React Native 0.81, Expo Router 6",
+  "data": "Real auth and emotion APIs through API Gateway port 8079"
+}
