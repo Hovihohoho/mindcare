@@ -2,7 +2,7 @@ export type AuthUser = {
   id: string;
   email: string;
   fullName: string;
-  role: 'ROLE_USER' | 'ROLE_EXPERT' | 'ROLE_ADMIN';
+  role: 'ROLE_USER' | 'ROLE_ADMIN';
   active: boolean;
   emailVerified: boolean;
   createdAt: string;

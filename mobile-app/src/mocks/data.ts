@@ -1,4 +1,4 @@
-import type { Assessment, ChatMessage, Expert, JournalEntry, SettingItem } from '@/types/mindcare';
+import type { Assessment, ChatMessage, JournalEntry, SettingItem } from '@/types/mindcare';
 
 export const journalEntries: JournalEntry[] = [
   { id: 'j1', title: 'Bình yên', note: 'Mình đã dành một buổi sáng chậm rãi và hoàn thành việc quan trọng nhất.', createdAt: 'Hôm nay, 08:30', tone: 'calm', score: 4 },
@@ -20,16 +20,9 @@ export const chatMessages: ChatMessage[] = [
   { id: 'm3', role: 'assistant', text: 'Mình hiểu. Hãy thử chọn một việc nhỏ nhất có thể hoàn thành trong 10 phút. Việc nào đang hiện lên đầu tiên?', createdAt: '09:21' },
 ];
 
-export const experts: Expert[] = [
-  { id: 'e1', name: 'Nguyễn An Nhiên', role: 'Chuyên gia tham vấn tâm lý', specialties: ['Lo âu', 'Căng thẳng'], experience: 8, availability: 'Trống lúc 19:30', initials: 'AN' },
-  { id: 'e2', name: 'Trần Minh Khoa', role: 'Nhà tâm lý học lâm sàng', specialties: ['Trầm cảm', 'Giấc ngủ'], experience: 10, availability: 'Trống ngày mai', initials: 'MK' },
-  { id: 'e3', name: 'Lê Hà Vy', role: 'Chuyên gia trị liệu gia đình', specialties: ['Mối quan hệ', 'Gia đình'], experience: 7, availability: 'Trống thứ Năm', initials: 'HV' },
-  { id: 'e4', name: 'Phạm Gia Linh', role: 'Chuyên gia tham vấn', specialties: ['Học tập', 'Định hướng'], experience: 6, availability: 'Trống lúc 20:00', initials: 'GL' },
-];
-
 export const settings: SettingItem[] = [
   { id: 's1', title: 'Hồ sơ cá nhân', description: 'Tên hiển thị và thông tin liên hệ', icon: 'person' },
-  { id: 's2', title: 'Thông báo', description: 'Nhắc nhật ký và lịch hẹn', icon: 'notifications' },
+  { id: 's2', title: 'Thông báo', description: 'Nhắc nhật ký và cập nhật tài khoản', icon: 'notifications' },
   { id: 's3', title: 'Quyền riêng tư', description: 'Dữ liệu sức khỏe và quyền truy cập', icon: 'lock' },
   { id: 's4', title: 'Ngôn ngữ', description: 'Tiếng Việt', icon: 'language' },
   { id: 's5', title: 'Bảo mật tài khoản', description: 'Mật khẩu và phiên đăng nhập', icon: 'shield' },

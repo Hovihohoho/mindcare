@@ -1,3 +1,4 @@
+/* Hallmark · pre-emit critique: P5 H4 E5 S4 R5 V4 */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
 import { colors, fonts, type } from '@/theme/tokens';
@@ -8,9 +9,15 @@ const icons = {
   journal: ['heart-outline', 'heart'] as const,
   assessments: ['clipboard-outline', 'clipboard'] as const,
   ai: ['sparkles-outline', 'sparkles'] as const,
-  experts: ['people-outline', 'people'] as const,
   settings: ['settings-outline', 'settings'] as const,
 };
+
+const visibleTabs = {
+  journal: 'Nhật ký',
+  assessments: 'Đánh giá',
+  ai: 'AI hỗ trợ',
+  settings: 'Cài đặt',
+} as const;
 
 export default function TabsLayout() {
   const { status } = useAuth();
@@ -30,9 +37,7 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: type.tab, lineHeight: 14 },
       }}
     >
-      {Object.entries({
-        journal: 'Nhật ký', assessments: 'Đánh giá', ai: 'AI hỗ trợ', experts: 'Chuyên gia', settings: 'Cài đặt',
-      }).map(([name, title]) => (
+      {Object.entries(visibleTabs).map(([name, title]) => (
         <Tabs.Screen
           key={name}
           name={name}
@@ -45,7 +50,9 @@ export default function TabsLayout() {
           }}
         />
       ))}
+      <Tabs.Screen name="experts" options={{ href: null }} />
       <Tabs.Screen name="journal-history" options={{ href: null }} />
+      <Tabs.Screen name="health-connect" options={{ href: null }} />
     </Tabs>
   );
 }

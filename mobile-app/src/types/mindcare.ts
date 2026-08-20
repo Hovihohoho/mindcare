@@ -26,19 +26,9 @@ export type ChatMessage = {
   createdAt: string;
 };
 
-export type Expert = {
-  id: string;
-  name: string;
-  role: string;
-  specialties: string[];
-  experience: number;
-  availability: string;
-  initials: string;
-};
-
 export type SettingItem = {
   id: string;
   title: string;
   description: string;
-  icon: 'person' | 'notifications' | 'lock' | 'language' | 'shield';
+  icon: 'person' | 'notifications' | 'lock' | 'language' | 'shield' | 'fitness';
 };

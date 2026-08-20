@@ -19,9 +19,10 @@ import { colors, fonts, radius, spacing, type } from '@/theme/tokens';
 export function AuthScreen({ children }: PropsWithChildren) {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, Platform.OS === 'android' && styles.scrollContentAndroid]}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -63,8 +64,14 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
         <TextInput
           ref={ref}
           accessibilityLabel={label}
-          onBlur={(event) => { setFocused(false); onBlur?.(event); }}
-          onFocus={(event) => { setFocused(true); onFocus?.(event); }}
+          onBlur={(event) => {
+            if (Platform.OS !== 'android') setFocused(false);
+            onBlur?.(event);
+          }}
+          onFocus={(event) => {
+            if (Platform.OS !== 'android') setFocused(true);
+            onFocus?.(event);
+          }}
           placeholderTextColor={colors.muted}
           selectionColor={colors.brand}
           style={[styles.input, style]}
@@ -127,6 +134,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   safeArea: { backgroundColor: colors.canvas, flex: 1 },
   scrollContent: { flexGrow: 1, justifyContent: 'center', paddingBottom: spacing.xl, paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
+  scrollContentAndroid: { justifyContent: 'flex-start' },
   content: { alignSelf: 'center', maxWidth: 430, width: '100%' },
   brandLogo: { height: 40, width: 195 },
   fieldGroup: { gap: spacing.xs },

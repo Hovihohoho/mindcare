@@ -1,6 +1,6 @@
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Platform, Text, TextInput, View } from 'react-native';
 
 import { ActionButton } from '@/components/buttons';
 import { AuthServiceError } from '@/services/auth/auth.service';
@@ -54,30 +54,34 @@ export default function LoginScreen() {
         {params.verified === '1' ? <SuccessNotice message="Email đã được xác thực. Bạn có thể đăng nhập ngay." /> : null}
         <AuthField
           autoCapitalize="none"
-          autoComplete="email"
+          autoComplete={Platform.OS === 'android' ? 'off' : 'email'}
+          autoCorrect={false}
           error={errors.email}
           icon="mail-outline"
+          importantForAutofill={Platform.OS === 'android' ? 'no' : 'auto'}
           keyboardType="email-address"
           label="Email"
           onChangeText={(value) => { setEmail(value); setErrors((current) => ({ ...current, email: undefined })); }}
-          onSubmitEditing={() => passwordRef.current?.focus()}
+          onSubmitEditing={Platform.OS === 'ios' ? () => passwordRef.current?.focus() : undefined}
           placeholder="ban@example.com"
-          returnKeyType="next"
-          textContentType="emailAddress"
+          returnKeyType={Platform.OS === 'ios' ? 'next' : 'done'}
+          textContentType={Platform.OS === 'ios' ? 'emailAddress' : 'none'}
           value={email}
         />
         <AuthField
           ref={passwordRef}
-          autoComplete="current-password"
+          autoComplete={Platform.OS === 'android' ? 'off' : 'current-password'}
+          autoCorrect={false}
           error={errors.password}
           icon="lock-closed-outline"
+          importantForAutofill={Platform.OS === 'android' ? 'no' : 'auto'}
           label="Mật khẩu"
           onChangeText={(value) => { setPassword(value); setErrors((current) => ({ ...current, password: undefined })); }}
           onSubmitEditing={submit}
           placeholder="Tối thiểu 8 ký tự"
           returnKeyType="done"
           secureTextEntry={passwordHidden}
-          textContentType="password"
+          textContentType={Platform.OS === 'ios' ? 'password' : 'none'}
           trailing={<PasswordToggle hidden={passwordHidden} onPress={() => setPasswordHidden((value) => !value)} />}
           value={password}
         />

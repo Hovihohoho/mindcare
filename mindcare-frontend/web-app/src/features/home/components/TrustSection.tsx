@@ -9,7 +9,7 @@ export function TrustSection() {
         <div className="absolute -bottom-24 -right-16 size-64 rounded-full bg-white/10" />
         <div className="relative mx-auto max-w-[680px]">
           <h2 className="text-3xl font-bold leading-10">Sẵn sàng để bắt đầu hành trình thấu hiểu bản thân?</h2>
-          <p className="mt-4 text-lg leading-7 text-white/90">Tham gia cùng hơn 10.000 người dùng khác đang cải thiện sức khỏe tinh thần mỗi ngày.</p>
+          <p className="mt-4 text-lg leading-7 text-white/90">Tạo tài khoản để lưu nhật ký cảm xúc, kết quả đánh giá và tiếp tục hành trình của bạn trên mọi thiết bị.</p>
           <Link className="mt-8 inline-block" to="/register">
             <Button className="bg-white px-16 text-brand-700 hover:bg-slate-50" size="lg">Tạo tài khoản miễn phí</Button>
           </Link>

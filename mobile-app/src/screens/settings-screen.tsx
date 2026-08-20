@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@/components/app-screen';
@@ -13,7 +14,7 @@ import type { SettingItem } from '@/types/mindcare';
 import { useAuth } from '@/features/auth/auth-context';
 
 const iconMap: Record<SettingItem['icon'], keyof typeof Ionicons.glyphMap> = {
-  person: 'person-outline', notifications: 'notifications-outline', lock: 'lock-closed-outline', language: 'language-outline', shield: 'shield-checkmark-outline',
+  person: 'person-outline', notifications: 'notifications-outline', lock: 'lock-closed-outline', language: 'language-outline', shield: 'shield-checkmark-outline', fitness: 'fitness-outline',
 };
 
 const filters: FilterOption[] = [
@@ -27,6 +28,7 @@ async function loadSettings(token: string): Promise<SettingItem[]> {
   const [user, sessions] = await Promise.all([authService.me(token), authService.sessions(token)]);
   const activeSessions = sessions.filter((item) => !item.revoked).length;
   return [
+    { id: 's6', title: 'Google Health Connect', description: 'Quản lý quyền và đồng bộ dữ liệu sức khỏe', icon: 'fitness' },
     { id: 's1', title: 'Hồ sơ cá nhân', description: `${user.fullName} · ${user.email}`, icon: 'person' },
     { id: 's2', title: 'Xác thực email', description: user.emailVerified ? 'Email đã được xác thực' : 'Email chưa được xác thực', icon: 'notifications' },
     { id: 's3', title: 'Trạng thái tài khoản', description: user.active ? 'Tài khoản đang hoạt động' : 'Tài khoản đã bị vô hiệu hóa', icon: 'lock' },
@@ -46,7 +48,7 @@ export default function SettingsScreen() {
     const queryMatch = `${item.title} ${item.description}`.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'));
     const filterMatch = filter === 'all'
       || (filter === 'account' && ['s1', 's2'].includes(item.id))
-      || (filter === 'privacy' && ['s3', 's5'].includes(item.id))
+      || (filter === 'privacy' && ['s3', 's5', 's6'].includes(item.id))
       || (filter === 'app' && item.id === 's4');
     return queryMatch && filterMatch;
   }), [data, filter, query]);
@@ -66,7 +68,7 @@ export default function SettingsScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => void reload(true)} refreshing={refreshing} tintColor={colors.brand} />}
-          renderItem={({ item }) => <SettingRow item={item} />}
+          renderItem={({ item }) => <SettingRow item={item} onPress={item.id === 's6' ? () => router.push('/(tabs)/health-connect') : undefined} />}
           ListFooterComponent={(
             <Pressable accessibilityRole="button" onPress={() => void logout().catch(() => undefined)} style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
               <Ionicons color={colors.danger} name="log-out-outline" size={20} />
@@ -80,16 +82,16 @@ export default function SettingsScreen() {
   );
 }
 
-function SettingRow({ item }: { item: SettingItem }) {
+function SettingRow({ item, onPress }: { item: SettingItem; onPress?: () => void }) {
   return (
-    <View style={styles.row}>
+    <Pressable accessibilityRole={onPress ? 'button' : undefined} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
       <View style={styles.icon}><Ionicons color={colors.brandDark} name={iconMap[item.icon]} size={21} /></View>
       <View style={styles.body}>
         <Text style={styles.title}>{item.title}</Text>
         <Text numberOfLines={1} style={styles.description}>{item.description}</Text>
       </View>
-      <Ionicons color={colors.mintInk} name="checkmark-circle-outline" size={18} />
-    </View>
+      <Ionicons color={onPress ? colors.brandDark : colors.mintInk} name={onPress ? 'chevron-forward' : 'checkmark-circle-outline'} size={18} />
+    </Pressable>
   );
 }
 

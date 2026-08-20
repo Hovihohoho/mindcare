@@ -211,18 +211,18 @@ if ($LASTEXITCODE -ne 0) {
 $maven = Get-MavenExecutable
 $processes = @()
 $processes += Start-LoggedProcess -Name "auth-service" -FilePath $maven `
-    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "auth-service")
+    -Arguments @("clean", "spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "auth-service")
 
 $processes += Start-LoggedProcess -Name "emotion-service" -FilePath $maven `
-    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "emotion-service")
+    -Arguments @("clean", "spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "emotion-service")
 
 if (-not $SkipAi) {
     $processes += Start-LoggedProcess -Name "ai-service" -FilePath $maven `
-        -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "ai-service")
+        -Arguments @("clean", "spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "ai-service")
 }
 
 $processes += Start-LoggedProcess -Name "api-gateway" -FilePath $maven `
-    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "api-gateway")
+    -Arguments @("clean", "spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "api-gateway")
 
 if ([string]::IsNullOrWhiteSpace($env:VITE_API_URL)) {
     $env:VITE_API_URL = "http://localhost:8079"

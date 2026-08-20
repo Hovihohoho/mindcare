@@ -28,8 +28,8 @@ type FeedbackProps = {
   kind: 'empty' | 'error';
   title: string;
   description: string;
-  onAction: () => void;
-  actionLabel: string;
+  onAction?: () => void;
+  actionLabel?: string;
 };
 
 export function DataFeedback({ kind, title, description, onAction, actionLabel }: FeedbackProps) {
@@ -40,7 +40,7 @@ export function DataFeedback({ kind, title, description, onAction, actionLabel }
       </View>
       <Text style={styles.feedbackTitle}>{title}</Text>
       <Text style={styles.feedbackDescription}>{description}</Text>
-      <ActionButton icon={kind === 'error' ? 'refresh-outline' : 'options-outline'} label={actionLabel} onPress={onAction} tone="secondary" />
+      {onAction && actionLabel ? <ActionButton icon={kind === 'error' ? 'refresh-outline' : 'options-outline'} label={actionLabel} onPress={onAction} tone="secondary" /> : null}
     </View>
   );
 }

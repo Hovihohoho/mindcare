@@ -1,4 +1,4 @@
-import { assessments, chatMessages, experts, journalEntries, settings } from '@/mocks/data';
+import { assessments, chatMessages, journalEntries, settings } from '@/mocks/data';
 import type { DataScenario } from '@/state/mock-state';
 
 const MOCK_LATENCY = 520;
@@ -19,6 +19,5 @@ export const mindcareService = {
   getJournalEntries: (scenario: DataScenario) => mockResponse(journalEntries, scenario),
   getAssessments: (scenario: DataScenario) => mockResponse(assessments, scenario),
   getChatMessages: (scenario: DataScenario) => mockResponse(chatMessages, scenario),
-  getExperts: (scenario: DataScenario) => mockResponse(experts, scenario),
   getSettings: (scenario: DataScenario) => mockResponse(settings, scenario),
 };
