@@ -50,7 +50,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
                 """,
                 String.class
         );
-        assertThat(currentVersion).isEqualTo("6");
+        assertThat(currentVersion).isEqualTo("7");
         assertThat(flyway.info().pending()).isEmpty();
 
         List<String> tables = jdbcTemplate.queryForList(
@@ -232,7 +232,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
                 """);
              var result = statement.executeQuery()) {
             assertThat(result.next()).isTrue();
-            assertThat(result.getString("version")).isEqualTo("6");
+            assertThat(result.getString("version")).isEqualTo("7");
         }
     }
 }

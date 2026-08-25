@@ -12,6 +12,8 @@ import { StatusBar } from 'expo-status-bar';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/features/auth/auth-context';
+import { HealthConnectGate } from '@/features/health/health-connect-gate';
+import '@/features/health/health-background.task';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -35,6 +37,7 @@ export default function RootLayout() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <AuthProvider>
         <StatusBar style="dark" />
+        <HealthConnectGate />
         <Stack screenOptions={{ headerShown: false }} />
       </AuthProvider>
     </SafeAreaProvider>

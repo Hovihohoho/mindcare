@@ -58,14 +58,18 @@ Index: `(user_id, created_at)`.
 | `id` | UUID | PK |
 | `user_id` | UUID | external reference |
 | `metric_type` | varchar(50) | ví dụ sleep/heart rate/steps |
-| `metric_value` | numeric(10,2) | bắt buộc |
+| `metric_value` | numeric(10,2) | nullable cho session |
 | `unit` | varchar(20) | nullable trong V1 |
 | `source_type` | varchar(50) | Apple/Google/manual |
-| `external_sample_id` | varchar(255) | ID nguồn, unique theo user/source khi bản ghi active |
+| `external_sample_id` | varchar(255) | ID nguồn, unique theo user/source kể cả khi soft-delete để upsert có thể phục hồi |
 | `recorded_at` | timestamptz | thời điểm đo, ánh xạ `OffsetDateTime` |
+| `start_time`, `end_time` | timestamptz | khoảng thời gian của record/session |
+| `source_name`, `data_origin` | varchar(255) | metadata nguồn để audit |
+| `source_last_modified_at` | timestamptz | quyết định bản upsert mới hơn |
+| `record_details` | jsonb | metadata type-specific có giới hạn kích thước ở application |
 | audit fields | timestamptz | create/update/delete; create/update do JPA Auditing quản lý |
 
-Index: `(user_id, recorded_at)`.
+Index: `(user_id, recorded_at)` và `(user_id, metric_type, recorded_at)` cho aggregate theo ngày.
 
 `health_metric_sync_requests` lưu `(user_id, source_type, idempotency_key)` unique, request hash và response JSONB; bảng này là metadata idempotency, không chứa metric detail.
 

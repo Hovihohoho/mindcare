@@ -106,8 +106,8 @@ export function EmotionTrendSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  chartRow: { flexDirection: 'row', gap: spacing.xs, minHeight: 212 },
-  axis: { height: PLOT_HEIGHT, position: 'relative', width: 76 },
+  chartRow: { flexDirection: 'row', gap: spacing.xs, minHeight: 202 },
+  axis: { height: PLOT_HEIGHT, position: 'relative', width: 68 },
   axisLevel: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs, justifyContent: 'flex-end', position: 'absolute', right: 0 },
   axisLevelMiddle: { transform: [{ translateY: -6 }] },
   axisLevelLast: { transform: [{ translateY: -12 }] },
@@ -118,12 +118,12 @@ const styles = StyleSheet.create({
   gridLine: { borderTopColor: colors.line, borderTopWidth: 1 },
   bars: { alignItems: 'flex-end', bottom: 0, flexDirection: 'row', gap: spacing.xxs, left: spacing.xxs, position: 'absolute', right: spacing.xxs, top: 0 },
   barColumn: { alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end', minWidth: 0 },
-  bar: { borderTopLeftRadius: radius.sm, borderTopRightRadius: radius.sm, minHeight: 5, width: '68%' },
+  bar: { borderRadius: radius.pill, minHeight: 4, width: 8 },
   dayRow: { flexDirection: 'row', gap: spacing.xxs, height: 32, paddingHorizontal: spacing.xxs, paddingTop: spacing.xs },
   day: { color: colors.muted, flex: 1, fontFamily: fonts.semibold, fontSize: type.tab, minWidth: 0, textAlign: 'center' },
-  empty: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderRadius: radius.input, justifyContent: 'center', minHeight: 172, padding: spacing.lg },
+  empty: { alignItems: 'center', justifyContent: 'center', minHeight: 156, padding: spacing.lg },
   emptyTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.label, textAlign: 'center' },
   emptyText: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginTop: spacing.xs, textAlign: 'center' },
   skeleton: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs, height: 180, paddingHorizontal: spacing.sm },
-  skeletonBar: { backgroundColor: colors.skeleton, borderTopLeftRadius: radius.sm, borderTopRightRadius: radius.sm, flex: 1 },
+  skeletonBar: { backgroundColor: colors.skeleton, borderRadius: radius.pill, flex: 1, maxWidth: 8 },
 });

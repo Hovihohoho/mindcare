@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -53,7 +54,7 @@ class HealthMetricServiceImplTest {
                 syncRequestRepository,
                 mapper,
                 new CursorCodec(),
-                new ObjectMapper(),
+                new ObjectMapper().findAndRegisterModules(),
                 Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -65,9 +66,8 @@ class HealthMetricServiceImplTest {
         when(savedEntity.getId()).thenReturn(UUID.randomUUID());
         when(syncRequestRepository.findByUserIdAndSourceTypeAndIdempotencyKey(eq(userId), anyString(), anyString()))
                 .thenReturn(Optional.empty());
-        when(repository.existsByUserIdAndSourceTypeAndExternalSampleIdAndDeletedAtIsNull(
-                eq(userId), anyString(), anyString()
-        )).thenReturn(false);
+        when(repository.findByUserIdAndSourceTypeAndExternalSampleId(eq(userId), anyString(), anyString()))
+                .thenReturn(Optional.empty());
         when(repository.saveAllAndFlush(any())).thenReturn(List.of(savedEntity));
 
         service.synchronizeMetrics(
@@ -91,9 +91,6 @@ class HealthMetricServiceImplTest {
 
     @Test
     void synchronizeRejectsDeviceSampleWithoutExternalId() {
-        when(syncRequestRepository.findByUserIdAndSourceTypeAndIdempotencyKey(any(), anyString(), anyString()))
-                .thenReturn(Optional.empty());
-
         assertThrows(InvalidRequestException.class, () -> service.synchronizeMetrics(
                 UUID.randomUUID(),
                 "sync-2",
@@ -105,5 +102,38 @@ class HealthMetricServiceImplTest {
                         OffsetDateTime.parse("2026-07-21T22:00:00Z")
                 )))
         ));
+    }
+
+    @Test
+    void synchronizeUpdatesRecordWhenSourceHasNewerRevision() {
+        UUID userId = UUID.randomUUID();
+        OffsetDateTime originalModifiedAt = OffsetDateTime.parse("2026-07-21T20:00:00Z");
+        OffsetDateTime newModifiedAt = OffsetDateTime.parse("2026-07-21T21:00:00Z");
+        HealthMetricEntity existing = new HealthMetricEntity(
+                userId, "STEP_COUNT", BigDecimal.TEN, "count", "HEALTH_CONNECT", "steps-1",
+                OffsetDateTime.parse("2026-07-21T20:00:00Z"), null, null, null, "watch.app",
+                originalModifiedAt, Map.of()
+        );
+        when(syncRequestRepository.findByUserIdAndSourceTypeAndIdempotencyKey(eq(userId), anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        when(repository.findByUserIdAndSourceTypeAndExternalSampleId(userId, "HEALTH_CONNECT", "steps-1"))
+                .thenReturn(Optional.of(existing));
+        HealthMetricEntity savedEntity = mock(HealthMetricEntity.class);
+        when(savedEntity.getId()).thenReturn(UUID.randomUUID());
+        when(repository.saveAllAndFlush(any())).thenReturn(List.of(savedEntity));
+
+        var response = service.synchronizeMetrics(userId, "sync-update", new HealthMetricBatchRequest(
+                "HEALTH_CONNECT",
+                List.of(new HealthMetricItemRequest(
+                        "steps-1", "STEP_COUNT", BigDecimal.valueOf(25), "count",
+                        OffsetDateTime.parse("2026-07-21T20:30:00Z"), null, null,
+                        "Watch", "watch.app", newModifiedAt, Map.of()
+                ))
+        ));
+
+        assertEquals(0, response.acceptedCount());
+        assertEquals(1, response.updatedCount());
+        assertEquals(BigDecimal.valueOf(25), existing.getMetricValue());
+        assertEquals(newModifiedAt, existing.getSourceLastModifiedAt());
     }
 }

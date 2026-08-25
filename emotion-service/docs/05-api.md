@@ -179,26 +179,28 @@ Request thiếu/sai timestamp trả `400 MALFORMED_REQUEST`; timezone không h�
 
 | Method | Path | Quyền | Mục đích |
 |---|---|---|---|
-| POST | `/health-metrics:batch` | USER | Nhận batch đồng bộ idempotent |
+| POST | `/api/v1/health-metrics/sync` | USER | Nhận batch upsert idempotent (tối đa 100) |
 | GET | `/health-metrics` | USER | Truy vấn theo type/time range |
-| GET | `/health-metric-trends` | USER | Aggregate theo type/bucket/timezone |
+| GET | `/api/v1/health-metrics/trends` | USER | Aggregate theo type/bucket/timezone |
 
 ```json
 {
-  "sourceType": "GOOGLE_HEALTH",
+  "sourceType": "HEALTH_CONNECT",
   "items": [
     {
-      "externalSampleId": "sleep-20260721",
-      "metricType": "SLEEP_HOURS",
-      "value": 6.5,
-      "unit": "h",
-      "recordedAt": "2026-07-21T23:00:00+07:00"
+      "externalSampleId": "sleep:source-id",
+      "metricType": "SLEEP_SESSION",
+      "recordedAt": "2026-07-21T23:00:00+07:00",
+      "startTime": "2026-07-21T16:30:00+07:00",
+      "endTime": "2026-07-21T23:00:00+07:00",
+      "dataOrigin": "com.example.wearable",
+      "sourceLastModifiedAt": "2026-07-21T23:05:00+07:00"
     }
   ]
 }
 ```
 
-Response nên trả `acceptedCount`, `duplicateCount` và ID đã xử lý. Không echo toàn bộ dữ liệu nếu không cần.
+Response trả `acceptedCount`, `updatedCount`, `duplicateCount` và ID đã xử lý. Không echo dữ liệu sức khỏe.
 
 ## Assessments cho user
 

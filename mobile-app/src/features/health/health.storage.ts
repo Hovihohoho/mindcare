@@ -2,12 +2,17 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 const LAST_SYNC_KEY_PREFIX = 'mindcare.health.last-sync.v1';
+const SNOOZE_KEY_PREFIX = 'mindcare.health.banner-snooze.v1';
 const options: SecureStore.SecureStoreOptions = {
   keychainService: 'mindcare.health.sync',
 };
 
 function keyFor(userId: string) {
   return `${LAST_SYNC_KEY_PREFIX}.${userId}`;
+}
+
+function snoozeKeyFor(userId: string) {
+  return `${SNOOZE_KEY_PREFIX}.${userId}`;
 }
 
 function webStorage() {
@@ -31,5 +36,21 @@ export const healthSyncStorage = {
       return;
     }
     await SecureStore.setItemAsync(keyFor(userId), value, options);
+  },
+
+  async getBannerSnoozedUntil(userId: string): Promise<number> {
+    const value = Platform.OS === 'web'
+      ? webStorage()?.getItem(snoozeKeyFor(userId)) ?? null
+      : await SecureStore.getItemAsync(snoozeKeyFor(userId), options);
+    const timestamp = Number(value);
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  },
+
+  async setBannerSnoozedUntil(userId: string, value: number): Promise<void> {
+    if (Platform.OS === 'web') {
+      webStorage()?.setItem(snoozeKeyFor(userId), String(value));
+      return;
+    }
+    await SecureStore.setItemAsync(snoozeKeyFor(userId), String(value), options);
   },
 };

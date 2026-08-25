@@ -8,6 +8,7 @@ import type {
 import { healthApi } from './health.api';
 import {
   EMPTY_HEALTH_PERMISSIONS,
+  HEALTH_BACKGROUND_PERMISSION,
   HEALTH_PERMISSIONS,
   HEALTH_RECORD_TYPES,
   HEALTH_SYNC_BATCH_SIZE,
@@ -65,7 +66,10 @@ function permissionState(permissions: readonly { accessType: string; recordType:
       ...state,
       [key]: permissions.some((item) => item.accessType === 'read' && item.recordType === HEALTH_RECORD_TYPES[key]),
     }),
-    { ...EMPTY_HEALTH_PERMISSIONS },
+    {
+      ...EMPTY_HEALTH_PERMISSIONS,
+      background: permissions.some((item) => item.accessType === 'read' && item.recordType === 'BackgroundAccessPermission'),
+    },
   );
 }
 
@@ -125,6 +129,11 @@ function toBackendItems(data: NormalizedHealthData) {
       recordedAt: record.endTime,
       unit: 'count',
       value: record.count,
+      startTime: record.startTime,
+      endTime: record.endTime,
+      sourceName: record.source.name,
+      dataOrigin: record.source.origin,
+      sourceLastModifiedAt: record.sourceLastModifiedAt,
     });
   });
 
@@ -139,6 +148,11 @@ function toBackendItems(data: NormalizedHealthData) {
       recordedAt: record.time,
       unit: 'bpm',
       value: record.beatsPerMinute,
+      startTime: record.startTime,
+      endTime: record.endTime,
+      sourceName: record.source.name,
+      dataOrigin: record.source.origin,
+      sourceLastModifiedAt: record.sourceLastModifiedAt,
     });
   });
 
@@ -150,10 +164,33 @@ function toBackendItems(data: NormalizedHealthData) {
     }
     items.push({
       externalSampleId: record.recordId,
-      metricType: 'SLEEP_HOURS',
+      metricType: 'SLEEP_SESSION',
       recordedAt: record.endTime,
-      unit: 'h',
-      value: Math.round(hours * 100) / 100,
+      startTime: record.startTime,
+      endTime: record.endTime,
+      sourceName: record.source.name,
+      dataOrigin: record.source.origin,
+      sourceLastModifiedAt: record.sourceLastModifiedAt,
+      details: { stages: record.stages },
+    });
+  });
+
+  data.exercise.forEach((record) => {
+    const duration = Date.parse(record.endTime) - Date.parse(record.startTime);
+    if (!Number.isFinite(duration) || duration <= 0 || duration > 24 * 3_600_000) {
+      invalidSkippedCount += 1;
+      return;
+    }
+    items.push({
+      externalSampleId: record.recordId,
+      metricType: 'EXERCISE_SESSION',
+      recordedAt: record.endTime,
+      startTime: record.startTime,
+      endTime: record.endTime,
+      sourceName: record.source.name,
+      dataOrigin: record.source.origin,
+      sourceLastModifiedAt: record.sourceLastModifiedAt,
+      details: { exerciseType: record.exerciseType },
     });
   });
 
@@ -217,6 +254,14 @@ export const healthConnectService = {
     return permissionState(granted);
   },
 
+  async requestBackgroundPermission(): Promise<HealthPermissionState> {
+    const module = await nativeModule();
+    await ensureAvailable(module);
+    await module.initialize();
+    await module.requestPermission([HEALTH_BACKGROUND_PERMISSION]);
+    return permissionState(await module.getGrantedPermissions());
+  },
+
   async openHealthConnectSettings(): Promise<void> {
     const module = await nativeModule();
     module.openHealthConnectSettings();
@@ -243,6 +288,7 @@ export const healthConnectService = {
       endTime: record.endTime,
       recordId: externalId('steps', record.metadata?.id, `${record.metadata?.dataOrigin}:${record.startTime}:${record.endTime}`),
       source: sourceOf(record.metadata),
+      sourceLastModifiedAt: record.metadata?.lastModifiedTime,
     }));
   },
 
@@ -256,6 +302,7 @@ export const healthConnectService = {
       stages: record.stages ?? [],
       recordId: externalId('sleep', record.metadata?.id, `${record.metadata?.dataOrigin}:${record.startTime}:${record.endTime}`),
       source: sourceOf(record.metadata),
+      sourceLastModifiedAt: record.metadata?.lastModifiedTime,
     }));
   },
 
@@ -270,6 +317,7 @@ export const healthConnectService = {
       endTime: record.endTime,
       recordId: externalId('heart-rate', undefined, `${record.metadata?.id || record.metadata?.dataOrigin}:${sample.time}`),
       source: sourceOf(record.metadata),
+      sourceLastModifiedAt: record.metadata?.lastModifiedTime,
     })));
   },
 
@@ -283,6 +331,7 @@ export const healthConnectService = {
       endTime: record.endTime,
       recordId: externalId('exercise', record.metadata?.id, `${record.metadata?.dataOrigin}:${record.startTime}:${record.endTime}`),
       source: sourceOf(record.metadata),
+      sourceLastModifiedAt: record.metadata?.lastModifiedTime,
     }));
   },
 
@@ -305,13 +354,12 @@ export const healthConnectService = {
   async syncHealthData(userId: string, token: string): Promise<HealthSyncResult> {
     await this.initializeHealthConnect();
     const permissions = await this.getGrantedPermissions();
-    if (!Object.values(permissions).some(Boolean)) {
+    if (!(permissions.steps || permissions.sleep || permissions.heartRate || permissions.exercise)) {
       throw new HealthConnectError('NO_PERMISSIONS', 'MindCare chưa có quyền đọc dữ liệu Health Connect.');
     }
 
     const endTime = new Date().toISOString();
-    const persistedStart = await healthSyncStorage.getLastSyncTime(userId);
-    const startTime = persistedStart ?? new Date(Date.now() - INITIAL_SYNC_DAYS * 86_400_000).toISOString();
+    const startTime = new Date(Date.now() - INITIAL_SYNC_DAYS * 86_400_000).toISOString();
     debug('read range', { startTime, endTime });
 
     const data = emptyData();
@@ -335,6 +383,7 @@ export const healthConnectService = {
     const { invalidSkippedCount, items } = toBackendItems(data);
     let acceptedCount = 0;
     let duplicateCount = 0;
+    let updatedCount = 0;
     for (let offset = 0; offset < items.length; offset += HEALTH_SYNC_BATCH_SIZE) {
       const batch = items.slice(offset, offset + HEALTH_SYNC_BATCH_SIZE);
       const response = await healthApi.syncMetrics(
@@ -344,13 +393,14 @@ export const healthConnectService = {
       );
       acceptedCount += response.acceptedCount;
       duplicateCount += response.duplicateCount;
+      updatedCount += response.updatedCount;
     }
 
     await healthSyncStorage.setLastSyncTime(userId, endTime);
     const result = {
       acceptedCount,
       duplicateCount,
-      exerciseSkippedCount: data.exercise.length,
+      updatedCount,
       invalidSkippedCount,
       readCounts,
       syncedAt: endTime,

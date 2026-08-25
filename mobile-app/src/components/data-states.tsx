@@ -46,15 +46,15 @@ export function DataFeedback({ kind, title, description, onAction, actionLabel }
 }
 
 const styles = StyleSheet.create({
-  skeletonList: { gap: spacing.sm, padding: spacing.md, paddingBottom: 96 },
-  skeletonCard: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, flexDirection: 'row', gap: spacing.sm, minHeight: 124, padding: spacing.md },
-  skeletonIcon: { backgroundColor: colors.skeleton, borderRadius: radius.input, height: 48, width: 48 },
+  skeletonList: { paddingHorizontal: spacing.page, paddingBottom: 96 },
+  skeletonCard: { borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.sm, minHeight: 96, paddingVertical: spacing.md },
+  skeletonIcon: { backgroundColor: colors.skeleton, borderRadius: radius.pill, height: 40, width: 40 },
   skeletonBody: { flex: 1, gap: spacing.sm, paddingTop: spacing.xxs },
   skeletonTitle: { backgroundColor: colors.skeleton, borderRadius: radius.sm, height: 18, width: '62%' },
   skeletonLine: { backgroundColor: colors.skeleton, borderRadius: radius.sm, height: 12, width: '100%' },
   skeletonShortLine: { backgroundColor: colors.skeleton, borderRadius: radius.sm, height: 12, width: '76%' },
   feedback: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, paddingBottom: 72 },
-  feedbackIcon: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderRadius: radius.card, height: 56, justifyContent: 'center', marginBottom: spacing.md, width: 56 },
+  feedbackIcon: { alignItems: 'center', height: 48, justifyContent: 'center', marginBottom: spacing.sm, width: 48 },
   errorIcon: { backgroundColor: colors.dangerSoft },
   feedbackTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: type.section, lineHeight: 28, textAlign: 'center' },
   feedbackDescription: { color: colors.inkSoft, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 23, marginBottom: spacing.lg, marginTop: spacing.xs, textAlign: 'center' },

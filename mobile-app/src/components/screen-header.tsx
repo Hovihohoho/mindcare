@@ -1,10 +1,12 @@
+/* Hallmark · component: screen header · genre: modern-minimal · theme: MindCare */
 import Ionicons from '@expo/vector-icons/Ionicons';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, spacing, type } from '@/theme/tokens';
 
-type Props = { title: string; description: string; onBack?: () => void };
+type Props = { title: string; description?: string; onBack?: () => void; action?: ReactNode };
 
-export function ScreenHeader({ title, description, onBack }: Props) {
+export function ScreenHeader({ title, description, onBack, action }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.titleRow}>
@@ -14,17 +16,18 @@ export function ScreenHeader({ title, description, onBack }: Props) {
           </Pressable>
         ) : null}
         <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+        {action}
       </View>
-      <Text style={styles.description}>{description}</Text>
+      {description ? <Text style={styles.description}>{description}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.xs, paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.md },
+  container: { gap: spacing.xs, paddingHorizontal: spacing.page, paddingTop: spacing.sm, paddingBottom: spacing.md },
   titleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  back: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.line, borderRadius: 12, borderWidth: 1, height: 40, justifyContent: 'center', width: 40 },
+  back: { alignItems: 'center', borderRadius: 12, height: 44, justifyContent: 'center', width: 44 },
   pressed: { opacity: 0.75 },
-  title: { color: colors.ink, flex: 1, fontFamily: fonts.bold, fontSize: type.title, lineHeight: 36, letterSpacing: -0.6 },
-  description: { color: colors.inkSoft, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 23 },
+  title: { color: colors.ink, flex: 1, fontFamily: fonts.semibold, fontSize: type.title, lineHeight: 38, letterSpacing: -0.7 },
+  description: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.label, lineHeight: 20, maxWidth: 350 },
 });

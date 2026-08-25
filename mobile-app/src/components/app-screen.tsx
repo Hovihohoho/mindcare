@@ -20,5 +20,5 @@ export function AppScreen({ children }: PropsWithChildren) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.canvas },
   keyboard: { flex: 1 },
-  frame: { flex: 1, width: '100%', maxWidth: 430, alignSelf: 'center', backgroundColor: colors.canvas },
+  frame: { flex: 1, width: '100%', maxWidth: 768, alignSelf: 'center', backgroundColor: colors.canvas },
 });

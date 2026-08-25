@@ -74,10 +74,7 @@ class RequestDtoValidationTest {
         assertThat(paths(validator.validate(invalid))).contains(
                 "sourceType",
                 "items[0].externalSampleId",
-                "items[0].metricType",
-                "items[0].value",
-                "items[0].unit",
-                "items[0].recordedAt"
+                "items[0].metricType"
         );
 
         List<HealthMetricItemRequest> tooManyItems = IntStream.rangeClosed(0, 100)

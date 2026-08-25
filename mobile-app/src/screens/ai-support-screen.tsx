@@ -1,11 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
+import { ChatBubble, ChatBubbleLoading } from '@/components/chat-bubble';
+import { ChatInput } from '@/components/chat-input';
 import { DataFeedback } from '@/components/data-states';
-import { FilterBottomSheet, type FilterOption } from '@/components/filter-controls';
-import { ListToolbar } from '@/components/list-toolbar';
+import { SearchField } from '@/components/search-field';
 import { ScreenHeader } from '@/components/screen-header';
 import { useAuth } from '@/features/auth/auth-context';
 import { aiService, type ChatSource } from '@/services/ai/ai.service';
@@ -13,12 +14,6 @@ import { ApiClientError } from '@/services/api/api.client';
 import { colors, fonts, radius, spacing, type } from '@/theme/tokens';
 
 type ChatMessage = { id: string; role: 'assistant' | 'user'; text: string; createdAt: string; sources?: ChatSource[] };
-
-const filters: FilterOption[] = [
-  { id: 'all', label: 'Toàn bộ cuộc trò chuyện' },
-  { id: 'mine', label: 'Tin nhắn của tôi' },
-  { id: 'assistant', label: 'Phản hồi từ AI' },
-];
 
 const welcome: ChatMessage = {
   id: 'welcome', role: 'assistant',
@@ -32,17 +27,12 @@ export default function AiSupportScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([welcome]);
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
   const [lastQuestion, setLastQuestion] = useState('');
-  const activeFilter = filters.find((item) => item.id === filter);
-  const filtered = useMemo(() => messages.filter((item) => {
-    const queryMatch = item.text.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'));
-    const filterMatch = filter === 'all' || (filter === 'mine' ? item.role === 'user' : item.role === 'assistant');
-    return queryMatch && filterMatch;
-  }), [filter, messages, query]);
+  const filtered = useMemo(() => messages.filter((item) => item.text.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))), [messages, query]);
 
   const send = async (retryQuestion?: string) => {
     const question = (retryQuestion ?? draft).trim();
@@ -68,8 +58,29 @@ export default function AiSupportScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader title="AI hỗ trợ" description="Một không gian riêng tư để sắp xếp suy nghĩ. AI không thay thế chuyên gia hoặc dịch vụ khẩn cấp." />
-      <ListToolbar activeFilterLabel={filter !== 'all' ? activeFilter?.label : undefined} onOpenFilter={() => setSheetOpen(true)} onQueryChange={setQuery} query={query} searchLabel="Tìm trong cuộc trò chuyện" />
+      <ScreenHeader
+        action={(
+          <Pressable accessibilityLabel="Tùy chọn cuộc trò chuyện" accessibilityRole="button" onPress={() => setMenuOpen((value) => !value)} style={({ pressed }) => [styles.menuButton, pressed && styles.pressed]}>
+            <Ionicons color={colors.ink} name="ellipsis-horizontal" size={23} />
+          </Pressable>
+        )}
+        description="Hỗ trợ trò chuyện và sắp xếp suy nghĩ"
+        title="AI hỗ trợ"
+      />
+      {menuOpen ? (
+        <View style={styles.menu}>
+          <MenuItem icon="time-outline" label="Lịch sử hội thoại" onPress={() => { setMenuOpen(false); Alert.alert('Lịch sử hội thoại', 'Lịch sử sẽ xuất hiện khi tài khoản có cuộc trò chuyện đã lưu.'); }} />
+          <MenuItem icon="search-outline" label="Tìm kiếm" onPress={() => { setSearchOpen(true); setMenuOpen(false); }} />
+          <MenuItem icon="add-outline" label="Cuộc trò chuyện mới" onPress={() => { setMessages([welcome]); setQuery(''); setSearchOpen(false); setMenuOpen(false); }} />
+          <MenuItem icon="information-circle-outline" label="Thông tin & giới hạn của AI" onPress={() => { setMenuOpen(false); Alert.alert('Về AI hỗ trợ', 'AI không thay thế chuyên gia hoặc dịch vụ khẩn cấp. Nếu bạn đang gặp nguy hiểm, hãy liên hệ dịch vụ khẩn cấp tại nơi bạn sống.'); }} />
+        </View>
+      ) : null}
+      {searchOpen ? (
+        <View style={styles.searchRow}>
+          <View style={styles.searchField}><SearchField label="Tìm trong cuộc trò chuyện" onChangeText={setQuery} value={query} /></View>
+          <Pressable accessibilityRole="button" onPress={() => { setSearchOpen(false); setQuery(''); }} style={styles.cancelSearch}><Text style={styles.cancelSearchText}>Đóng</Text></Pressable>
+        </View>
+      ) : null}
       <FlatList
         ref={listRef}
         contentContainerStyle={styles.list}
@@ -77,10 +88,10 @@ export default function AiSupportScreen() {
         keyExtractor={(item) => item.id}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={<DataFeedback actionLabel="Xóa bộ lọc" description="Không có tin nhắn phù hợp với tìm kiếm hiện tại." kind="empty" onAction={() => { setQuery(''); setFilter('all'); }} title="Không tìm thấy tin nhắn" />}
+        ListEmptyComponent={<DataFeedback actionLabel="Xóa tìm kiếm" description="Không có tin nhắn phù hợp với từ khóa hiện tại." kind="empty" onAction={() => setQuery('')} title="Không tìm thấy tin nhắn" />}
         ListFooterComponent={(
           <View>
-            {sending ? <LoadingBubble /> : null}
+            {sending ? <ChatBubbleLoading /> : null}
             {sendError ? (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{sendError}</Text>
@@ -90,45 +101,20 @@ export default function AiSupportScreen() {
           </View>
         )}
         ListHeaderComponent={<Text style={styles.dateLabel}>Hôm nay</Text>}
-        renderItem={({ item }) => <MessageBubble item={item} />}
+        renderItem={({ item }) => <ChatBubble role={item.role} sources={item.sources?.map((source) => source.title)} text={item.text} time={item.createdAt} />}
       />
-      <View style={styles.composer}>
-        <TextInput
-          accessibilityLabel="Nhập tin nhắn cho AI"
-          editable={!sending}
-          maxLength={4000}
-          multiline
-          onChangeText={setDraft}
-          placeholder="Chia sẻ điều bạn đang nghĩ…"
-          placeholderTextColor={colors.muted}
-          style={styles.composerInput}
-          value={draft}
-        />
-        <Pressable accessibilityLabel="Gửi tin nhắn" accessibilityRole="button" disabled={!draft.trim() || sending} onPress={() => void send()} style={({ pressed }) => [styles.send, pressed && styles.sendPressed, (!draft.trim() || sending) && styles.sendDisabled]}>
-          <Ionicons color={colors.surface} name="arrow-up" size={20} />
-        </Pressable>
-      </View>
-      <FilterBottomSheet onClose={() => setSheetOpen(false)} onSelect={setFilter} options={filters} selected={filter} title="Lọc tin nhắn" visible={sheetOpen} />
+      <ChatInput disabled={sending} onChangeText={setDraft} onSend={() => void send()} value={draft} />
     </AppScreen>
   );
 }
 
-function MessageBubble({ item }: { item: ChatMessage }) {
-  const mine = item.role === 'user';
+function MenuItem({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress(): void }) {
   return (
-    <View style={[styles.messageRow, mine && styles.messageRowMine]}>
-      {!mine && <View style={styles.aiIcon}><Ionicons color={colors.brandDark} name="sparkles" size={17} /></View>}
-      <View style={[styles.bubble, mine ? styles.mineBubble : styles.aiBubble]}>
-        <Text style={[styles.messageText, mine && styles.mineText]}>{item.text}</Text>
-        {item.sources?.length ? <Text style={styles.sources}>Nguồn: {item.sources.map((source) => source.title).join(' · ')}</Text> : null}
-        <Text style={[styles.messageTime, mine && styles.mineTime]}>{item.createdAt}</Text>
-      </View>
-    </View>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}>
+      <Ionicons color={colors.inkSoft} name={icon} size={20} />
+      <Text style={styles.menuItemText}>{label}</Text>
+    </Pressable>
   );
-}
-
-function LoadingBubble() {
-  return <View accessibilityLabel="AI đang trả lời" style={styles.messageRow}><View style={styles.aiIcon}><Ionicons color={colors.brandDark} name="sparkles" size={17} /></View><View style={[styles.bubble, styles.aiBubble, styles.loadingBubble]}><View style={styles.loadingLine} /><View style={styles.loadingShortLine} /></View></View>;
 }
 
 function formatTime(date: Date) {
@@ -140,29 +126,20 @@ function makeId(prefix: string) {
 }
 
 const styles = StyleSheet.create({
-  list: { flexGrow: 1, gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.md },
+  list: { flexGrow: 1, gap: spacing.md, paddingHorizontal: spacing.page, paddingBottom: spacing.md },
   dateLabel: { alignSelf: 'center', color: colors.muted, fontFamily: fonts.medium, fontSize: type.caption, marginBottom: spacing.xxs },
-  messageRow: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs, maxWidth: '90%' },
-  messageRowMine: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
-  aiIcon: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderRadius: radius.pill, height: 32, justifyContent: 'center', width: 32 },
-  bubble: { borderRadius: radius.card, maxWidth: '90%', paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
-  aiBubble: { backgroundColor: colors.surface, borderColor: colors.line, borderBottomLeftRadius: spacing.xxs, borderWidth: 1 },
-  mineBubble: { backgroundColor: colors.brandDeep, borderBottomRightRadius: spacing.xxs },
-  messageText: { color: colors.ink, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 23 },
-  mineText: { color: colors.surface },
-  sources: { color: colors.brandDark, fontFamily: fonts.medium, fontSize: type.caption, lineHeight: 18, marginTop: spacing.xs },
-  messageTime: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, marginTop: spacing.xs },
-  mineTime: { color: colors.brandSoft, textAlign: 'right' },
-  loadingBubble: { gap: spacing.xs, minHeight: 62, width: 180 },
-  loadingLine: { backgroundColor: colors.skeleton, borderRadius: radius.sm, height: 12, width: '92%' },
-  loadingShortLine: { backgroundColor: colors.skeleton, borderRadius: radius.sm, height: 12, width: '58%' },
+  menuButton: { alignItems: 'center', borderRadius: radius.sm, height: 44, justifyContent: 'center', width: 44 },
+  pressed: { opacity: 0.65 },
+  menu: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, marginBottom: spacing.sm, marginHorizontal: spacing.page, overflow: 'hidden' },
+  menuItem: { alignItems: 'center', borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.sm, minHeight: 48, paddingHorizontal: spacing.sm },
+  menuItemPressed: { backgroundColor: colors.surfacePressed },
+  menuItemText: { color: colors.ink, flex: 1, fontFamily: fonts.regular, fontSize: type.label },
+  searchRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm, paddingHorizontal: spacing.page },
+  searchField: { flex: 1 },
+  cancelSearch: { alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+  cancelSearchText: { color: colors.brand, fontFamily: fonts.medium, fontSize: type.label },
   errorBox: { alignItems: 'center', backgroundColor: colors.dangerSoft, borderColor: colors.dangerLine, borderRadius: radius.input, borderWidth: 1, flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, padding: spacing.sm },
   errorText: { color: colors.danger, flex: 1, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18 },
   retry: { alignItems: 'center', height: 44, justifyContent: 'center', paddingHorizontal: spacing.xs },
   retryText: { color: colors.danger, fontFamily: fonts.semibold, fontSize: type.caption },
-  composer: { alignItems: 'flex-end', backgroundColor: colors.surface, borderTopColor: colors.line, borderTopWidth: 1, flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  composerInput: { backgroundColor: colors.canvas, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, color: colors.ink, flex: 1, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 22, maxHeight: 112, minHeight: 48, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
-  send: { alignItems: 'center', backgroundColor: colors.brandDark, borderRadius: radius.input, height: 48, justifyContent: 'center', width: 48 },
-  sendPressed: { opacity: 0.82, transform: [{ translateY: 1 }] },
-  sendDisabled: { opacity: 0.42 },
 });

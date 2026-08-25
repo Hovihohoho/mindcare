@@ -6,7 +6,7 @@ export type HealthConnectAvailability =
   | 'unavailable'
   | 'update-required';
 
-export type HealthPermissionState = Record<HealthDataType, boolean>;
+export type HealthPermissionState = Record<HealthDataType, boolean> & { background: boolean };
 
 export type HealthSource = {
   origin?: string;
@@ -18,6 +18,7 @@ type HealthRecordBase = {
   startTime: string;
   endTime: string;
   source: HealthSource;
+  sourceLastModifiedAt?: string;
 };
 
 export type StepHealthRecord = HealthRecordBase & {
@@ -56,22 +57,29 @@ export type NormalizedHealthData = {
 
 export type HealthMetricSyncItem = {
   externalSampleId: string;
-  metricType: 'STEP_COUNT' | 'HEART_RATE' | 'SLEEP_HOURS';
+  metricType: 'STEP_COUNT' | 'HEART_RATE' | 'SLEEP_SESSION' | 'EXERCISE_SESSION';
   recordedAt: string;
-  unit: 'count' | 'bpm' | 'h';
-  value: number;
+  unit?: 'count' | 'bpm';
+  value?: number;
+  startTime?: string;
+  endTime?: string;
+  sourceName?: string;
+  dataOrigin?: string;
+  sourceLastModifiedAt?: string;
+  details?: Record<string, unknown>;
 };
 
 export type HealthMetricBatchResponse = {
   acceptedCount: number;
   duplicateCount: number;
+  updatedCount: number;
   processedMetricIds: string[];
 };
 
 export type HealthSyncResult = {
   acceptedCount: number;
   duplicateCount: number;
-  exerciseSkippedCount: number;
+  updatedCount: number;
   invalidSkippedCount: number;
   readCounts: Record<HealthDataType, number>;
   syncedAt: string;
@@ -82,4 +90,16 @@ export type HealthConnectSnapshot = {
   initialized: boolean;
   lastSyncTime: string | null;
   permissions: HealthPermissionState;
+};
+
+export type HealthTrendPoint = {
+  periodStart: string;
+  periodEnd: string;
+  metricType: HealthMetricSyncItem['metricType'];
+  value: number;
+  minimumValue: number;
+  maximumValue: number;
+  count: number;
+  unit: string;
+  aggregation: 'AVERAGE' | 'SUM';
 };

@@ -29,12 +29,12 @@ export default function TabsLayout() {
       initialRouteName="journal"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.brandDark,
-        tabBarInactiveTintColor: colors.muted,
+        tabBarActiveTintColor: colors.brand,
+        tabBarInactiveTintColor: colors.tertiary,
         tabBarHideOnKeyboard: true,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line, minHeight: 64 },
-        tabBarItemStyle: { minHeight: 52, paddingVertical: 5 },
-        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: type.tab, lineHeight: 14 },
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line, borderTopWidth: 1, minHeight: 62 },
+        tabBarItemStyle: { minHeight: 52, paddingBottom: 4, paddingTop: 6 },
+        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: type.tab, lineHeight: 15 },
       }}
     >
       {Object.entries(visibleTabs).map(([name, title]) => (

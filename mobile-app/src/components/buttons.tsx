@@ -39,14 +39,14 @@ export function ActionButton({ label, icon, tone = 'primary', compact = false, l
 const styles = StyleSheet.create({
   base: { alignItems: 'center', borderRadius: radius.input, flexDirection: 'row', gap: spacing.xs, height: 52, justifyContent: 'center', paddingHorizontal: spacing.md },
   primary: { backgroundColor: colors.brandDark },
-  secondary: { backgroundColor: colors.surface, borderColor: colors.lineStrong, borderWidth: 1 },
+  secondary: { backgroundColor: colors.surface, borderColor: colors.line, borderWidth: 1 },
   danger: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerLine, borderWidth: 1 },
   link: { backgroundColor: colors.transparent },
   compact: { height: 44, paddingHorizontal: spacing.xs },
   pressed: { opacity: 0.82, transform: [{ translateY: 1 }] },
   disabled: { opacity: 0.5 },
   label: { fontFamily: fonts.semibold, fontSize: type.label },
-  primaryLabel: { color: colors.surface },
+  primaryLabel: { color: colors.accentInk },
   secondaryLabel: { color: colors.brandDark },
   dangerLabel: { color: colors.danger },
 });

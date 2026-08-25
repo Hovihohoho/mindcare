@@ -9,10 +9,17 @@ import org.springframework.data.repository.query.Param;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 public interface HealthMetricRepository extends JpaRepository<HealthMetricEntity, UUID> {
 
     boolean existsByUserIdAndSourceTypeAndExternalSampleIdAndDeletedAtIsNull(
+            UUID userId,
+            String sourceType,
+            String externalSampleId
+    );
+
+    Optional<HealthMetricEntity> findByUserIdAndSourceTypeAndExternalSampleId(
             UUID userId,
             String sourceType,
             String externalSampleId
