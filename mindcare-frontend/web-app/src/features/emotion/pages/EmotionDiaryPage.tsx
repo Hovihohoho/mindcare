@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Button, Card, Loading, Textarea } from "@/shared";
+import { Button, Card, Loading, Textarea, cn } from "@/shared";
 import { emotionApi } from "../api/emotion.api";
 import { EmotionHistoryIcon, EmotionPicker } from "../components/EmotionPicker";
 import { EmotionTrendChart } from "../components/EmotionTrendChart";
@@ -16,6 +16,9 @@ export function EmotionDiaryPage() {
   const queryClient = useQueryClient();
   const [emotion, setEmotion] = useState<EmotionLevel>();
   const [note, setNote] = useState("");
+  const [energyLevel, setEnergyLevel] = useState<number>();
+  const [stressLevel, setStressLevel] = useState<number>();
+  const [sleepQuality, setSleepQuality] = useState<number>();
   const history = useQuery({
     queryKey: ["emotion-history", rangeFrom.toISOString(), rangeTo.toISOString()],
     queryFn: () => emotionApi.history(rangeFrom.toISOString(), rangeTo.toISOString()),
@@ -25,10 +28,13 @@ export function EmotionDiaryPage() {
     queryFn: () => emotionApi.trends(rangeFrom.toISOString(), rangeTo.toISOString()),
   });
   const createJournal = useMutation({
-    mutationFn: () => emotionApi.create({ emotionType: emotion!, content: note.trim() }),
+    mutationFn: () => emotionApi.create({ emotionType: emotion!, content: note.trim(), energyLevel, stressLevel, sleepQuality }),
     onSuccess: async () => {
       setEmotion(undefined);
       setNote("");
+      setEnergyLevel(undefined);
+      setStressLevel(undefined);
+      setSleepQuality(undefined);
       await queryClient.invalidateQueries({ queryKey: ["emotion-history"] });
       await queryClient.invalidateQueries({ queryKey: ["emotion-trends"] });
     },
@@ -42,6 +48,13 @@ export function EmotionDiaryPage() {
           <p className="mt-4 text-lg text-slate-500">Hôm nay tâm trạng của bạn như thế nào?</p>
           <div className="mt-8 max-w-[680px]"><EmotionPicker value={emotion} onChange={setEmotion} /></div>
           <div className="mt-8">
+            <div className="grid gap-5 md:grid-cols-3">
+              <RatingField label="Năng lượng" value={energyLevel} onChange={setEnergyLevel} low="Rất thấp" high="Rất cao" />
+              <RatingField label="Căng thẳng" value={stressLevel} onChange={setStressLevel} low="Rất ít" high="Rất nhiều" />
+              <RatingField label="Giấc ngủ" value={sleepQuality} onChange={setSleepQuality} low="Rất kém" high="Rất tốt" />
+            </div>
+          </div>
+          <div className="mt-8">
             <Textarea
               label="Viết thêm về ngày hôm nay"
               placeholder="Hãy chia sẻ những gì đang diễn ra..."
@@ -50,7 +63,7 @@ export function EmotionDiaryPage() {
             />
           </div>
           <div className="mt-5 flex justify-end gap-3">
-            <Button variant="outline" onClick={() => { setEmotion(undefined); setNote(""); }}>Hủy</Button>
+            <Button variant="outline" onClick={() => { setEmotion(undefined); setNote(""); setEnergyLevel(undefined); setStressLevel(undefined); setSleepQuality(undefined); }}>Hủy</Button>
             <Button disabled={!emotion} loading={createJournal.isPending} onClick={() => createJournal.mutate()}>Lưu nhật ký</Button>
           </div>
           {createJournal.isError && <p className="mt-4 text-sm text-rose-700">Không thể lưu nhật ký. Vui lòng thử lại.</p>}
@@ -78,6 +91,7 @@ export function EmotionDiaryPage() {
                       <span className="whitespace-nowrap text-xs text-muted">{new Date(item.createdAt).toLocaleString("vi-VN")}</span>
                     </div>
                     <p className="mt-2 line-clamp-2 text-slate-500">{item.content || "Không có ghi chú"}</p>
+                    {(item.energyLevel || item.stressLevel || item.sleepQuality) && <p className="mt-2 text-xs text-muted">Năng lượng {item.energyLevel ?? "–"}/5 · Căng thẳng {item.stressLevel ?? "–"}/5 · Giấc ngủ {item.sleepQuality ?? "–"}/5</p>}
                   </div>
                 </article>
               );
@@ -89,4 +103,8 @@ export function EmotionDiaryPage() {
       </Card>
     </div>
   );
+}
+
+function RatingField({ label, value, onChange, low, high }: { label: string; value?: number; onChange: (value: number) => void; low: string; high: string }) {
+  return <fieldset><legend className="text-sm font-semibold text-slate-700">{label} <span className="font-normal text-muted">(không bắt buộc)</span></legend><div className="mt-2 flex gap-2">{[1, 2, 3, 4, 5].map((score) => <button className={cn("grid size-9 place-items-center rounded-full border text-sm font-semibold", value === score ? "border-brand-600 bg-brand-600 text-white" : "border-line bg-white text-slate-600")} key={score} onClick={() => onChange(score)} type="button">{score}</button>)}</div><div className="mt-1 flex justify-between text-[11px] text-muted"><span>{low}</span><span>{high}</span></div></fieldset>;
 }

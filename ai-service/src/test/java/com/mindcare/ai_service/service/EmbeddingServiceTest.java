@@ -29,7 +29,8 @@ class EmbeddingServiceTest {
         when(geminiClient.embed(org.mockito.ArgumentMatchers.startsWith("Sleep"),
                 org.mockito.ArgumentMatchers.eq("RETRIEVAL_DOCUMENT")))
                 .thenThrow(new RuntimeException("embedding unavailable"));
-        EmbeddingService service = new EmbeddingService(geminiClient, vectorRepository, repository);
+        DocumentChunker chunker = new DocumentChunker(500, 50);
+        EmbeddingService service = new EmbeddingService(geminiClient, vectorRepository, repository, chunker);
 
         int count = service.reindexAll();
 
@@ -38,7 +39,8 @@ class EmbeddingServiceTest {
         assertThat(successful.getIndexedAt()).isNotNull();
         assertThat(failed.getProcessingStatus()).isEqualTo("FAILED");
         assertThat(failed.getProcessingError()).isEqualTo("embedding unavailable");
-        verify(vectorRepository).updateEmbedding(successful.getId(), List.of(0.1));
+        verify(vectorRepository).replaceChunks(org.mockito.ArgumentMatchers.eq(successful.getId()),
+                org.mockito.ArgumentMatchers.eq("Stress"), org.mockito.ArgumentMatchers.anyList());
     }
 
     private KnowledgeDocument document(String title) {

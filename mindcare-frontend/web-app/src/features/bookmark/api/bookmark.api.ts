@@ -1,6 +1,6 @@
 import { httpClient, type ApiResponse } from "@/shared";
 
-export type BookmarkType = "ASSESSMENT";
+export type BookmarkType = "ASSESSMENT" | "SELF_CARE_CONTENT";
 export interface BookmarkItem {
   id: string;
   targetType: BookmarkType;

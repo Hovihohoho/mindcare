@@ -41,6 +41,7 @@ public class RagChatService {
             """;
     private final EmbeddingService embeddingService;
     private final GeminiClient geminiClient;
+    private final CrisisRiskDetector crisisRiskDetector;
 
     @Value("${rag.default-top-k:5}") private int defaultTopK;
     @Value("${rag.max-top-k:10}") private int maxTopK;
@@ -51,12 +52,13 @@ public class RagChatService {
             return new RagChatResponse(conversationalReply(request.question()), List.of());
         }
         int topK = Math.min(request.topK() == null ? defaultTopK : request.topK(), maxTopK);
+        CrisisRiskDetector.RiskLevel riskLevel = crisisRiskDetector.detect(request.question());
         String conversation = formatHistory(request.history());
         String retrievalQuery = conversation.isBlank()
                 ? request.question().trim()
                 : conversation + "\n" + request.question().trim();
         List<SimilarityResult> contexts = embeddingService.search(
-                        retrievalQuery, topK, threshold).stream()
+                        retrievalQuery, topK, threshold, riskLevel.requiresSafetyContext()).stream()
                 .filter(item -> item.sourceUrl() != null && item.sourceUrl().startsWith("https://"))
                 .toList();
         String contextText = contexts.isEmpty()
@@ -93,7 +95,7 @@ public class RagChatService {
         String prompt = "NGỮ CẢNH ĐÃ KIỂM CHỨNG:\n" + contextText
                 + (conversation.isBlank() ? "" : "\n\nHỘI THOẠI GẦN ĐÂY:\n" + conversation)
                 + "\n\nTIN NHẮN HIỆN TẠI CỦA NGƯỜI DÙNG:\n" + request.question().trim();
-        system = system + SAFETY_RESPONSE_POLICY;
+        system = system + safetyInstruction(riskLevel);
         boolean conversational = isConversational(request.question());
         if (contexts.isEmpty() && !conversational) {
             return new RagChatResponse(
@@ -126,6 +128,32 @@ public class RagChatService {
                 })
                 .toList();
         return new RagChatResponse(answer, sources);
+    }
+
+    private String safetyInstruction(CrisisRiskDetector.RiskLevel riskLevel) {
+        return switch (riskLevel) {
+            case NONE -> """
+
+                    SAFETY ROUTING:
+                    - Tin nhắn hiện tại không có tín hiệu tự hại hoặc tự sát. Không hỏi về tự hại, không đưa
+                      hướng dẫn cấp cứu và không chuyển chủ đề sang khủng hoảng. Hãy trả lời đúng vấn đề người dùng nêu.
+                    """;
+            case CHECK_IN -> SAFETY_RESPONSE_POLICY + """
+
+                    Tín hiệu hiện tại còn mơ hồ. Chỉ hỏi một câu kiểm tra an toàn ngắn; không khẳng định người dùng
+                    có ý định tự sát và không đưa quy trình cấp cứu dài khi họ chưa xác nhận nguy cơ.
+                    """;
+            case EXPLICIT -> SAFETY_RESPONSE_POLICY + """
+
+                    Người dùng đã trực tiếp đề cập tự hại/tự sát. Hỏi rõ họ có đang định thực hiện ngay lúc này,
+                    có kế hoạch hoặc phương tiện hay không, đồng thời khuyến khích kết nối hỗ trợ trực tiếp.
+                    """;
+            case IMMINENT -> SAFETY_RESPONSE_POLICY + """
+
+                    Có tín hiệu nguy cơ tức thời. Ưu tiên hướng dẫn khẩn cấp ngắn gọn, không để người dùng ở một mình
+                    và không mô tả phương pháp tự hại.
+                    """;
+        };
     }
 
     private Set<Integer> citedNumbers(String answer) {

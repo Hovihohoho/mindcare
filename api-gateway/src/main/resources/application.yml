@@ -36,7 +36,7 @@ spring:
             - id: emotion-service
               uri: ${EMOTION_SERVICE_URI:http://localhost:8083}
               predicates:
-                - Path=/api/v1/emotion-journals/**,/api/v1/emotion-trends/**,/api/v1/assessments/**,/api/v1/assessment-results/**,/api/v1/risk-alerts/**,/api/v1/health-metrics/**,/api/v1/admin/assessments/**
+                - Path=/api/v1/emotion-journals/**,/api/v1/emotion-trends/**,/api/v1/assessments/**,/api/v1/assessment-results/**,/api/v1/risk-alerts/**,/api/v1/health-metrics/**,/api/v1/self-care-plan/**,/api/v1/admin/assessments/**
             - id: ai-service
               uri: ${AI_SERVICE_URI:http://localhost:8084}
               predicates:

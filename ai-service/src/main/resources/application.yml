@@ -29,3 +29,5 @@ rag:
   default-top-k: 5
   max-top-k: 10
   similarity-threshold: 0.35
+  chunk-size-characters: 1800
+  chunk-overlap-characters: 250

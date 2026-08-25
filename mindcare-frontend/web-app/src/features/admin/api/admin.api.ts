@@ -14,7 +14,7 @@ export interface KnowledgeDocument {
   originalFilename?: string;
   mimeType?: string;
   fileSize?: number;
-  processingStatus?: "PROCESSING" | "READY" | "FAILED";
+  processingStatus?: "PENDING_REVIEW" | "PROCESSING" | "READY" | "FAILED" | "REJECTED";
   processingError?: string;
   indexedAt?: string;
   publisher?: string;

@@ -45,6 +45,7 @@ Mailpit captures local verification emails and does not deliver them to the publ
 Start the complete application and load the idempotent demo dataset with:
 
 ```powershell
+$env:GEMINI_API_KEY="your-key"
 .\run-all.ps1 -SeedDemo
 ```
 

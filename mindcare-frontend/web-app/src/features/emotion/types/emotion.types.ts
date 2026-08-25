@@ -4,6 +4,9 @@ export interface EmotionJournal {
   id: string;
   emotionType: EmotionLevel;
   content: string | null;
+  energyLevel: number | null;
+  stressLevel: number | null;
+  sleepQuality: number | null;
   createdAt: string;
   updatedAt: string;
 }

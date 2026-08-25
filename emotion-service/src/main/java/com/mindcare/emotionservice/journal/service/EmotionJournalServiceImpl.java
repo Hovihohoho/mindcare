@@ -66,7 +66,10 @@ public class EmotionJournalServiceImpl implements EmotionJournalService {
         EmotionJournalEntity entity = new EmotionJournalEntity(
                 userId,
                 request.emotionType(),
-                normalizeContent(request.content())
+                normalizeContent(request.content()),
+                request.energyLevel(),
+                request.stressLevel(),
+                request.sleepQuality()
         );
         return mapper.toResponse(repository.saveAndFlush(entity));
     }

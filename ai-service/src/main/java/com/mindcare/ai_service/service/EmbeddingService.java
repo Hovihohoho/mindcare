@@ -16,17 +16,22 @@ public class EmbeddingService {
     private final GeminiClient geminiClient;
     private final KnowledgeVectorRepository vectorRepository;
     private final KnowledgeDocumentRepository documentRepository;
+    private final DocumentChunker chunker;
 
     public void embed(KnowledgeDocument document) {
-        String input = document.getTitle() + "\n\n" + document.getContent();
-        vectorRepository.updateEmbedding(
-                document.getId(), geminiClient.embed(input, "RETRIEVAL_DOCUMENT"));
+        List<KnowledgeVectorRepository.ChunkEmbedding> embeddings = chunker.split(document.getContent()).stream()
+                .map(chunk -> new KnowledgeVectorRepository.ChunkEmbedding(chunk.index(), chunk.content(),
+                        chunk.tokenEstimate(), geminiClient.embed(
+                                document.getTitle() + "\n\n" + chunk.content(), "RETRIEVAL_DOCUMENT")))
+                .toList();
+        if (embeddings.isEmpty()) throw new IllegalArgumentException("Tài liệu không có nội dung để lập chỉ mục");
+        vectorRepository.replaceChunks(document.getId(), document.getTitle(), embeddings);
     }
 
     public List<KnowledgeVectorRepository.SimilarityResult> search(
-            String query, int limit, double threshold) {
-        return vectorRepository.search(
-                geminiClient.embed(query, "RETRIEVAL_QUERY"), limit, threshold);
+            String query, int limit, double threshold, boolean includeSafety) {
+        return vectorRepository.search(query,
+                geminiClient.embed(query, "RETRIEVAL_QUERY"), limit, threshold, includeSafety);
     }
 
     @Transactional

@@ -2,7 +2,7 @@ import { httpClient, type CursorPage } from "@/shared";
 import type { EmotionJournal, EmotionLevel, EmotionTrendPoint } from "../types/emotion.types";
 
 export const emotionApi = {
-  async create(payload: { emotionType: EmotionLevel; content: string }) {
+  async create(payload: { emotionType: EmotionLevel; content: string; energyLevel?: number; stressLevel?: number; sleepQuality?: number }) {
     const { data } = await httpClient.post<EmotionJournal>("/api/v1/emotion-journals", payload);
     return data;
   },

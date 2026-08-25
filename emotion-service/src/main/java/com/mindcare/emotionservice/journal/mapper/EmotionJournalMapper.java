@@ -17,5 +17,8 @@ public interface EmotionJournalMapper {
     @Mapping(target = "userId", source = "userId")
     @Mapping(target = "emotionType", source = "request.emotionType")
     @Mapping(target = "content", source = "request.content")
+    @Mapping(target = "energyLevel", source = "request.energyLevel")
+    @Mapping(target = "stressLevel", source = "request.stressLevel")
+    @Mapping(target = "sleepQuality", source = "request.sleepQuality")
     EmotionJournalEntity toEntity(CreateEmotionJournalRequest request, UUID userId);
 }

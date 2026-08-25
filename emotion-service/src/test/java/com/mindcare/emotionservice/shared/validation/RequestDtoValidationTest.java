@@ -59,6 +59,16 @@ class RequestDtoValidationTest {
     }
 
     @Test
+    void dailyCheckInSignalsMustStayWithinOneToFive() {
+        var valid = new CreateEmotionJournalRequest(EmotionType.NEUTRAL, null, 1, 5, 3);
+        var invalid = new CreateEmotionJournalRequest(EmotionType.NEUTRAL, null, 0, 6, -1);
+
+        assertThat(validator.validate(valid)).isEmpty();
+        assertThat(paths(validator.validate(invalid))).containsExactlyInAnyOrder(
+                "energyLevel", "stressLevel", "sleepQuality");
+    }
+
+    @Test
     void healthBatchValidatesSizeAndNestedItems() {
         HealthMetricBatchRequest invalid = new HealthMetricBatchRequest(
                 " ",

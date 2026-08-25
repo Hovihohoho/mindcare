@@ -27,6 +27,9 @@ const HomePage = lazy(() => import("@/features/home").then((module) => ({ defaul
 const NotificationsPage = lazy(() => import("@/features/notifications").then((module) => ({ default: module.NotificationsPage })));
 const ProfilePage = lazy(() => import("@/features/profile").then((module) => ({ default: module.ProfilePage })));
 const SettingsPage = lazy(() => import("@/features/settings").then((module) => ({ default: module.SettingsPage })));
+const SelfCareLibraryPage = lazy(() => import("@/features/self-care").then((module) => ({ default: module.SelfCareLibraryPage })));
+const SelfCareDetailPage = lazy(() => import("@/features/self-care").then((module) => ({ default: module.SelfCareDetailPage })));
+const CarePlanPage = lazy(() => import("@/features/care-plan").then((module) => ({ default: module.CarePlanPage })));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
 const ForbiddenPage = lazy(() => import("./pages/ForbiddenPage").then((module) => ({ default: module.ForbiddenPage })));
 
@@ -45,6 +48,9 @@ export const appRouter = createBrowserRouter([
           { path: "emotion", element: <EmotionDiaryPage /> },
           { path: "emotion/history", element: <EmotionHistoryPage /> },
           { path: "ai-chat", element: <AiChatPage /> },
+          { path: "self-care", element: <SelfCareLibraryPage /> },
+          { path: "self-care/:id", element: <SelfCareDetailPage /> },
+          { path: "care-plan", element: <CarePlanPage /> },
           { path: "bookmarks", element: <BookmarkPage /> },
           { path: "profile", element: <ProfilePage /> },
           { path: "settings", element: <SettingsPage /> },

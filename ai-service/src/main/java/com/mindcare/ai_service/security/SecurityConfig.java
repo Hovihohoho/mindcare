@@ -29,6 +29,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/ws/ai/**").authenticated()
                         .requestMatchers("/api/ai/documents/**").hasRole("ADMIN")
+                        .requestMatchers("/api/ai/self-care-content/**").hasRole("USER")
                         .requestMatchers("/api/ai/chat/**").authenticated()
                         .anyRequest().denyAll())
                 .exceptionHandling(errors -> errors

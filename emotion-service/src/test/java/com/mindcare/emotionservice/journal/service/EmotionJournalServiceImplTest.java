@@ -88,6 +88,22 @@ class EmotionJournalServiceImplTest {
     }
 
     @Test
+    void createJournalPersistsOptionalDailyCheckInSignals() {
+        when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(mapper.toResponse(any())).thenReturn(new EmotionJournalResponse(
+                null, EmotionType.HAPPY, null, 4, 2, 5, null, null));
+
+        service.createJournal(UUID.randomUUID(),
+                new CreateEmotionJournalRequest(EmotionType.HAPPY, null, 4, 2, 5));
+
+        ArgumentCaptor<EmotionJournalEntity> captor = ArgumentCaptor.forClass(EmotionJournalEntity.class);
+        verify(repository).saveAndFlush(captor.capture());
+        assertEquals(4, captor.getValue().getEnergyLevel());
+        assertEquals(2, captor.getValue().getStressLevel());
+        assertEquals(5, captor.getValue().getSleepQuality());
+    }
+
+    @Test
     void createJournalRejectsMissingEmotion() {
         assertThrows(
                 InvalidRequestException.class,

@@ -31,14 +31,16 @@ export function AdminContentPage() {
         title: String(data.get("title")),
         content: String(data.get("content")),
         sourceUrl: String(data.get("sourceUrl")),
-        documentType: "KNOWLEDGE",
+        documentType: String(data.get("documentType") || "SELF_CARE_ARTICLE"),
         active: true,
       });
       form.reset();
       await docs.refetch();
       setDocumentMessage(document.processingStatus === "FAILED"
         ? "Đã lưu tài liệu nhưng chưa thể lập chỉ mục. Hãy kiểm tra GEMINI_API_KEY rồi thử lại."
-        : "Đã thêm và lập chỉ mục tài liệu AI.");
+        : document.processingStatus === "PENDING_REVIEW"
+          ? "Đã lưu nội dung và chuyển sang bước chờ kiểm duyệt."
+          : "Đã thêm và lập chỉ mục tài liệu AI.");
     } catch {
       setDocumentMessage("Không thể thêm tài liệu AI. Vui lòng kiểm tra AI Service và dữ liệu nhập.");
     } finally {
@@ -71,6 +73,12 @@ export function AdminContentPage() {
         <form className="mt-4 grid gap-4" onSubmit={create}>
           <Input label="Tiêu đề" name="title" required />
           <Input label="Nguồn" name="sourceUrl" type="url" />
+          <label className="grid gap-2 text-sm font-semibold text-slate-700">Loại nội dung
+            <select className="h-12 rounded-xl border border-line bg-white px-4" defaultValue="SELF_CARE_ARTICLE" name="documentType">
+              <option value="SELF_CARE_ARTICLE">Bài viết tự chăm sóc</option>
+              <option value="KNOWLEDGE">Tài liệu kiến thức cho AI</option>
+            </select>
+          </label>
           <Textarea label="Nội dung" name="content" required rows={6} />
           <Button className="w-fit" loading={creating}>Thêm và lập chỉ mục</Button>
         </form>

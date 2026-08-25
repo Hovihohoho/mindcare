@@ -42,6 +42,15 @@ public class EmotionJournalEntity {
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "energy_level")
+    private Integer energyLevel;
+
+    @Column(name = "stress_level")
+    private Integer stressLevel;
+
+    @Column(name = "sleep_quality")
+    private Integer sleepQuality;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -54,9 +63,17 @@ public class EmotionJournalEntity {
     private OffsetDateTime deletedAt;
 
     public EmotionJournalEntity(UUID userId, EmotionType emotionType, String content) {
+        this(userId, emotionType, content, null, null, null);
+    }
+
+    public EmotionJournalEntity(UUID userId, EmotionType emotionType, String content,
+                                Integer energyLevel, Integer stressLevel, Integer sleepQuality) {
         this.userId = Objects.requireNonNull(userId, "userId must not be null");
         this.emotionType = Objects.requireNonNull(emotionType, "emotionType must not be null");
         this.content = content;
+        this.energyLevel = energyLevel;
+        this.stressLevel = stressLevel;
+        this.sleepQuality = sleepQuality;
     }
 
     public void softDelete(OffsetDateTime deletedAt) {

@@ -32,9 +32,10 @@ class KnowledgeVectorRepositoryTests {
                 "A", "APPROVED");
         List<Double> vector = new ArrayList<>(Collections.nCopies(768, 0.0));
         vector.set(0, 1.0);
-        vectorRepository.updateEmbedding(id, vector);
+        vectorRepository.replaceChunks(id, "Vector repository test", List.of(
+                new KnowledgeVectorRepository.ChunkEmbedding(0, "Test content", 3, vector)));
 
-        var results = vectorRepository.search(vector, 3, 0.5);
+        var results = vectorRepository.search("Test content", vector, 3, 0.5, false);
 
         assertThat(results).isNotEmpty();
         assertThat(results.get(0).id()).isEqualTo(id);
