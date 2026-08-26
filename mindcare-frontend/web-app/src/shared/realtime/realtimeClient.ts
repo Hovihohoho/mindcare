@@ -1,5 +1,5 @@
 import type { NotificationItem } from "@/features/notification/types/notification.types";
-import type { ChatSource } from "@/features/ai-chat/types/chat.types";
+import type { ChatSafetyDirective, ChatSource } from "@/features/ai-chat/types/chat.types";
 
 type RealtimeChannel = "ai" | "notifications";
 type Listener = (payload: unknown) => void;
@@ -7,7 +7,7 @@ type Listener = (payload: unknown) => void;
 interface AiResponseEvent {
   type: "AI_RESPONSE";
   requestId: string;
-  data: { answer: string; sources: ChatSource[] };
+  data: { answer: string; sources: ChatSource[]; safety: ChatSafetyDirective; conversationId: string };
 }
 
 interface AiErrorEvent {
@@ -67,13 +67,13 @@ class RealtimeClient {
     return this.sockets.get(channel)?.readyState === WebSocket.OPEN;
   }
 
-  askAi(question: string, history: Array<{ role: "user" | "assistant"; content: string }> = [], topK = 5) {
+  askAi(question: string, history: Array<{ role: "user" | "assistant"; content: string }> = [], topK = 5, conversationId?: string) {
     const socket = this.sockets.get("ai");
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       return Promise.reject(new Error("AI WebSocket is not connected"));
     }
     const requestId = crypto.randomUUID();
-    return new Promise<{ answer: string; sources: ChatSource[] }>(
+    return new Promise<{ answer: string; sources: ChatSource[]; safety: ChatSafetyDirective; conversationId: string }>(
       (resolve, reject) => {
         const timeout = window.setTimeout(() => {
           unsubscribe();
@@ -93,6 +93,7 @@ class RealtimeClient {
           question,
           topK,
           history,
+          conversationId,
         }));
       },
     );

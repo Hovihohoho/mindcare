@@ -1,0 +1,20 @@
+[
+  {
+    "date": "2026-08-25",
+    "scope": "screen",
+    "macrostructure": "Native Content Flow",
+    "theme": "custom",
+    "theme_axes": "warm-white / restrained-sans / muted-teal",
+    "enrichment": "none",
+    "brief": "Redesign the MindCare Mobile Health Connect dashboard"
+  },
+  {
+    "date": "2026-08-24",
+    "scope": "app",
+    "macrostructure": "Native Content Flow",
+    "theme": "custom",
+    "theme_axes": "warm-white / restrained-sans / muted-teal",
+    "enrichment": "none",
+    "brief": "Redesign MindCare Mobile as a calm modern consumer mental-wellness app"
+  }
+]

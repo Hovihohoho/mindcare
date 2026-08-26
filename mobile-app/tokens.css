@@ -1,0 +1,38 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Native Content Flow · design-system: design.md · designed-as-app */
+:root {
+  --color-paper: oklch(98.2% 0.006 174);
+  --color-paper-2: oklch(100% 0 0);
+  --color-ink: oklch(27% 0.032 190);
+  --color-ink-2: oklch(53% 0.018 190);
+  --color-rule: oklch(92.5% 0.009 174);
+  --color-accent: oklch(55% 0.075 185);
+  --color-accent-dark: oklch(45% 0.072 185);
+  --color-accent-soft: oklch(95% 0.019 174);
+  --color-accent-ink: oklch(100% 0 0);
+  --color-focus: oklch(47% 0.074 185);
+  --font-display: "Be Vietnam Pro", sans-serif;
+  --font-body: "Be Vietnam Pro", sans-serif;
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-page: 1.25rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 2.5rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.25rem;
+  --text-title: 1.875rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.32, 0, 0.67, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-short: 120ms;
+  --dur-medium: 180ms;
+  --radius-sm: 8px;
+  --radius-input: 12px;
+  --radius-card: 14px;
+  --radius-sheet: 22px;
+  --rule-hairline: 1px;
+}

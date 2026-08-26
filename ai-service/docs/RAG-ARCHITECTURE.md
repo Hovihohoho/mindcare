@@ -15,6 +15,8 @@
 7. A deterministic Vietnamese crisis gate classifies only the current user message. Safety documents are
    excluded from ordinary retrieval and become eligible only for ambiguous, explicit or imminent risk signals.
    This prevents symptoms such as insomnia alone from causing false-positive suicide escalation.
+8. The response includes structured safety metadata (`NONE`, `CHECK_IN`, `EXPLICIT`, `IMMINENT`) so clients
+   can render deterministic safety checks and emergency actions independently from generated prose.
 
 ## Why this design
 

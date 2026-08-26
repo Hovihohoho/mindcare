@@ -35,6 +35,16 @@ export const authApi = {
   async deactivate() {
     await httpClient.delete("/api/auth/me");
   },
+  async exportMyData() {
+    const { data } = await httpClient.get<ApiResponse<Record<string, unknown>>>("/api/auth/me/data-export");
+    return data.data;
+  },
+  async verifyPassword(currentPassword: string) {
+    await httpClient.post("/api/auth/me/verify-password", { currentPassword });
+  },
+  async permanentlyDelete(currentPassword: string) {
+    await httpClient.delete("/api/auth/me/permanent", { data: { currentPassword } });
+  },
   async sessions() {
     const { data } = await httpClient.get<ApiResponse<LoginSession[]>>("/api/auth/sessions");
     return data.data;

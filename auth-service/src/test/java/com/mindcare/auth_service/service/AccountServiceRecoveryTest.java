@@ -14,6 +14,8 @@ import com.mindcare.auth_service.entity.UserSession;
 import com.mindcare.auth_service.repository.PasswordResetTokenRepository;
 import com.mindcare.auth_service.repository.UserRepository;
 import com.mindcare.auth_service.repository.UserSessionRepository;
+import com.mindcare.auth_service.repository.NotificationRepository;
+import com.mindcare.auth_service.repository.BookmarkRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.OffsetDateTime;
@@ -39,6 +41,8 @@ class AccountServiceRecoveryTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JavaMailSender mailSender;
     @Mock private PasswordPolicy passwordPolicy;
+    @Mock private NotificationRepository notificationRepository;
+    @Mock private BookmarkRepository bookmarkRepository;
     @InjectMocks private AccountService service;
 
     private User user;
@@ -48,11 +52,36 @@ class AccountServiceRecoveryTest {
     void setUp() {
         user = new User();
         user.setId(UUID.randomUUID());
+        user.setEmail("user@mindcare.test");
         user.setPassword("old-hash");
         token = new PasswordResetToken();
         token.setUser(user);
         token.setTokenHash(hash("raw-token"));
         token.setExpiresAt(OffsetDateTime.now().plusMinutes(5));
+    }
+
+    @Test
+    void permanentDeletionRequiresCurrentPassword() {
+        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", user.getPassword())).thenReturn(false);
+
+        assertThatThrownBy(() -> service.permanentlyDelete(user.getEmail(), "wrong"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Mật khẩu");
+        verify(userRepository, never()).delete(any());
+    }
+
+    @Test
+    void permanentDeletionReturnsAvatarForPostCommitCleanup() {
+        user.setAvatarUrl("/api/auth/files/avatars/avatar.webp");
+        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("correct", user.getPassword())).thenReturn(true);
+
+        String avatar = service.permanentlyDelete(user.getEmail(), "correct");
+
+        assertThat(avatar).isEqualTo(user.getAvatarUrl());
+        verify(userRepository).delete(user);
+        verify(userRepository).flush();
     }
 
     @Test

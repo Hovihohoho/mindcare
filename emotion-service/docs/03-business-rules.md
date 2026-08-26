@@ -42,17 +42,20 @@
 | `SLEEP_HOURS` | `h` | Không âm; giới hạn sinh lý/ingest cụ thể cần cấu hình |
 | `HEART_RATE` | `bpm` | Số dương; phân biệt sample và aggregate trong thiết kế mở rộng |
 | `STEP_COUNT` | `count` | Số nguyên không âm dù schema hiện dùng numeric |
+| `SLEEP_SESSION` | duration suy ra theo giờ | Bắt buộc `startTime < endTime`, tối đa cửa sổ ingest |
+| `EXERCISE_SESSION` | duration suy ra theo giờ | Bắt buộc `startTime < endTime`, giữ `exerciseType` trong details |
 
-Nguồn baseline: `APPLE_HEALTH`, `GOOGLE_HEALTH`, `MANUAL`. Tài liệu tổng quan nhấn mạnh Google Health Connect, tài liệu chức năng bổ sung Apple HealthKit.
+Nguồn baseline: `APPLE_HEALTH`, `HEALTH_CONNECT` (`GOOGLE_HEALTH` là alias tương thích), `MANUAL`.
 
 ### Quy tắc
 
 1. Client chỉ gửi dữ liệu sau khi hệ điều hành/user cấp quyền; server không thể tự cấp quyền native.
-2. Mỗi item phải có type, value, unit/source và `recordedAt` hợp lệ, không ở tương lai quá ngưỡng clock-skew cấu hình.
+2. Metric point phải có value/unit; session phải có `startTime`/`endTime`. `recordedAt` hợp lệ và không ở tương lai quá clock-skew.
 3. Convert về đơn vị canonical trước khi phân tích; giữ metadata nguồn cần thiết để audit.
-4. Batch phải có `idempotencyKey` hoặc external sample ID. Cùng user/source/key không được tạo trùng.
-5. Item không hợp lệ cần error rõ ràng. Chính sách atomic cả batch hay partial acceptance phải được chốt; baseline đề xuất atomic cho batch nhỏ.
-6. Thu hồi consent dừng ingest tương lai; xử lý dữ liệu đã lưu theo policy retention/erasure được duyệt.
+4. Batch phải có `Idempotency-Key`; dữ liệu thiết bị bắt buộc có external sample ID. Cùng user/source/external ID được upsert, không tạo trùng; `sourceLastModifiedAt` mới hơn được quyền cập nhật bản ghi.
+5. Trend theo ngày tổng hợp riêng từng metric: heart rate dùng average; steps và duration session dùng sum. Không trộn metric hoặc đơn vị.
+6. Batch tối đa 100 item và được validate atomically; item không hợp lệ làm cả batch thất bại với error rõ ràng.
+7. Thu hồi consent dừng ingest tương lai; xử lý dữ liệu đã lưu theo policy retention/erasure được duyệt.
 
 ## Assessment
 

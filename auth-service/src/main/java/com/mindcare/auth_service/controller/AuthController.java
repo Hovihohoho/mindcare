@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -128,6 +129,31 @@ public class AuthController {
                     item.getCreatedAt(), item.getLastSeenAt(), item.getExpiresAt(),
                     item.getRevokedAt() != null);
         }
+    }
+
+    @GetMapping("/me/data-export")
+    public ApiResponse<Map<String, Object>> exportData(Authentication authentication) {
+        return ApiResponse.success(
+                "Dữ liệu tài khoản của bạn",
+                accountService.exportData(authentication.getName()));
+    }
+
+    @PostMapping("/me/verify-password")
+    public ApiResponse<Void> verifyPassword(
+            Authentication authentication,
+            @Valid @RequestBody AccountRequests.ConfirmPassword request) {
+        accountService.verifyPassword(authentication.getName(), request.currentPassword());
+        return ApiResponse.success("Mật khẩu hợp lệ", null);
+    }
+
+    @DeleteMapping("/me/permanent")
+    public ApiResponse<Void> permanentlyDelete(
+            Authentication authentication,
+            @Valid @RequestBody AccountRequests.ConfirmPassword request) {
+        String avatarUrl = accountService.permanentlyDelete(
+                authentication.getName(), request.currentPassword());
+        accountService.deleteAvatarFile(avatarUrl);
+        return ApiResponse.success("Tài khoản đã được xóa vĩnh viễn", null);
     }
 
 }

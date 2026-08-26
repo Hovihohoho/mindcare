@@ -31,3 +31,7 @@ rag:
   similarity-threshold: 0.35
   chunk-size-characters: 1800
   chunk-overlap-characters: 250
+
+ai:
+  conversation-retention-days: ${AI_CONVERSATION_RETENTION_DAYS:365}
+  conversation-retention-cron: ${AI_CONVERSATION_RETENTION_CRON:0 20 3 * * *}

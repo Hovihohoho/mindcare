@@ -1,3 +1,4 @@
+/* Hallmark · pre-emit critique: P5 H4 E5 S4 R5 V4 */
 import { ArrowRight, Bot, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/shared";
@@ -8,13 +9,13 @@ export function HeroSection() {
       <div className="page-container grid min-h-[564px] items-center gap-10 lg:grid-cols-2 lg:gap-8">
         <div className="flex flex-col items-start gap-8">
           <span className="inline-flex items-center gap-2 rounded-full bg-emerald-200 px-4 py-1.5 text-sm font-medium text-teal-800">
-            <ShieldCheck className="size-4" /> Người đồng hành tâm hồn số 1
+            <ShieldCheck className="size-4" /> Đồng hành riêng tư mỗi ngày
           </span>
           <h1 className="max-w-[620px] text-4xl font-bold leading-[1.2] text-slate-800 md:text-5xl">
             Chăm sóc sức khỏe <span className="text-brand-700">tinh thần</span> mỗi ngày.
           </h1>
           <p className="max-w-[590px] text-base leading-7 text-slate-500 md:text-lg">
-            Theo dõi cảm xúc, đánh giá sức khỏe tâm lý, kết nối chuyên gia và nhận hỗ trợ từ AI mọi lúc, mọi nơi trong môi trường an toàn và bảo mật.
+            Theo dõi cảm xúc, thực hiện bài đánh giá tâm lý và nhận gợi ý từ AI trong một không gian riêng tư, dễ sử dụng.
           </p>
           <div className="flex w-full max-w-[300px] flex-col gap-4">
             <Link to="/assessments">

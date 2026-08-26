@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
     Page<Notification> findByUserIdOrderByCreatedAtDescIdDesc(UUID userId, Pageable pageable);
     List<Notification> findTop50ByUserIdOrderByCreatedAtDesc(UUID userId);
+    List<Notification> findByUserIdOrderByCreatedAtDesc(UUID userId);
     Optional<Notification> findByIdAndUserId(UUID id, UUID userId);
     boolean existsBySourceEventIdAndUserId(UUID sourceEventId, UUID userId);
     long countByUserIdAndReadAtIsNull(UUID userId);

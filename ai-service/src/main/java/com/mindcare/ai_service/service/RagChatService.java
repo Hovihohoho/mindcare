@@ -2,6 +2,7 @@ package com.mindcare.ai_service.service;
 
 import com.mindcare.ai_service.dto.RagChatRequest;
 import com.mindcare.ai_service.dto.RagChatResponse;
+import com.mindcare.ai_service.dto.RagChatResponse.SafetyDirective;
 import com.mindcare.ai_service.repository.KnowledgeVectorRepository.SimilarityResult;
 import java.util.List;
 import java.util.Set;
@@ -100,7 +101,7 @@ public class RagChatService {
         if (contexts.isEmpty() && !conversational) {
             return new RagChatResponse(
                     "Mình chưa tìm thấy nguồn đã được MindCare kiểm duyệt đủ phù hợp để trả lời chính xác câu hỏi này. Bạn có thể mô tả cụ thể hơn điều bạn đang muốn tìm hiểu không?",
-                    List.of());
+                    List.of(), safetyDirective(riskLevel));
         }
         String answer = geminiClient.generate(system, prompt);
         Set<Integer> citedNumbers = citedNumbers(answer);
@@ -116,7 +117,7 @@ public class RagChatService {
         if (!conversational && !citationsAreValid(citedNumbers, contexts.size())) {
             return new RagChatResponse(
                     "Mình chưa thể tạo câu trả lời có đủ căn cứ kiểm chứng cho câu hỏi này. Vì an toàn, mình sẽ không đưa ra nhận định khi chưa có nguồn phù hợp.",
-                    List.of());
+                    List.of(), safetyDirective(riskLevel));
         }
         Set<Integer> validatedCitations = citedNumbers;
         List<RagChatResponse.Source> sources = IntStream.range(0, contexts.size())
@@ -127,7 +128,16 @@ public class RagChatService {
                             index + 1, item.id(), item.title(), item.sourceUrl(), item.similarity());
                 })
                 .toList();
-        return new RagChatResponse(answer, sources);
+        return new RagChatResponse(answer, sources, safetyDirective(riskLevel));
+    }
+
+    private SafetyDirective safetyDirective(CrisisRiskDetector.RiskLevel riskLevel) {
+        return switch (riskLevel) {
+            case NONE -> SafetyDirective.none();
+            case CHECK_IN -> new SafetyDirective("CHECK_IN", true, false, null);
+            case EXPLICIT -> new SafetyDirective("EXPLICIT", true, true, "115");
+            case IMMINENT -> new SafetyDirective("IMMINENT", true, true, "115");
+        };
     }
 
     private String safetyInstruction(CrisisRiskDetector.RiskLevel riskLevel) {

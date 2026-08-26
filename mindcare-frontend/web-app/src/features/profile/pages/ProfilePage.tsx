@@ -1,9 +1,11 @@
 import { useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, Upload } from "lucide-react";
+import { Download, Save, Trash2, Upload } from "lucide-react";
 import { authApi, useCurrentUser } from "@/features/auth";
 import { Avatar, Button, Card, Input, Loading, PageHeader, Textarea } from "@/shared";
 import { userStorage } from "@/shared/lib/storage";
+import { tokenStorage } from "@/shared/lib/storage";
+import { privacyApi } from "../api/privacy.api";
 
 export function ProfilePage() {
   const user = useCurrentUser();
@@ -21,6 +23,36 @@ export function ProfilePage() {
     onSuccess: (item) => {
       userStorage.set(item);
       client.setQueryData(["current-user"], item);
+    },
+  });
+  const exportData = useMutation({
+    mutationFn: async () => {
+      const [account, wellbeing, ai] = await Promise.all([
+        authApi.exportMyData(),
+        privacyApi.exportEmotionData(),
+        privacyApi.exportAiData(),
+      ]);
+      const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), account, wellbeing, ai }, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `mindcare-data-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    },
+  });
+  const deleteAccount = useMutation({
+    mutationFn: async () => {
+      const password = window.prompt("Nhập mật khẩu hiện tại để xác nhận xóa vĩnh viễn tài khoản");
+      if (!password) throw new Error("CANCELLED");
+      await authApi.verifyPassword(password);
+      await privacyApi.deleteEmotionData();
+      await privacyApi.deleteAiData();
+      await authApi.permanentlyDelete(password);
+    },
+    onSuccess: () => {
+      tokenStorage.clear();
+      window.location.assign("/login");
     },
   });
 
@@ -99,6 +131,18 @@ export function ProfilePage() {
           {save.isError && <p className="text-rose-600 md:col-span-2">Không thể lưu hồ sơ.</p>}
           <div className="md:col-span-2"><Button leftIcon={<Save className="size-4" />} loading={save.isPending}>Lưu thay đổi</Button></div>
         </form>
+      </Card>
+      <Card className="p-7">
+        <h2 className="text-lg font-bold">Quyền dữ liệu của bạn</h2>
+        <p className="mt-2 text-sm text-muted">Tải bản sao dữ liệu hồ sơ, nhật ký, đánh giá, Health Connect, kế hoạch tự chăm sóc và hội thoại AI.</p>
+        <Button className="mt-5" leftIcon={<Download className="size-4" />} loading={exportData.isPending} onClick={() => exportData.mutate()} type="button" variant="outline">Tải dữ liệu của tôi</Button>
+        {exportData.isError && <p className="mt-2 text-sm text-rose-600">Không thể tạo bản xuất dữ liệu. Vui lòng thử lại.</p>}
+      </Card>
+      <Card className="border-rose-200 p-7">
+        <h2 className="text-lg font-bold text-rose-800">Xóa tài khoản vĩnh viễn</h2>
+        <p className="mt-2 text-sm text-muted">Thao tác này xóa hồ sơ, dữ liệu chăm sóc tinh thần và hội thoại AI. Dữ liệu không thể khôi phục.</p>
+        <Button className="mt-5" leftIcon={<Trash2 className="size-4" />} loading={deleteAccount.isPending} onClick={() => { if (window.confirm("Bạn chắc chắn muốn xóa vĩnh viễn toàn bộ tài khoản MindCare?")) deleteAccount.mutate(); }} type="button" variant="outline">Xóa vĩnh viễn tài khoản</Button>
+        {deleteAccount.isError && <p className="mt-2 text-sm text-rose-600">Không thể hoàn tất xóa tài khoản. Nếu một phần dữ liệu đã được xóa, bạn có thể thử lại an toàn.</p>}
       </Card>
     </div>
   );

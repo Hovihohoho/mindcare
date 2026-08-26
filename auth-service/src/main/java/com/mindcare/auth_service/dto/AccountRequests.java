@@ -20,6 +20,8 @@ public final class AccountRequests {
             @NotBlank @Size(min = 8, max = 72) String newPassword
     ) {}
 
+    public record ConfirmPassword(@NotBlank String currentPassword) {}
+
     public record ForgotPassword(@NotBlank @Email String email) {}
     public record ResetPassword(
             @NotBlank String token,

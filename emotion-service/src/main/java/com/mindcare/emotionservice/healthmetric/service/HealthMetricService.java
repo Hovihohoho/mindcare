@@ -4,6 +4,7 @@ import com.mindcare.emotionservice.healthmetric.dto.HealthMetricBatchRequest;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricBatchResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricTrendPointResponse;
+import com.mindcare.emotionservice.healthmetric.dto.HealthSourceSummaryResponse;
 import com.mindcare.emotionservice.shared.dto.CursorPageResponse;
 
 import java.time.OffsetDateTime;
@@ -36,4 +37,10 @@ public interface HealthMetricService {
             String bucket,
             ZoneId timezone
     );
+
+    HealthSourceSummaryResponse getSourceSummary(UUID userId, String sourceType);
+
+    HealthSourceSummaryResponse enableSourceSync(UUID userId, String sourceType);
+
+    HealthSourceSummaryResponse revokeAndDeleteSourceData(UUID userId, String sourceType);
 }

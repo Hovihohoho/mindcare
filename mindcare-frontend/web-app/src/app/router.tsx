@@ -24,6 +24,8 @@ const BookmarkPage = lazy(() => import("@/features/bookmark").then((module) => (
 const EmotionDiaryPage = lazy(() => import("@/features/emotion").then((module) => ({ default: module.EmotionDiaryPage })));
 const EmotionHistoryPage = lazy(() => import("@/features/emotion").then((module) => ({ default: module.EmotionHistoryPage })));
 const HomePage = lazy(() => import("@/features/home").then((module) => ({ default: module.HomePage })));
+const ProgressPage = lazy(() => import("@/features/progress").then((module) => ({ default: module.ProgressPage })));
+const HealthDataPage = lazy(() => import("@/features/health").then((module) => ({ default: module.HealthDataPage })));
 const NotificationsPage = lazy(() => import("@/features/notifications").then((module) => ({ default: module.NotificationsPage })));
 const ProfilePage = lazy(() => import("@/features/profile").then((module) => ({ default: module.ProfilePage })));
 const SettingsPage = lazy(() => import("@/features/settings").then((module) => ({ default: module.SettingsPage })));
@@ -42,11 +44,13 @@ export const appRouter = createBrowserRouter([
       {
         element: <RequireRole roles={["ROLE_USER"]}><UserLayout /></RequireRole>,
         children: [
+          { path: "progress", element: <ProgressPage /> },
           { path: "assessments", element: <AssessmentOverviewPage /> },
           { path: "assessments/library", element: <AssessmentLibraryPage /> },
           { path: "assessments/:code/result", element: <AssessmentResultPage /> },
           { path: "emotion", element: <EmotionDiaryPage /> },
           { path: "emotion/history", element: <EmotionHistoryPage /> },
+          { path: "health", element: <HealthDataPage /> },
           { path: "ai-chat", element: <AiChatPage /> },
           { path: "self-care", element: <SelfCareLibraryPage /> },
           { path: "self-care/:id", element: <SelfCareDetailPage /> },

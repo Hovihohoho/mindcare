@@ -8,6 +8,10 @@ import com.mindcare.auth_service.entity.UserSession;
 import com.mindcare.auth_service.repository.PasswordResetTokenRepository;
 import com.mindcare.auth_service.repository.UserRepository;
 import com.mindcare.auth_service.repository.UserSessionRepository;
+import com.mindcare.auth_service.repository.NotificationRepository;
+import com.mindcare.auth_service.repository.BookmarkRepository;
+import com.mindcare.auth_service.entity.Notification;
+import com.mindcare.auth_service.entity.Bookmark;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -27,6 +31,10 @@ import java.util.List;
 import java.util.UUID;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -37,10 +45,13 @@ public class AccountService {
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
     private final PasswordPolicy passwordPolicy;
+    private final NotificationRepository notificationRepository;
+    private final BookmarkRepository bookmarkRepository;
     private final SecureRandom random = new SecureRandom();
 
     @Value("${app.frontend-url}") private String frontendUrl;
     @Value("${app.mail-from}") private String mailFrom;
+    @Value("${app.upload-directory:uploads}") private String uploadDirectory;
 
     public User current(String email) {
         return userRepository.findByEmail(email)
@@ -86,6 +97,83 @@ public class AccountService {
 
     public List<UserSession> sessions(String email) {
         return sessionRepository.findByUserIdOrderByCreatedAtDesc(current(email).getId());
+    }
+
+    public Map<String, Object> exportData(String email) {
+        User user = current(email);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("exportedAt", OffsetDateTime.now());
+        result.put("profile", UserSummary.from(user));
+        result.put("sessions", sessions(email).stream().map(this::sessionExport).toList());
+        result.put("notifications", notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
+                .stream().map(this::notificationExport).toList());
+        result.put("bookmarks", bookmarkRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
+                .stream().map(this::bookmarkExport).toList());
+        return result;
+    }
+
+    public void verifyPassword(String email, String currentPassword) {
+        if (!passwordEncoder.matches(currentPassword, current(email).getPassword())) {
+            throw new RuntimeException("Mật khẩu hiện tại không đúng");
+        }
+    }
+
+    @Transactional
+    public String permanentlyDelete(String email, String currentPassword) {
+        User user = current(email);
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Mật khẩu hiện tại không đúng");
+        }
+        String avatarUrl = user.getAvatarUrl();
+        userRepository.delete(user);
+        userRepository.flush();
+        return avatarUrl;
+    }
+
+    public void deleteAvatarFile(String avatarUrl) {
+        if (avatarUrl == null || !avatarUrl.startsWith("/api/auth/files/avatars/")) return;
+        String filename = avatarUrl.substring(avatarUrl.lastIndexOf('/') + 1);
+        Path directory = Path.of(uploadDirectory, "avatars").toAbsolutePath().normalize();
+        Path file = directory.resolve(filename).normalize();
+        if (!file.getParent().equals(directory)) return;
+        try {
+            Files.deleteIfExists(file);
+        } catch (java.io.IOException ignored) {
+            // Database deletion remains authoritative; orphan cleanup can retry safely.
+        }
+    }
+
+    private Map<String, Object> sessionExport(UserSession session) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", session.getId());
+        result.put("userAgent", session.getUserAgent());
+        result.put("ipAddress", session.getIpAddress());
+        result.put("createdAt", session.getCreatedAt());
+        result.put("lastSeenAt", session.getLastSeenAt());
+        result.put("expiresAt", session.getExpiresAt());
+        result.put("revoked", session.getRevokedAt() != null);
+        return result;
+    }
+
+    private Map<String, Object> notificationExport(Notification item) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", item.getId());
+        result.put("type", item.getType());
+        result.put("title", item.getTitle());
+        result.put("message", item.getMessage());
+        result.put("actionUrl", item.getActionUrl());
+        result.put("readAt", item.getReadAt());
+        result.put("createdAt", item.getCreatedAt());
+        return result;
+    }
+
+    private Map<String, Object> bookmarkExport(Bookmark item) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", item.getId());
+        result.put("targetType", item.getTargetType());
+        result.put("targetId", item.getTargetId());
+        result.put("createdAt", item.getCreatedAt());
+        return result;
     }
 
     @Transactional

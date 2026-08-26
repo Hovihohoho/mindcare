@@ -178,6 +178,16 @@ Không chuyển `Provisional` thành `Accepted` nếu chưa có phê duyệt th�
 - Hệ quả: cả service lock/invariant và database constraint cùng bảo vệ thao tác; writer khác không thể tạo draft active thứ hai cho cùng code.
 - Migration: V4 thêm partial unique index `uq_assessment_one_draft_version` trên `assessments(code)` khi `status = 'DRAFT' AND deleted_at IS NULL`; không sửa V1-V3.
 
+## DEC-018 - Health Connect lưu record nguồn và aggregate theo metric
+
+- Trạng thái: **Accepted**
+- Ngày ghi nhận: 2026-08-21
+- Người duyệt: chủ dự án, qua chỉ thị trực tiếp triển khai luồng Health Connect production.
+- Quyết định: client đọc rolling window 7 ngày, gửi batch tối đa 100; backend upsert theo `(user_id, source_type, external_sample_id)` và chỉ nhận thay đổi nguồn mới hơn khi có `sourceLastModifiedAt`.
+- Quyết định: point metric giữ value/unit; sleep và exercise giữ start/end cùng JSON details. Trend theo ngày dùng average cho heart rate và sum cho steps/duration session, timezone mặc định `Asia/Ho_Chi_Minh`.
+- Lý do: record nguồn có thể bị sửa sau lần ingest đầu; insert-ignore làm aggregate cũ vĩnh viễn và mô hình value-only làm mất session.
+- Migration: V7 mở rộng `health_metrics`, giữ unique key xuyên soft-delete và thêm index daily aggregation.
+
 ## Quyết định mở cần ưu tiên
 
 | ID | Câu hỏi | Người/nhóm cần tham gia | Chặn |

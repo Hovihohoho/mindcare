@@ -3,7 +3,7 @@ package com.mindcare.ai_service.websocket;
 import tools.jackson.databind.ObjectMapper;
 import com.mindcare.ai_service.dto.RagChatRequest;
 import com.mindcare.ai_service.dto.RagChatResponse;
-import com.mindcare.ai_service.service.RagChatService;
+import com.mindcare.ai_service.service.AiConversationService;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
@@ -22,7 +22,7 @@ public class AiChatWebSocketHandler extends TextWebSocketHandler {
     private static final String USER_ID_HEADER = "X-User-Id";
 
     private final ObjectMapper objectMapper;
-    private final RagChatService ragChatService;
+    private final AiConversationService conversationService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -58,8 +58,11 @@ public class AiChatWebSocketHandler extends TextWebSocketHandler {
 
         CompletableFuture.runAsync(() -> {
             try {
-                RagChatResponse response = ragChatService.chat(
-                        new RagChatRequest(request.question(), request.topK(), request.history()));
+                UUID userId = UUID.fromString(session.getHandshakeHeaders().getFirst(USER_ID_HEADER));
+                RagChatResponse response = conversationService.chat(
+                        userId,
+                        new RagChatRequest(
+                                request.question(), request.topK(), request.history(), request.conversationId()));
                 send(session, Map.of(
                         "type", "AI_RESPONSE",
                         "requestId", request.requestId(),
@@ -94,5 +97,6 @@ public class AiChatWebSocketHandler extends TextWebSocketHandler {
             String requestId,
             String question,
             Integer topK,
-            java.util.List<RagChatRequest.ConversationMessage> history) {}
+            java.util.List<RagChatRequest.ConversationMessage> history,
+            UUID conversationId) {}
 }

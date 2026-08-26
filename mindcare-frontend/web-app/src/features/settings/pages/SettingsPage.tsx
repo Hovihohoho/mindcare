@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { authApi } from "@/features/auth";
 import { Button, Card, Input, Loading, PageHeader } from "@/shared";
 import { tokenStorage } from "@/shared/lib/storage";
+import { ReminderSettings } from "../components/ReminderSettings";
 
 export function SettingsPage() {
   const sessions = useQuery({ queryKey: ["auth-sessions"], queryFn: authApi.sessions });
@@ -26,6 +27,7 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-8">
+      <ReminderSettings />
       <PageHeader title="Bảo mật tài khoản" description="Mật khẩu, phiên đăng nhập và trạng thái tài khoản." />
       <Card className="p-7">
         <h2 className="text-xl font-bold">Đổi mật khẩu</h2>

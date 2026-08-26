@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record HealthMetricBatchResponse(
         int acceptedCount,
+        int updatedCount,
         int duplicateCount,
         List<UUID> processedMetricIds
 ) {

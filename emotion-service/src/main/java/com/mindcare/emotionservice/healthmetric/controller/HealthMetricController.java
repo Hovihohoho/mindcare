@@ -4,6 +4,7 @@ import com.mindcare.emotionservice.healthmetric.dto.HealthMetricBatchRequest;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricBatchResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricTrendPointResponse;
+import com.mindcare.emotionservice.healthmetric.dto.HealthSourceSummaryResponse;
 import com.mindcare.emotionservice.healthmetric.service.HealthMetricService;
 import com.mindcare.emotionservice.shared.dto.CursorPageResponse;
 import com.mindcare.emotionservice.shared.security.AuthenticatedUser;
@@ -14,6 +15,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -60,5 +62,26 @@ public class HealthMetricController {
             @RequestParam(defaultValue = "DAY") String bucket,
             @RequestParam(defaultValue = "Asia/Ho_Chi_Minh") String timezone) {
         return service.getMetricTrends(user.userId(), metricType, from, to, bucket, ZoneId.of(timezone));
+    }
+
+    @GetMapping("/sources/{sourceType}")
+    public HealthSourceSummaryResponse sourceSummary(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @org.springframework.web.bind.annotation.PathVariable String sourceType) {
+        return service.getSourceSummary(user.userId(), sourceType);
+    }
+
+    @PostMapping("/sources/{sourceType}/enable")
+    public HealthSourceSummaryResponse enableSource(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @org.springframework.web.bind.annotation.PathVariable String sourceType) {
+        return service.enableSourceSync(user.userId(), sourceType);
+    }
+
+    @DeleteMapping("/sources/{sourceType}/data")
+    public HealthSourceSummaryResponse revokeAndDelete(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @org.springframework.web.bind.annotation.PathVariable String sourceType) {
+        return service.revokeAndDeleteSourceData(user.userId(), sourceType);
     }
 }

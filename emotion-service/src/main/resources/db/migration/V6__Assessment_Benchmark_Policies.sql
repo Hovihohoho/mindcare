@@ -4,7 +4,7 @@ CREATE TABLE emotion_schema.scoring_policies (
     policy_version VARCHAR(30) NOT NULL,
     source_url VARCHAR(1000) NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL,
     CONSTRAINT uq_scoring_policy_version UNIQUE (assessment_code, policy_version)
 );
 
@@ -15,7 +15,7 @@ CREATE TABLE emotion_schema.benchmark_policies (
     interpretation_type VARCHAR(40) NOT NULL,
     source_url VARCHAR(1000) NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL,
     CONSTRAINT uq_benchmark_policy_version UNIQUE (assessment_code, policy_version)
 );
 
@@ -30,17 +30,21 @@ CREATE TABLE emotion_schema.benchmark_bands (
     CONSTRAINT uq_benchmark_band_level UNIQUE (benchmark_policy_key, level)
 );
 
-INSERT INTO emotion_schema.scoring_policies(policy_key, assessment_code, policy_version, source_url) VALUES
-    ('PHQ9_SCORE', 'PHQ-9', '1.0', 'https://doi.org/10.1046/j.1525-1497.2001.016009606.x'),
-    ('GAD7_SCORE', 'GAD-7', '1.0', 'https://doi.org/10.1001/archinte.166.10.1092'),
-    ('WHO5_SCORE', 'WHO-5', '1.0', 'https://www.who.int/publications/m/item/WHO-UCN-MSD-MHE-2024.01'),
-    ('PSS10_SCORE', 'PSS-10', '1.0', 'https://www.cmu.edu/dietrich/psychology/stress-immunity-disease-lab/scales/html/pssscoring.html');
+INSERT INTO emotion_schema.scoring_policies(
+    policy_key, assessment_code, policy_version, source_url, created_at
+) VALUES
+    ('PHQ9_SCORE', 'PHQ-9', '1.0', 'https://doi.org/10.1046/j.1525-1497.2001.016009606.x', CURRENT_TIMESTAMP),
+    ('GAD7_SCORE', 'GAD-7', '1.0', 'https://doi.org/10.1001/archinte.166.10.1092', CURRENT_TIMESTAMP),
+    ('WHO5_SCORE', 'WHO-5', '1.0', 'https://www.who.int/publications/m/item/WHO-UCN-MSD-MHE-2024.01', CURRENT_TIMESTAMP),
+    ('PSS10_SCORE', 'PSS-10', '1.0', 'https://www.cmu.edu/dietrich/psychology/stress-immunity-disease-lab/scales/html/pssscoring.html', CURRENT_TIMESTAMP);
 
-INSERT INTO emotion_schema.benchmark_policies(policy_key, assessment_code, policy_version, interpretation_type, source_url) VALUES
-    ('PHQ9_KROENKE_2001', 'PHQ-9', '1.0', 'SEVERITY_BANDS', 'https://doi.org/10.1046/j.1525-1497.2001.016009606.x'),
-    ('GAD7_SPITZER_2006', 'GAD-7', '1.0', 'SEVERITY_BANDS', 'https://doi.org/10.1001/archinte.166.10.1092'),
-    ('WHO5_2024', 'WHO-5', '1.0', 'WELL_BEING_THRESHOLD', 'https://www.who.int/publications/m/item/WHO-UCN-MSD-MHE-2024.01'),
-    ('PSS10_TRACKING', 'PSS-10', '1.0', 'TRACKING_ONLY', 'https://www.cmu.edu/dietrich/psychology/stress-immunity-disease-lab/scales/html/pssscoring.html');
+INSERT INTO emotion_schema.benchmark_policies(
+    policy_key, assessment_code, policy_version, interpretation_type, source_url, created_at
+) VALUES
+    ('PHQ9_KROENKE_2001', 'PHQ-9', '1.0', 'SEVERITY_BANDS', 'https://doi.org/10.1046/j.1525-1497.2001.016009606.x', CURRENT_TIMESTAMP),
+    ('GAD7_SPITZER_2006', 'GAD-7', '1.0', 'SEVERITY_BANDS', 'https://doi.org/10.1001/archinte.166.10.1092', CURRENT_TIMESTAMP),
+    ('WHO5_2024', 'WHO-5', '1.0', 'WELL_BEING_THRESHOLD', 'https://www.who.int/publications/m/item/WHO-UCN-MSD-MHE-2024.01', CURRENT_TIMESTAMP),
+    ('PSS10_TRACKING', 'PSS-10', '1.0', 'TRACKING_ONLY', 'https://www.cmu.edu/dietrich/psychology/stress-immunity-disease-lab/scales/html/pssscoring.html', CURRENT_TIMESTAMP);
 
 INSERT INTO emotion_schema.benchmark_bands(id, benchmark_policy_key, level, minimum_score, maximum_score, display_order) VALUES
     (md5('PHQ9-MINIMAL')::UUID, 'PHQ9_KROENKE_2001', 'MINIMAL', 0, 4, 1),

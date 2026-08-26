@@ -36,5 +36,46 @@ class RagChatServiceTest {
         assertThat(response.answer()).doesNotContainIgnoringCase("tự hại", "tự sát", "cấp cứu");
         assertThat(response.sources()).singleElement().extracting(source -> source.title())
                 .isEqualTo("Giấc ngủ và sức khỏe tinh thần");
+        assertThat(response.safety().level()).isEqualTo("NONE");
+        assertThat(response.safety().showEmergencyActions()).isFalse();
+    }
+
+    @Test
+    void explicitSelfHarmSignalReturnsStructuredEmergencyActionsEvenWithoutContext() {
+        EmbeddingService embeddings = mock(EmbeddingService.class);
+        GeminiClient gemini = mock(GeminiClient.class);
+        String question = "I want to kill myself";
+        when(embeddings.search(question, 5, 0.35, true)).thenReturn(List.of());
+        RagChatService service = configuredService(embeddings, gemini);
+
+        var response = service.chat(new RagChatRequest(question, null));
+
+        assertThat(response.safety().level()).isEqualTo("EXPLICIT");
+        assertThat(response.safety().showSafetyCheck()).isTrue();
+        assertThat(response.safety().showEmergencyActions()).isTrue();
+        assertThat(response.safety().emergencyNumber()).isEqualTo("115");
+    }
+
+    @Test
+    void ambiguousDistressRequestsSafetyCheckWithoutEmergencyAction() {
+        EmbeddingService embeddings = mock(EmbeddingService.class);
+        GeminiClient gemini = mock(GeminiClient.class);
+        String question = "Tôi thấy tuyệt vọng";
+        when(embeddings.search(question, 5, 0.35, true)).thenReturn(List.of());
+        RagChatService service = configuredService(embeddings, gemini);
+
+        var response = service.chat(new RagChatRequest(question, null));
+
+        assertThat(response.safety().level()).isEqualTo("CHECK_IN");
+        assertThat(response.safety().showSafetyCheck()).isTrue();
+        assertThat(response.safety().showEmergencyActions()).isFalse();
+    }
+
+    private RagChatService configuredService(EmbeddingService embeddings, GeminiClient gemini) {
+        RagChatService service = new RagChatService(embeddings, gemini, new CrisisRiskDetector());
+        ReflectionTestUtils.setField(service, "defaultTopK", 5);
+        ReflectionTestUtils.setField(service, "maxTopK", 10);
+        ReflectionTestUtils.setField(service, "threshold", 0.35);
+        return service;
     }
 }

@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(ConversationNotFoundException.class)
+    ResponseEntity<ApiResponse<Void>> notFound(ConversationNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(exception.getMessage()));
+    }
+
     @ExceptionHandler(IllegalStateException.class)
     ResponseEntity<ApiResponse<Void>> unavailable(IllegalStateException exception) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
