@@ -8,7 +8,8 @@ import java.time.Instant;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AiConversationRepository extends JpaRepository<AiConversation, UUID> {
-    List<AiConversation> findTop50ByUserIdOrderByUpdatedAtDesc(UUID userId);
+    org.springframework.data.domain.Slice<AiConversation> findByUserIdOrderByIdAsc(
+            UUID userId, org.springframework.data.domain.Pageable pageable);
     List<AiConversation> findByUserIdOrderByUpdatedAtDesc(UUID userId);
     Optional<AiConversation> findByIdAndUserId(UUID id, UUID userId);
     long deleteByUpdatedAtBefore(Instant cutoff);

@@ -26,8 +26,8 @@ export interface ConversationDetail extends ConversationSummary {
   }>;
 }
 
-export async function askMindCare(question: string, history: Array<{ role: "user" | "assistant"; content: string }> = [], conversationId?: string): Promise<RagResponse> {
-  const { data } = await httpClient.post<ApiResponse<RagResponse>>("/api/ai/chat", { question, topK: 5, history, conversationId });
+export async function askMindCare(question: string, history: Array<{ role: "user" | "assistant"; content: string }> = [], conversationId?: string, requestId = crypto.randomUUID()): Promise<RagResponse> {
+  const { data } = await httpClient.post<ApiResponse<RagResponse>>("/api/ai/chat", { question, topK: 5, history, conversationId, requestId }, { timeout: 120_000 });
   return data.data;
 }
 

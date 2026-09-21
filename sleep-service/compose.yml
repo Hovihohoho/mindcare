@@ -1,0 +1,11 @@
+services:
+  sleep-inference:
+    build:
+      context: .
+      args:
+        SKLEARN_VERSION: ${SKLEARN_VERSION:?Set SKLEARN_VERSION to the version from Kaggle}
+    ports:
+      - "127.0.0.1:8085:8085"
+    volumes:
+      - ./models:/app/models:ro
+    restart: unless-stopped

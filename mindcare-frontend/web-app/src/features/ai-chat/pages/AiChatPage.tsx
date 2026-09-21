@@ -1,7 +1,8 @@
 import { Bot, Menu, Pencil, Phone, Plus, Send, ShieldAlert, Sparkles, Trash2, Users } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, Card } from "@/shared";
-import { realtimeClient } from "@/shared/realtime/realtimeClient";
+import { AiResponseError, realtimeClient } from "@/shared/realtime/realtimeClient";
+import { isAxiosError } from "axios";
 import { askMindCare, deleteConversation, getConversation, listConversations, renameConversation, type ConversationSummary } from "../api/chat.api";
 import { ChatBubble } from "../components/ChatBubble";
 import type { ChatMessage } from "../types/chat.types";
@@ -41,6 +42,7 @@ export function AiChatPage() {
     event.preventDefault();
     if (!input.trim() || loading) return;
     const question = input.trim();
+    const requestId = crypto.randomUUID();
     const history = messages
       .filter((message) => message.id !== "welcome")
       .slice(-6)
@@ -51,18 +53,23 @@ export function AiChatPage() {
       let response;
       if (realtimeClient.isOpen("ai")) {
         try {
-          response = await realtimeClient.askAi(question, history, 5, conversationId);
-        } catch {
-          response = await askMindCare(question, history, conversationId);
+          response = await realtimeClient.askAi(question, history, 5, conversationId, requestId);
+        } catch (error) {
+          if (error instanceof AiResponseError) throw error;
+          response = await askMindCare(question, history, conversationId, requestId);
         }
       } else {
-        response = await askMindCare(question, history, conversationId);
+        response = await askMindCare(question, history, conversationId, requestId);
       }
       setMessages((items) => [...items, { id: crypto.randomUUID(), role: "assistant", content: response.answer, sources: response.sources, safety: response.safety, createdAt: "Bây giờ" }]);
       setConversationId(response.conversationId);
       refreshConversations();
-    } catch {
-      setMessages((items) => [...items, { id: crypto.randomUUID(), role: "assistant", content: "Không thể kết nối với dịch vụ trợ lý. Vui lòng thử lại sau.", createdAt: "Bây giờ" }]);
+    } catch (error) {
+      const content = error instanceof AiResponseError ? error.message
+        : isAxiosError(error) && error.response?.status === 429
+          ? "Trợ lý đang xử lý yêu cầu hoặc bạn gửi quá nhanh. Vui lòng chờ một phút rồi thử lại."
+          : "Không thể kết nối với dịch vụ trợ lý. Vui lòng thử lại sau.";
+      setMessages((items) => [...items, { id: crypto.randomUUID(), role: "assistant", content, createdAt: "Bây giờ" }]);
     } finally { setLoading(false); }
   };
   return (

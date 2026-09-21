@@ -86,6 +86,28 @@ class AiConversationServiceTest {
     }
 
     @Test
+    void exportIncludesEveryPageAndKeepsOwnership() {
+        UUID user = UUID.randomUUID();
+        var all = java.util.stream.IntStream.range(0, 53).mapToObj(index -> {
+            AiConversation conversation = new AiConversation();
+            conversation.setId(UUID.randomUUID());
+            conversation.setUserId(user);
+            when(conversations.findByIdAndUserId(conversation.getId(), user)).thenReturn(Optional.of(conversation));
+            when(messages.findByConversationIdOrderByCreatedAtAscIdAsc(conversation.getId())).thenReturn(List.of());
+            return conversation;
+        }).toList();
+        var first = org.springframework.data.domain.PageRequest.of(0, 50);
+        var second = org.springframework.data.domain.PageRequest.of(1, 50);
+        when(conversations.findByUserIdOrderByIdAsc(user, first))
+                .thenReturn(new org.springframework.data.domain.SliceImpl<>(all.subList(0, 50), first, true));
+        when(conversations.findByUserIdOrderByIdAsc(user, second))
+                .thenReturn(new org.springframework.data.domain.SliceImpl<>(all.subList(50, 53), second, false));
+
+        assertThat(service.exportAll(user)).hasSize(53)
+                .extracting(item -> item.id()).containsExactlyElementsOf(all.stream().map(AiConversation::getId).toList());
+    }
+
+    @Test
     void deleteAllIsIdempotentAtRepositoryBoundary() {
         UUID userId = UUID.randomUUID();
         when(conversations.deleteByUserId(userId)).thenReturn(0L);

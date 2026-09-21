@@ -1,6 +1,9 @@
 server:
   port: 8084
 
+sleep:
+  inference-url: ${SLEEP_INFERENCE_URL:http://127.0.0.1:8085}
+
 spring:
   application:
     name: ai-service
@@ -24,6 +27,8 @@ gemini:
   chat-model: ${GEMINI_CHAT_MODEL:gemini-3.1-flash-lite}
   fallback-chat-model: ${GEMINI_FALLBACK_CHAT_MODEL:gemini-3.1-flash-lite}
   embedding-dimensions: 768
+  connect-timeout-seconds: ${GEMINI_CONNECT_TIMEOUT_SECONDS:3}
+  read-timeout-seconds: ${GEMINI_READ_TIMEOUT_SECONDS:15}
 
 rag:
   default-top-k: 5
@@ -33,5 +38,7 @@ rag:
   chunk-overlap-characters: 250
 
 ai:
+  chat:
+    requests-per-minute: ${AI_CHAT_REQUESTS_PER_MINUTE:12}
   conversation-retention-days: ${AI_CONVERSATION_RETENTION_DAYS:365}
   conversation-retention-cron: ${AI_CONVERSATION_RETENTION_CRON:0 20 3 * * *}

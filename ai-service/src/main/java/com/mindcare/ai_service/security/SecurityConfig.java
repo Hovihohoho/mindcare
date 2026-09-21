@@ -31,6 +31,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/ai/documents/**").hasRole("ADMIN")
                         .requestMatchers("/api/ai/self-care-content/**").hasRole("USER")
                         .requestMatchers("/api/ai/chat/**").authenticated()
+                        .requestMatchers("/api/ai/privacy/**").authenticated()
+                        .requestMatchers("/api/ai/sleep/**").authenticated()
                         .anyRequest().denyAll())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, exception) ->

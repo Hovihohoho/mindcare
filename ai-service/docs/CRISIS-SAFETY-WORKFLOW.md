@@ -23,6 +23,15 @@ The emergency number is response metadata rather than hard-coded in clients so l
 
 ## Privacy and review
 
+Provider connection/read failures and empty provider responses return a deterministic
+fallback with the current safety directive. This covers provider outages, not a
+database outage or an unavailable gateway. Narrow explicit negations and complete
+educational questions are handled before matching. Educational prefixes must not
+hide a later danger statement. Accented `từ từ` is preserved as ordinary language
+before accent removal. A current statement of inability to stay safe routes to
+`IMMINENT`. The detector remains a limited rule-based router, not a clinically
+validated classifier; the fixed evaluation set cannot establish real-world recall.
+
 - Do not expose detected phrases, hidden scores, or detector internals to clients.
 - Do not infer a diagnosis from a safety level.
 - Do not silently notify family, authorities, or healthcare providers.

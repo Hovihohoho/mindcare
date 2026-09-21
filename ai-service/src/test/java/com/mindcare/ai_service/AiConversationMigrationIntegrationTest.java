@@ -21,7 +21,7 @@ class AiConversationMigrationIntegrationTest {
     @Autowired JdbcTemplate jdbcTemplate;
 
     @Test
-    void flywayCreatesConversationHistoryAtVersionSix() {
+    void flywayCreatesConversationHistoryAndRequestDeduplication() {
         Integer tables = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
                 FROM information_schema.tables
@@ -34,7 +34,11 @@ class AiConversationMigrationIntegrationTest {
                 """, String.class);
 
         assertThat(tables).isEqualTo(2);
-        assertThat(version).isEqualTo("6");
+        assertThat(version).isEqualTo("7");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='ai_schema'
+                AND table_name IN ('ai_chat_requests', 'ai_chat_rate_limits')
+                """, Integer.class)).isEqualTo(2);
     }
 
     @TestConfiguration(proxyBeanMethods = false)

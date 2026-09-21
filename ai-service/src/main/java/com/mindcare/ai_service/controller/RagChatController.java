@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RagChatController {
     private final AiConversationService conversationService;
+    private final com.mindcare.ai_service.service.ChatExecutionService chatExecutionService;
 
     @PostMapping
     public ApiResponse<RagChatResponse> chat(
@@ -34,7 +35,7 @@ public class RagChatController {
             @Valid @RequestBody RagChatRequest request) {
         return ApiResponse.success(
                 "Phản hồi từ MindCare AI",
-                conversationService.chat(user.userId(), request));
+                chatExecutionService.chat(user.userId(), request));
     }
 
     @GetMapping("/conversations")

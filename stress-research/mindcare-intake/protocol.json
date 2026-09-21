@@ -1,0 +1,18 @@
+{
+  "version": "mindcare-stress-v1-draft",
+  "status": "RESEARCH_ONLY_NO_APP_PREDICTION",
+  "target": "same-day self-reported MindCare stressLevel",
+  "target_scale": [1, 2, 3, 4, 5],
+  "label_window_hours": 6,
+  "feature_window_hours": 24,
+  "features": ["steps_24h", "step_coverage_minutes"],
+  "excluded_inputs": ["participant_id", "stress_level", "assessment_answers", "future_records"],
+  "consent_version": "mindcare-stress-research-v1",
+  "split_seed": 20260920,
+  "holdout_participant_fraction": 0.25,
+  "development_folds": 5,
+  "primary_metric": "participant-macro MAE on the 1-5 target",
+  "baselines": ["training-label median", "training-label mean"],
+  "additional_evaluation": "Freeze a later-time cohort before model selection; evaluate once after participant holdout.",
+  "promotion": "Requires independent data, improvement over preselected baseline, coverage/device subgroup review, and approved data/source governance. No automatic deployment."
+}

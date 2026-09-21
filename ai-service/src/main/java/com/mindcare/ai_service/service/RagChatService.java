@@ -18,7 +18,8 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class RagChatService {
-    private static final Pattern CITATION_PATTERN = Pattern.compile("Ngu\u1ed3n\\s+(\\d+)");
+    private static final Pattern CITATION_PATTERN = Pattern.compile("\\[Ngu\u1ed3n\\s+(\\d+)\\]");
+    private static final Pattern CITATION_TOKEN_PATTERN = Pattern.compile("\\[Ngu\u1ed3n[^\\]]*\\]");
     private static final String SAFETY_RESPONSE_POLICY = """
 
             SAFETY RESPONSE POLICY (highest priority):
@@ -54,6 +55,18 @@ public class RagChatService {
         }
         int topK = Math.min(request.topK() == null ? defaultTopK : request.topK(), maxTopK);
         CrisisRiskDetector.RiskLevel riskLevel = crisisRiskDetector.detect(request.question());
+        try {
+            return groundedChat(request, topK, riskLevel);
+        } catch (org.springframework.web.client.RestClientException | IllegalStateException unavailable) {
+            // Safety routing must survive provider outages. Never return provider error bodies.
+            return new RagChatResponse(
+                    "Mình chưa thể tra cứu nguồn tin cậy lúc này. Bạn có thể thử lại sau.",
+                    List.of(), safetyDirective(riskLevel));
+        }
+    }
+
+    private RagChatResponse groundedChat(RagChatRequest request, int topK,
+                                         CrisisRiskDetector.RiskLevel riskLevel) {
         String conversation = formatHistory(request.history());
         String retrievalQuery = conversation.isBlank()
                 ? request.question().trim()
@@ -105,7 +118,7 @@ public class RagChatService {
         }
         String answer = geminiClient.generate(system, prompt);
         Set<Integer> citedNumbers = citedNumbers(answer);
-        if (!conversational && !citationsAreValid(citedNumbers, contexts.size())) {
+        if (!conversational && !citationsAreValid(answer, citedNumbers, contexts.size())) {
             answer = geminiClient.generate(system, prompt + """
 
                     YÊU CẦU SỬA CÂU TRẢ LỜI:
@@ -114,7 +127,7 @@ public class RagChatService {
                     """);
             citedNumbers = citedNumbers(answer);
         }
-        if (!conversational && !citationsAreValid(citedNumbers, contexts.size())) {
+        if (!conversational && !citationsAreValid(answer, citedNumbers, contexts.size())) {
             return new RagChatResponse(
                     "Mình chưa thể tạo câu trả lời có đủ căn cứ kiểm chứng cho câu hỏi này. Vì an toàn, mình sẽ không đưa ra nhận định khi chưa có nguồn phù hợp.",
                     List.of(), safetyDirective(riskLevel));
@@ -169,7 +182,10 @@ public class RagChatService {
     private Set<Integer> citedNumbers(String answer) {
         Matcher matcher = CITATION_PATTERN.matcher(answer == null ? "" : answer);
         Set<Integer> result = new java.util.LinkedHashSet<>();
-        while (matcher.find()) result.add(Integer.parseInt(matcher.group(1)));
+        while (matcher.find()) {
+            try { result.add(Integer.parseInt(matcher.group(1))); }
+            catch (NumberFormatException invalidCitation) { result.add(0); }
+        }
         return Set.copyOf(result);
     }
 
@@ -183,8 +199,14 @@ public class RagChatService {
                 .collect(Collectors.joining("\n"));
     }
 
-    private boolean citationsAreValid(Set<Integer> citations, int sourceCount) {
-        return !citations.isEmpty()
+    private boolean citationsAreValid(String answer, Set<Integer> citations, int sourceCount) {
+        Matcher tokens = CITATION_TOKEN_PATTERN.matcher(answer == null ? "" : answer);
+        boolean foundToken = false;
+        while (tokens.find()) {
+            foundToken = true;
+            if (!CITATION_PATTERN.matcher(tokens.group()).matches()) return false;
+        }
+        return foundToken && !citations.isEmpty()
                 && citations.stream().allMatch(number -> number >= 1 && number <= sourceCount);
     }
 

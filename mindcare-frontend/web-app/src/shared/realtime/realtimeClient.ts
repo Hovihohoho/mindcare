@@ -4,6 +4,13 @@ import type { ChatSafetyDirective, ChatSource } from "@/features/ai-chat/types/c
 type RealtimeChannel = "ai" | "notifications";
 type Listener = (payload: unknown) => void;
 
+export class AiResponseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AiResponseError";
+  }
+}
+
 interface AiResponseEvent {
   type: "AI_RESPONSE";
   requestId: string;
@@ -67,25 +74,24 @@ class RealtimeClient {
     return this.sockets.get(channel)?.readyState === WebSocket.OPEN;
   }
 
-  askAi(question: string, history: Array<{ role: "user" | "assistant"; content: string }> = [], topK = 5, conversationId?: string) {
+  askAi(question: string, history: Array<{ role: "user" | "assistant"; content: string }> = [], topK = 5, conversationId?: string, requestId = crypto.randomUUID()) {
     const socket = this.sockets.get("ai");
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       return Promise.reject(new Error("AI WebSocket is not connected"));
     }
-    const requestId = crypto.randomUUID();
     return new Promise<{ answer: string; sources: ChatSource[]; safety: ChatSafetyDirective; conversationId: string }>(
       (resolve, reject) => {
         const timeout = window.setTimeout(() => {
           unsubscribe();
           reject(new Error("AI WebSocket response timed out"));
-        }, 90_000);
+        }, 120_000);
         const unsubscribe = this.subscribe("ai", (payload) => {
           const event = payload as AiResponseEvent | AiErrorEvent;
           if (event.requestId !== requestId) return;
           window.clearTimeout(timeout);
           unsubscribe();
           if (event.type === "AI_RESPONSE") resolve(event.data);
-          else reject(new Error(event.message));
+          else reject(new AiResponseError(event.message));
         });
         socket.send(JSON.stringify({
           type: "AI_QUESTION",

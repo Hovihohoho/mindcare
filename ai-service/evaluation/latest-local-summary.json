@@ -1,0 +1,45 @@
+{
+  "generatedAt": "2026-09-21T02:08:43.438144Z",
+  "status": "NOT_PASSED",
+  "labelStatus": "DRAFT_REQUIRES_HUMAN_REVIEW",
+  "sourceReport": "evaluation/results/rag-1789956523439.json",
+  "goldenSha256": "90f1f49c3a951176aa56d1ad484254a2b1e1197581aba53020cab765d2617f8d",
+  "corpusFingerprint": "6c95d117f7ebebc5babf82e335f60814",
+  "eligibleChunks": 7,
+  "models": {
+    "embedding": "gemini-embedding-2",
+    "chat": "gemini-3.1-flash-lite"
+  },
+  "metrics": {
+    "retrievalRecallAt5": 0.8695652173913043,
+    "exactSafetyAccuracy": 1.0,
+    "crisisRoutingRecall": 1.0,
+    "crisisFalsePositiveRate": 0.0,
+    "groundedAnswerCoverage": 0.78125,
+    "p95ServiceLatencyMs": 6448,
+    "providerFailedCases": 1,
+    "generationErrorRate": 0.011363636363636364,
+    "promptTokens": 181771,
+    "outputTokensIncludingThoughts": 14126
+  },
+  "passedChecks": [
+    "minimum_50_cases",
+    "retrieval_recall_at_5",
+    "citation_validity",
+    "crisis_routing_recall",
+    "exact_safety_accuracy",
+    "no_case_errors"
+  ],
+  "failedChecks": [
+    "human_review_complete",
+    "citation_precision",
+    "groundedness",
+    "provider_available"
+  ],
+  "observations": [
+    "A 3500 ms inter-case delay reduced provider failures from 30 in the prior run to one transient 503 and eliminated quota 429 responses.",
+    "Strict citation syntax and source-number mapping passed after automatic citation repair.",
+    "All six screening questions still missed the labelled screening document because the local screening source remains unapproved and inactive.",
+    "This summary is evidence from a draft run, not a production baseline or clinical approval."
+  ]
+}

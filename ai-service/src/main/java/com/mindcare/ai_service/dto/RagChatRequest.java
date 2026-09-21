@@ -13,7 +13,12 @@ public record RagChatRequest(
         @NotBlank @Size(max = 4000) String question,
         @Min(1) @Max(10) Integer topK,
         @Size(max = 10) List<@Valid ConversationMessage> history,
-        UUID conversationId) {
+        UUID conversationId,
+        UUID requestId) {
+
+    public RagChatRequest(String question, Integer topK, List<ConversationMessage> history, UUID conversationId) {
+        this(question, topK, history, conversationId, null);
+    }
 
     public RagChatRequest(String question, Integer topK) {
         this(question, topK, List.of(), null);

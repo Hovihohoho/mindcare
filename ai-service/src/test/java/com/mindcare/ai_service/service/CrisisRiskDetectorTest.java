@@ -19,4 +19,12 @@ class CrisisRiskDetectorTest {
         assertThat(detector.detect("Tôi đang nghĩ đến việc tự sát")).isEqualTo(EXPLICIT);
         assertThat(detector.detect("Tôi muốn chết và đã có kế hoạch tối nay")).isEqualTo(IMMINENT);
     }
+
+    @Test
+    void educationalPrefixAndNegationCannotHideLaterDanger() {
+        assertThat(detector.detect("Tự sát là gì? Tôi đang nghĩ đến việc tự sát")).isEqualTo(EXPLICIT);
+        assertThat(detector.detect("Tôi không muốn tự sát nhưng không thể giữ an toàn")).isEqualTo(IMMINENT);
+        assertThat(detector.detect("Tôi không thể giữ an toàn")).isEqualTo(IMMINENT);
+        assertThat(detector.detect("Tôi muốn làm mọi việc từ từ")).isEqualTo(NONE);
+    }
 }

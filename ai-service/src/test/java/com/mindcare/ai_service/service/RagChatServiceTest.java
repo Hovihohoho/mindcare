@@ -78,4 +78,67 @@ class RagChatServiceTest {
         ReflectionTestUtils.setField(service, "threshold", 0.35);
         return service;
     }
+
+    @Test
+    void embeddingFailureStillReturnsSafetyMetadata() {
+        EmbeddingService embeddings = mock(EmbeddingService.class);
+        GeminiClient gemini = mock(GeminiClient.class);
+        String question = "Tôi muốn chết ngay bây giờ";
+        when(embeddings.search(question, 5, 0.35, true))
+                .thenThrow(new IllegalStateException("provider error containing sensitive content"));
+        var response = configuredService(embeddings, gemini).chat(new RagChatRequest(question, 5));
+        assertThat(response.safety().level()).isEqualTo("IMMINENT");
+        assertThat(response.safety().showEmergencyActions()).isTrue();
+        assertThat(response.answer()).doesNotContain("sensitive");
+        org.mockito.Mockito.verifyNoInteractions(gemini);
+    }
+
+    @Test
+    void generationTimeoutStillReturnsSafetyMetadata() {
+        EmbeddingService embeddings = mock(EmbeddingService.class);
+        GeminiClient gemini = mock(GeminiClient.class);
+        String question = "Tôi đang nghĩ đến việc tự sát";
+        when(embeddings.search(question, 5, 0.35, true)).thenReturn(List.of(
+                new SimilarityResult(UUID.randomUUID(), UUID.randomUUID(), 0, "Safety", "Support",
+                        "https://www.nimh.nih.gov/", 0.8)));
+        when(gemini.generate(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
+                .thenThrow(new org.springframework.web.client.ResourceAccessException("timeout"));
+        var response = configuredService(embeddings, gemini).chat(new RagChatRequest(question, 5));
+        assertThat(response.safety().level()).isEqualTo("EXPLICIT");
+        assertThat(response.sources()).isEmpty();
+    }
+
+    @Test
+    void invalidCitationsAreRepairedOnceThenRefused() {
+        EmbeddingService embeddings = mock(EmbeddingService.class);
+        GeminiClient gemini = mock(GeminiClient.class);
+        when(embeddings.search("Stress", 5, 0.35, false)).thenReturn(List.of(
+                new SimilarityResult(UUID.randomUUID(), UUID.randomUUID(), 0, "Stress", "Support",
+                        "https://www.who.int/", 0.8)));
+        when(gemini.generate(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn("Unsupported [Nguồn 99]");
+        var response = configuredService(embeddings, gemini).chat(new RagChatRequest("Stress", 5));
+        assertThat(response.sources()).isEmpty();
+        assertThat(response.answer()).contains("chưa thể");
+        verify(gemini, org.mockito.Mockito.times(2)).generate(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void groupedCitationSyntaxIsRepairedInsteadOfSilentlyAccepted() {
+        EmbeddingService embeddings = mock(EmbeddingService.class);
+        GeminiClient gemini = mock(GeminiClient.class);
+        when(embeddings.search("Stress", 5, 0.35, false)).thenReturn(List.of(
+                new SimilarityResult(UUID.randomUUID(), UUID.randomUUID(), 0, "Stress", "Support",
+                        "https://www.who.int/", 0.8),
+                new SimilarityResult(UUID.randomUUID(), UUID.randomUUID(), 1, "Support", "More support",
+                        "https://www.nih.gov/", 0.75)));
+        when(gemini.generate(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn("Nhận định [Nguồn 1, Nguồn 2]", "Nhận định [Nguồn 1] [Nguồn 2]");
+        var response = configuredService(embeddings, gemini).chat(new RagChatRequest("Stress", 5));
+        assertThat(response.answer()).isEqualTo("Nhận định [Nguồn 1] [Nguồn 2]");
+        assertThat(response.sources()).hasSize(2);
+        verify(gemini, org.mockito.Mockito.times(2)).generate(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+    }
 }

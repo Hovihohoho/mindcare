@@ -1,0 +1,168 @@
+{
+  "seed": 20260916,
+  "target": "same-day self-reported stress 0..100 at evening prompt",
+  "dataset": "https://zenodo.org/records/18706837",
+  "archive_sha256": "a157463a6e7c969540e27bc35cf3aa1f5cbbc847412f7bdd0cb9acc965080eb6",
+  "environment": {
+    "python": "3.11.9",
+    "numpy": "2.4.6",
+    "pandas": "2.3.3",
+    "sklearn": "1.6.1",
+    "joblib": "1.6.0"
+  },
+  "audit": {
+    "questionnaires": 3133,
+    "invalid_or_late_labels": 24,
+    "no_steps_in_window": 872,
+    "duplicate_questionnaires": 0
+  },
+  "rows": 2237,
+  "participants": 32,
+  "deep_sleep_missing_fraction": 0.302637460885114,
+  "development_rows": 1618,
+  "test_rows": 619,
+  "development_participants": [
+    "1",
+    "10",
+    "13",
+    "15",
+    "16",
+    "18",
+    "2",
+    "20",
+    "21",
+    "22",
+    "23",
+    "25",
+    "28",
+    "29",
+    "30",
+    "31",
+    "32",
+    "33",
+    "34",
+    "35",
+    "4",
+    "5",
+    "6",
+    "8"
+  ],
+  "test_participants": [
+    "11",
+    "17",
+    "19",
+    "24",
+    "26",
+    "27",
+    "7",
+    "9"
+  ],
+  "selection_metric": "5-fold development participant-macro MAE",
+  "development_cv": [
+    {
+      "feature_set": "steps_only",
+      "model": "median_baseline",
+      "mae": 22.189740420271942,
+      "participant_macro_mae": 22.235894489122316,
+      "rmse": 27.999260541180455,
+      "r2": -0.1010061174923822
+    },
+    {
+      "feature_set": "steps_only",
+      "model": "mean_baseline",
+      "mae": 22.671905388893887,
+      "participant_macro_mae": 22.813373936205362,
+      "rmse": 27.285157970024763,
+      "r2": -0.04556142856677492
+    },
+    {
+      "feature_set": "steps_only",
+      "model": "ridge",
+      "mae": 22.52315285611608,
+      "participant_macro_mae": 22.570900167556648,
+      "rmse": 27.169019000407637,
+      "r2": -0.036679530687249384
+    },
+    {
+      "feature_set": "steps_only",
+      "model": "random_forest",
+      "mae": 22.79018692191034,
+      "participant_macro_mae": 23.13211668474101,
+      "rmse": 27.50221317202199,
+      "r2": -0.062262612897598046
+    },
+    {
+      "feature_set": "steps_and_deep_sleep",
+      "model": "median_baseline",
+      "mae": 22.189740420271942,
+      "participant_macro_mae": 22.235894489122316,
+      "rmse": 27.999260541180455,
+      "r2": -0.1010061174923822
+    },
+    {
+      "feature_set": "steps_and_deep_sleep",
+      "model": "mean_baseline",
+      "mae": 22.671905388893887,
+      "participant_macro_mae": 22.813373936205362,
+      "rmse": 27.285157970024763,
+      "r2": -0.04556142856677492
+    },
+    {
+      "feature_set": "steps_and_deep_sleep",
+      "model": "ridge",
+      "mae": 22.65747106042966,
+      "participant_macro_mae": 22.667023923588335,
+      "rmse": 27.379104479063578,
+      "r2": -0.052773844232581135
+    },
+    {
+      "feature_set": "steps_and_deep_sleep",
+      "model": "random_forest",
+      "mae": 22.773467728069193,
+      "participant_macro_mae": 23.055172363935938,
+      "rmse": 27.521506275691237,
+      "r2": -0.06375351336362756
+    }
+  ],
+  "selected": {
+    "feature_set": "steps_only",
+    "model": "ridge",
+    "mae": 22.52315285611608,
+    "participant_macro_mae": 22.570900167556648,
+    "rmse": 27.169019000407637,
+    "r2": -0.036679530687249384
+  },
+  "features": [
+    "steps_24h",
+    "steps_recent_6h",
+    "steps_previous_6h",
+    "steps_older_12h"
+  ],
+  "heldout": {
+    "median_baseline": {
+      "mae": 16.78352180936995,
+      "participant_macro_mae": 15.777812402067218,
+      "rmse": 23.07538394270814,
+      "r2": -0.01462700795279348
+    },
+    "mean_baseline": {
+      "mae": 18.359464705424234,
+      "participant_macro_mae": 17.329985783074466,
+      "rmse": 23.14657303907315,
+      "r2": -0.02089704859780417
+    },
+    "selected_candidate": {
+      "mae": 18.002935605147517,
+      "participant_macro_mae": 16.97339039974745,
+      "rmse": 22.66240987976908,
+      "r2": 0.021365038083776877
+    }
+  },
+  "candidate_minus_median_participant_mae": 1.1955779976802323,
+  "participant_bootstrap_95_percent_interval": [
+    -0.5115937301429277,
+    2.8107947163631155
+  ],
+  "exploratory_improvement_over_median": false,
+  "deployment_status": "RESEARCH_ONLY_NOT_VALIDATED_FOR_MINDCARE"
+}

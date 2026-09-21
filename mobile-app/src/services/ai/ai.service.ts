@@ -10,14 +10,19 @@ export type ChatSafetyDirective = {
 export type AiAnswer = { answer: string; sources: ChatSource[]; safety: ChatSafetyDirective; conversationId: string };
 export type ConversationSummary = { id: string; title: string; createdAt: string; updatedAt: string };
 export type ConversationDetail = ConversationSummary & {
-  messages: Array<{ id: string; role: 'user' | 'assistant'; content: string; sources: ChatSource[]; safetyLevel: ChatSafetyDirective['level']; createdAt: string }>;
+  messages: { id: string; role: 'user' | 'assistant'; content: string; sources: ChatSource[]; safetyLevel: ChatSafetyDirective['level']; createdAt: string }[];
 };
+
+function newRequestId() {
+  return globalThis.crypto?.randomUUID?.() ?? `ai-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 export const aiService = {
   ask(token: string, question: string, conversationId?: string) {
     return apiRequest<AiAnswer>('/api/ai/chat', {
-      body: { question, topK: 5, conversationId },
+      body: { question, topK: 5, conversationId, requestId: newRequestId() },
       method: 'POST',
+      timeout: 120_000,
       token,
     });
   },

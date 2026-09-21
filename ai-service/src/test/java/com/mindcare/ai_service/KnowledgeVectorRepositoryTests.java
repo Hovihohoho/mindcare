@@ -15,6 +15,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@org.testcontainers.junit.jupiter.Testcontainers(disabledWithoutDocker = true)
+@org.springframework.context.annotation.Import(AiConversationMigrationIntegrationTest.ContainerConfiguration.class)
 @Transactional
 class KnowledgeVectorRepositoryTests {
     @Autowired KnowledgeVectorRepository vectorRepository;
@@ -25,8 +27,8 @@ class KnowledgeVectorRepositoryTests {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update("""
                         INSERT INTO ai_schema.knowledge_documents
-                            (id,title,content,source_url,source_tier,review_status,is_active)
-                        VALUES (?,?,?,?,?,?,TRUE)
+                            (id,title,content,source_url,source_tier,review_status,is_active,document_type)
+                        VALUES (?,?,?,?,?,?,TRUE,'KNOWLEDGE')
                         """,
                 id, "Vector repository test", "Test content", "https://www.who.int/",
                 "A", "APPROVED");

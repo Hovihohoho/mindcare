@@ -3,7 +3,8 @@ package com.mindcare.ai_service.websocket;
 import tools.jackson.databind.ObjectMapper;
 import com.mindcare.ai_service.dto.RagChatRequest;
 import com.mindcare.ai_service.dto.RagChatResponse;
-import com.mindcare.ai_service.service.AiConversationService;
+import com.mindcare.ai_service.service.ChatExecutionService;
+import com.mindcare.ai_service.exception.ChatRequestException;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
@@ -22,7 +23,8 @@ public class AiChatWebSocketHandler extends TextWebSocketHandler {
     private static final String USER_ID_HEADER = "X-User-Id";
 
     private final ObjectMapper objectMapper;
-    private final AiConversationService conversationService;
+    private final ChatExecutionService conversationService;
+    private final java.util.concurrent.ExecutorService aiChatExecutor;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -40,6 +42,7 @@ public class AiChatWebSocketHandler extends TextWebSocketHandler {
         AiRequest request;
         try {
             request = objectMapper.readValue(message.getPayload(), AiRequest.class);
+            UUID.fromString(request.requestId());
             if (!"AI_QUESTION".equals(request.type())
                     || request.requestId() == null
                     || request.requestId().isBlank()
@@ -56,25 +59,33 @@ public class AiChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                UUID userId = UUID.fromString(session.getHandshakeHeaders().getFirst(USER_ID_HEADER));
-                RagChatResponse response = conversationService.chat(
-                        userId,
-                        new RagChatRequest(
-                                request.question(), request.topK(), request.history(), request.conversationId()));
-                send(session, Map.of(
-                        "type", "AI_RESPONSE",
-                        "requestId", request.requestId(),
-                        "data", response));
-            } catch (RuntimeException error) {
-                send(session, Map.of(
-                        "type", "AI_ERROR",
-                        "requestId", request.requestId(),
-                        "code", "AI_SERVICE_ERROR",
-                        "message", "Không thể xử lý câu hỏi lúc này."));
-            }
-        });
+        try {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    UUID userId = UUID.fromString(session.getHandshakeHeaders().getFirst(USER_ID_HEADER));
+                    RagChatResponse response = conversationService.chat(
+                            userId,
+                            new RagChatRequest(
+                                    request.question(), request.topK(), request.history(), request.conversationId(),
+                                    UUID.fromString(request.requestId())));
+                    send(session, Map.of(
+                            "type", "AI_RESPONSE",
+                            "requestId", request.requestId(),
+                            "data", response));
+                } catch (RuntimeException error) {
+                    send(session, Map.of(
+                            "type", "AI_ERROR",
+                            "requestId", request.requestId(),
+                            "code", error instanceof ChatRequestException specific
+                                    ? specific.status().name() : "AI_SERVICE_ERROR",
+                            "message", error instanceof ChatRequestException
+                                    ? error.getMessage() : "Không thể xử lý câu hỏi lúc này."));
+                }
+            }, aiChatExecutor);
+        } catch (java.util.concurrent.RejectedExecutionException busy) {
+            send(session, Map.of("type", "AI_ERROR", "requestId", request.requestId(),
+                    "code", "TOO_MANY_REQUESTS", "message", "Trợ lý đang bận. Vui lòng thử lại sau."));
+        }
     }
 
     private void send(WebSocketSession session, Object payload) {

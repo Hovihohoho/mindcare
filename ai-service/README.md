@@ -1,5 +1,17 @@
 # MindCare AI Service
 
+Chat reliability and privacy: [conversation contract](docs/CONVERSATION-HISTORY.md).
+Vietnamese RAG evaluation: [dataset, runner and release gate](evaluation/README.md).
+V7 adds transactional chat deduplication and per-user quota counters; deploy the
+backend migration before web clients start sending retry IDs. No sleep model or
+sleep inference contract is changed by these chat additions.
+
+## Sleep prediction
+
+`POST /api/ai/sleep/predict` accepts daily wearable measurements for authenticated
+users and returns next-day sleep duration. See [setup and request examples](../sleep-service/README.md).
+Requires the internal Python inference service and the trained Kaggle artifact.
+
 ## Gemini configuration
 
 Set `GEMINI_API_KEY` before starting the service. The default models are:

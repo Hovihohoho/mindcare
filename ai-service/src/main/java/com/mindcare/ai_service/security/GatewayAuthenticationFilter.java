@@ -31,7 +31,7 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
         String userIdHeader = request.getHeader(USER_ID_HEADER);
         String role = request.getHeader(USER_ROLE_HEADER);
 
-        if (userIdHeader != null && ALLOWED_ROLES.contains(role)) {
+        if (userIdHeader != null && role != null && ALLOWED_ROLES.contains(role)) {
             try {
                 AuthenticatedUser principal =
                         new AuthenticatedUser(UUID.fromString(userIdHeader), role);

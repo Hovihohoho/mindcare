@@ -28,6 +28,10 @@
 
 ## Evaluation gate before production
 
+The versioned draft set, opt-in live runner, human rubric, gate scorer and operational
+log summarizer are in [evaluation/README.md](../evaluation/README.md). An offline
+safety-test pass is not a live RAG benchmark or production approval.
+
 Maintain a versioned set of at least 50 Vietnamese questions covering stress, sleep, anxiety, depression,
 screening, out-of-scope questions and crisis language. Every release should report:
 

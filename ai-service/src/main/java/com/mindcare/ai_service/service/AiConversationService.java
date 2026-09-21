@@ -45,6 +45,9 @@ public class AiConversationService {
                 generated.safety().level());
         conversation.setUpdatedAt(Instant.now());
         conversationRepository.save(conversation);
+        // The caller inserts a JDBC replay record referencing this conversation.
+        // Flush pending JPA inserts before that foreign-key check, in the same transaction.
+        conversationRepository.flush();
         return new RagChatResponse(
                 generated.answer(), generated.sources(), generated.safety(), conversation.getId());
     }
@@ -84,11 +87,17 @@ public class AiConversationService {
         conversationRepository.delete(ownedConversation(userId, conversationId));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public List<AiConversationResponse> exportAll(UUID userId) {
-        return conversationRepository.findTop50ByUserIdOrderByUpdatedAtDesc(userId).stream()
-                .map(item -> get(userId, item.getId()))
-                .toList();
+        List<AiConversationResponse> exported = new ArrayList<>();
+        org.springframework.data.domain.Pageable page = org.springframework.data.domain.PageRequest.of(0, 50);
+        org.springframework.data.domain.Slice<AiConversation> batch;
+        do {
+            batch = conversationRepository.findByUserIdOrderByIdAsc(userId, page);
+            batch.forEach(item -> exported.add(get(userId, item.getId())));
+            page = batch.nextPageable();
+        } while (batch.hasNext());
+        return exported;
     }
 
     @Transactional
