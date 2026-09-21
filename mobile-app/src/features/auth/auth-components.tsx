@@ -120,10 +120,10 @@ export function SuccessNotice({ message }: { message: string }) {
 }
 
 export const authStyles = StyleSheet.create({
-  header: { gap: spacing.xs, marginBottom: spacing.lg, marginTop: spacing.xl },
+  header: { gap: spacing.xs, marginBottom: spacing.xl, marginTop: spacing.xl },
   title: { color: colors.ink, fontFamily: fonts.bold, fontSize: type.title, letterSpacing: -0.5, lineHeight: 36 },
   description: { color: colors.inkSoft, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 23 },
-  form: { gap: spacing.md },
+  form: { gap: spacing.sm },
   switchRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: spacing.lg, minHeight: 44 },
   switchCopy: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.label },
   switchLink: { justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.xs },
@@ -133,13 +133,13 @@ export const authStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   safeArea: { backgroundColor: colors.canvas, flex: 1 },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', paddingBottom: spacing.xl, paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', paddingBottom: spacing.xl, paddingHorizontal: spacing.page, paddingTop: spacing.lg },
   scrollContentAndroid: { justifyContent: 'flex-start' },
   content: { alignSelf: 'center', maxWidth: 430, width: '100%' },
-  brandLogo: { height: 40, width: 195 },
+  brandLogo: { height: 36, width: 176 },
   fieldGroup: { gap: spacing.xs },
   fieldLabel: { color: colors.ink, fontFamily: fonts.medium, fontSize: type.label },
-  inputShell: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.lineStrong, borderRadius: radius.input, borderWidth: 1, flexDirection: 'row', minHeight: 52, paddingLeft: spacing.sm },
+  inputShell: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.sm, borderWidth: 1, flexDirection: 'row', minHeight: 50, paddingLeft: spacing.sm },
   inputFocused: { borderColor: colors.brand, shadowColor: colors.brandSoft, shadowOpacity: 1, shadowRadius: 0, shadowOffset: { width: 0, height: 0 } },
   inputError: { borderColor: colors.danger },
   inputDisabled: { backgroundColor: colors.surfaceMuted, opacity: 0.6 },

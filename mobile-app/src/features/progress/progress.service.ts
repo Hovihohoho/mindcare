@@ -1,6 +1,7 @@
 import { assessmentService, type AssessmentResult } from '@/services/assessment/assessment.service';
 import { apiRequest } from '@/services/api/api.client';
 import { emotionService } from '@/services/emotion/emotion.service';
+import type { EmotionTrendPoint } from '@/features/emotion/emotion.types';
 import { healthApi } from '@/features/health/health.api';
 import type { HealthMetricSyncItem, HealthTrendPoint } from '@/features/health/health.types';
 
@@ -8,6 +9,7 @@ export type CarePlanSummary = { completedThisWeek: number; targetThisWeek: numbe
 export type ProgressData = {
   currentCheckIns: number;
   previousCheckIns: number;
+  emotionTrends: EmotionTrendPoint[];
   currentHealth: Record<string, HealthTrendPoint[]>;
   previousHealth: Record<string, HealthTrendPoint[]>;
   latestAssessment: AssessmentResult | null;
@@ -39,6 +41,7 @@ export const progressService = {
     return {
       currentCheckIns: currentEmotion.reduce((sum, point) => sum + point.count, 0),
       previousCheckIns: previousEmotion.reduce((sum, point) => sum + point.count, 0),
+      emotionTrends: currentEmotion,
       currentHealth: Object.fromEntries(currentHealth), previousHealth: Object.fromEntries(previousHealth),
       latestAssessment: assessments.items[0] ?? null, carePlan,
     };

@@ -10,6 +10,21 @@ export interface HealthSourceSummary {
   newestRecordAt: string | null;
   recordsByMetricType: Record<string, number>;
 }
+export interface HealthBenchmarkEvaluation {
+  policyKey: string;
+  policyVersion: string;
+  metricType: string;
+  status: "WITHIN_BENCHMARK" | "INSUFFICIENT_DATA" | "BELOW_BENCHMARK" | "RECHECK_RECOMMENDED";
+  reasonCode: string;
+  observedValue: number | null;
+  unit: string;
+  observedDays: number;
+  windowDays: number;
+  message: string;
+  sourceTitle: string;
+  sourceUrl: string;
+  recommendedPlanTemplateCode: string | null;
+}
 
 const timezone = "Asia/Ho_Chi_Minh";
 
@@ -34,5 +49,12 @@ export const healthApi = {
   async deleteHealthConnectData(): Promise<HealthSourceSummary> {
     const { data } = await httpClient.delete<HealthSourceSummary>("/api/v1/health-metrics/sources/HEALTH_CONNECT/data");
     return data;
+  },
+  async benchmarkEvaluations(): Promise<HealthBenchmarkEvaluation[]> {
+    const { data } = await httpClient.get<HealthBenchmarkEvaluation[]>("/api/v1/health-metrics/benchmark-evaluations");
+    return data;
+  },
+  async analyzeAlerts(): Promise<void> {
+    await httpClient.post("/api/v1/risk-alerts/analyze-health");
   },
 };

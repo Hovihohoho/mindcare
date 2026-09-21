@@ -13,14 +13,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
-    private final GatewayAuthenticationFilter gatewayAuthenticationFilter;
-
-    public SecurityConfig(GatewayAuthenticationFilter gatewayAuthenticationFilter) {
-        this.gatewayAuthenticationFilter = gatewayAuthenticationFilter;
-    }
-
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        GatewayAuthenticationFilter gatewayAuthenticationFilter =
+                new GatewayAuthenticationFilter();
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
@@ -29,6 +25,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/ws/ai/**").authenticated()
                         .requestMatchers("/api/ai/documents/**").hasRole("ADMIN")
+                        .requestMatchers("/api/ai/stress-predictions/**").hasRole("USER")
+                        .requestMatchers("/api/ai/wellness-forecasts/**").hasRole("USER")
                         .requestMatchers("/api/ai/self-care-content/**").hasRole("USER")
                         .requestMatchers("/api/ai/chat/**").authenticated()
                         .requestMatchers("/api/ai/privacy/**").authenticated()

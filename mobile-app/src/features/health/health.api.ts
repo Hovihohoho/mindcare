@@ -1,5 +1,5 @@
 import { apiRequest } from '@/services/api/api.client';
-import type { HealthMetricBatchResponse, HealthMetricSyncItem, HealthSourceSummary, HealthTrendPoint } from './health.types';
+import type { HealthBenchmarkAlert, HealthMetricBatchResponse, HealthMetricSyncItem, HealthSourceSummary, HealthTrendPoint } from './health.types';
 
 export const healthApi = {
   syncMetrics(token: string, items: HealthMetricSyncItem[], idempotencyKey: string) {
@@ -26,6 +26,11 @@ export const healthApi = {
   deleteSourceData(token: string) {
     return apiRequest<HealthSourceSummary>('/api/v1/health-metrics/sources/HEALTH_CONNECT/data', {
       method: 'DELETE', token, responseType: 'raw',
+    });
+  },
+  analyzeHealthAlerts(token: string) {
+    return apiRequest<HealthBenchmarkAlert[]>('/api/v1/risk-alerts/analyze-health', {
+      method: 'POST', token, responseType: 'raw',
     });
   },
 };

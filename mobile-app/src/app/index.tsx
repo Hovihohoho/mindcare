@@ -5,5 +5,5 @@ import { SessionLoader } from '@/features/auth/session-loader';
 export default function Index() {
   const { status } = useAuth();
   if (status === 'loading') return <SessionLoader />;
-  return <Redirect href={status === 'authenticated' ? '/(tabs)/progress' : '/(auth)/login'} />;
+  return <Redirect href={status === 'authenticated' ? '/(tabs)/journal' : '/(auth)/login'} />;
 }

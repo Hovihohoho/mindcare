@@ -1,24 +1,25 @@
 /* Hallmark · pre-emit critique: P5 H4 E5 S4 R5 V4 */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
+import { StyleSheet } from 'react-native';
 import { colors, fonts, type } from '@/theme/tokens';
 import { useAuth } from '@/features/auth/auth-context';
 import { SessionLoader } from '@/features/auth/session-loader';
 
 const icons = {
-  progress: ['stats-chart-outline', 'stats-chart'] as const,
-  journal: ['heart-outline', 'heart'] as const,
-  assessments: ['clipboard-outline', 'clipboard'] as const,
-  ai: ['sparkles-outline', 'sparkles'] as const,
-  settings: ['settings-outline', 'settings'] as const,
+  journal: ['home-outline', 'home'] as const,
+  progress: ['pulse-outline', 'pulse'] as const,
+  assessments: ['book-outline', 'book'] as const,
+  ai: ['chatbubble-ellipses-outline', 'chatbubble-ellipses'] as const,
+  settings: ['person-circle-outline', 'person-circle'] as const,
 };
 
 const visibleTabs = {
-  progress: 'Tiến triển',
-  journal: 'Nhật ký',
-  assessments: 'Đánh giá',
-  ai: 'AI hỗ trợ',
-  settings: 'Cài đặt',
+  journal: 'Hôm nay',
+  progress: 'Hành trình',
+  assessments: 'Tự chăm sóc',
+  ai: 'Trò chuyện',
+  settings: 'Của tôi',
 } as const;
 
 export default function TabsLayout() {
@@ -28,15 +29,15 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      initialRouteName="progress"
+      initialRouteName="journal"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.tertiary,
         tabBarHideOnKeyboard: true,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line, borderTopWidth: 1, minHeight: 62 },
-        tabBarItemStyle: { minHeight: 52, paddingBottom: 4, paddingTop: 6 },
-        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: type.tab, lineHeight: 15 },
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth, height: 70, paddingTop: 7 },
+        tabBarItemStyle: { minHeight: 52, paddingBottom: 4, paddingTop: 2 },
+        tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: type.tab, lineHeight: 15 },
       }}
     >
       {Object.entries(visibleTabs).map(([name, title]) => (

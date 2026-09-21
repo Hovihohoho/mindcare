@@ -1,7 +1,7 @@
 /* Hallmark · component: section header · genre: modern-minimal · theme: MindCare */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, radius, spacing, type } from '@/theme/tokens';
+import { colors, fonts, spacing, type } from '@/theme/tokens';
 
 type Props = { title: string; description?: string; actionLabel?: string; onAction?: () => void };
 
@@ -23,11 +23,11 @@ export function SectionHeader({ title, description, actionLabel, onAction }: Pro
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.xs },
+  container: { gap: spacing.xxs },
   row: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm, justifyContent: 'space-between' },
-  title: { color: colors.ink, flex: 1, fontFamily: fonts.semibold, fontSize: type.section, letterSpacing: -0.2, lineHeight: 28 },
+  title: { color: colors.ink, flex: 1, fontFamily: fonts.semibold, fontSize: type.section, letterSpacing: -0.25, lineHeight: 28 },
   description: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.label, lineHeight: 20 },
-  action: { alignItems: 'center', borderRadius: radius.sm, flexDirection: 'row', minHeight: 44, paddingLeft: spacing.xs },
+  action: { alignItems: 'center', flexDirection: 'row', minHeight: 44, paddingLeft: spacing.xs },
   actionLabel: { color: colors.brand, fontFamily: fonts.medium, fontSize: type.caption },
   pressed: { opacity: 0.68 },
 });

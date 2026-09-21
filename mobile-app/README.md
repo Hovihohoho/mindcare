@@ -28,11 +28,8 @@ npx expo export --platform web
 - `src/services/auth`: auth API thật và adapter lưu phiên an toàn.
 - `src/services/emotion`: API thật cho tạo nhật ký, lịch sử và xu hướng cảm xúc.
 - `src/app/(tabs)`: Expo Router và 5 bottom tabs.
-- `src/screens`: Nhật ký, Đánh giá, AI, Chuyên gia và Cài đặt.
+- `src/screens`: Nhật ký, Đánh giá, AI và Cài đặt.
 - `src/components`: search, card states, bottom sheet và UI dùng chung.
-- `src/services/mindcare.service.ts`: adapter dữ liệu; thay mock bằng HTTP tại đây mà không đổi contract màn hình.
-- `src/mocks/data.ts`: dữ liệu mẫu tiếng Việt.
-- `src/state/mock-state.tsx`: trạng thái mock toàn app.
 - `src/theme/tokens.ts`: màu, font, spacing, radius và shadow lấy từ web MindCare.
 
 ## Kiểm thử đăng nhập
@@ -43,17 +40,6 @@ Sao chép `.env.example` thành `.env` và đặt `EXPO_PUBLIC_API_URL` thành �
 
 Nút **Đăng xuất** nằm cuối danh sách trong tab **Cài đặt**, gọi `/api/auth/logout` rồi xóa phiên cục bộ.
 
-## Kiểm thử trạng thái
-
-Mở tab **Cài đặt** → **Kiểm thử trạng thái dữ liệu** để chuyển giữa:
-
-- Có dữ liệu
-- Loading với skeleton xám theo hình card
-- Không có dữ liệu
-- Lỗi API và nút thử lại
-
-Trạng thái lọc được kiểm tra trực tiếp bằng nút **Bộ lọc** trên từng màn hình. Khi filter khác “Tất cả”, một chip có nhãn “Đang áp dụng bộ lọc” xuất hiện bên cạnh.
-
 ## Kết nối backend
 
-Màn Nhật ký gọi trực tiếp các endpoint `/api/v1/emotion-journals` và `/api/v1/emotion-trends` qua API Gateway. Bearer token lấy từ phiên đăng nhập trong SecureStore. Các tab còn lại vẫn dùng adapter mock trong `mindcareService` cho đến khi được chuyển sang backend ở các bước tiếp theo.
+Màn Nhật ký gọi trực tiếp các endpoint `/api/v1/emotion-journals` và `/api/v1/emotion-trends` qua API Gateway. Bearer token lấy từ phiên đăng nhập trong SecureStore. Các API còn lại được tổ chức trong `src/services` và theo tính năng trong `src/features`; adapter mock cũ đã được loại bỏ.

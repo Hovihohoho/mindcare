@@ -57,6 +57,14 @@ Nguồn baseline: `APPLE_HEALTH`, `HEALTH_CONNECT` (`GOOGLE_HEALTH` là alias t�
 6. Batch tối đa 100 item và được validate atomically; item không hợp lệ làm cả batch thất bại với error rõ ràng.
 7. Thu hồi consent dừng ingest tương lai; xử lý dữ liệu đã lưu theo policy retention/erasure được duyệt.
 
+### Feature cho mô hình stress offline
+
+1. Emotion Service sở hữu công thức chuyển raw health metric thành vector `pmdata-features-v2`; client không tự tính rolling feature.
+2. Vector dùng một ngày hiện tại và tối đa 7 ngày lịch sử trước đó, theo timezone IANA do request chỉ định.
+3. Dữ liệu thiếu được giữ là `null` để pipeline model impute; không thay bằng 0 hoặc giá trị "bình thường".
+4. Kết quả này chỉ là input kỹ thuật cho model hỗ trợ sức khỏe, không phải chẩn đoán hay composite clinical score.
+5. Thứ tự feature và feature version phải cố định, có test hồi quy trước khi đổi model/contract.
+
 ## Assessment
 
 ### Loại assessment được hỗ trợ

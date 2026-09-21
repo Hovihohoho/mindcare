@@ -1,15 +1,21 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Native Content Flow · design-system: design.md · designed-as-app */
 :root {
-  --color-paper: oklch(98.2% 0.006 174);
-  --color-paper-2: oklch(100% 0 0);
-  --color-ink: oklch(27% 0.032 190);
-  --color-ink-2: oklch(53% 0.018 190);
-  --color-rule: oklch(92.5% 0.009 174);
-  --color-accent: oklch(55% 0.075 185);
-  --color-accent-dark: oklch(45% 0.072 185);
-  --color-accent-soft: oklch(95% 0.019 174);
+  --color-paper: oklch(98% 0.014 155);
+  --color-paper-2: oklch(99.8% 0.006 90);
+  --color-home-canvas: oklch(98% 0.014 155);
+  --color-ink: oklch(28% 0.022 150);
+  --color-ink-2: oklch(50% 0.018 150);
+  --color-rule: oklch(90% 0.025 145);
+  --color-accent: oklch(52% 0.075 150);
+  --color-accent-dark: oklch(43% 0.07 160);
+  --color-accent-soft: oklch(94% 0.05 150);
   --color-accent-ink: oklch(100% 0 0);
-  --color-focus: oklch(47% 0.074 185);
+  --color-focus: oklch(43% 0.13 250);
+  --color-wash-blue: oklch(94% 0.035 210);
+  --color-wash-mint: oklch(95% 0.035 160);
+  --color-wash-blush: oklch(94% 0.025 10);
+  --color-wash-sand: oklch(95% 0.025 75);
+  --color-wash-lavender: oklch(94% 0.025 300);
   --font-display: "Be Vietnam Pro", sans-serif;
   --font-body: "Be Vietnam Pro", sans-serif;
   --space-3xs: 0.25rem;
@@ -24,6 +30,7 @@
   --text-sm: 0.8125rem;
   --text-md: 0.9375rem;
   --text-lg: 1.25rem;
+  --text-home-title: 1.625rem;
   --text-title: 1.875rem;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.32, 0, 0.67, 0);
@@ -32,7 +39,7 @@
   --dur-medium: 180ms;
   --radius-sm: 8px;
   --radius-input: 12px;
-  --radius-card: 14px;
-  --radius-sheet: 22px;
+  --radius-card: 12px;
+  --radius-sheet: 18px;
   --rule-hairline: 1px;
 }

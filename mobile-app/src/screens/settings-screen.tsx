@@ -1,9 +1,8 @@
 import { router } from 'expo-router';
-import { Pressable, RefreshControl, SectionList, StyleSheet, Text } from 'react-native';
+import { Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@/components/app-screen';
 import { DataFeedback, SkeletonList } from '@/components/data-states';
 import { ListItem } from '@/components/list-item';
-import { ScreenHeader } from '@/components/screen-header';
 import { useAuthenticatedList } from '@/hooks/use-authenticated-list';
 import { authService } from '@/services/auth/auth.service';
 import { colors, fonts, spacing, type } from '@/theme/tokens';
@@ -37,7 +36,6 @@ export default function SettingsScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader title="Cài đặt" />
       {loading ? <SkeletonList rows={3} /> : error ? (
         <DataFeedback actionLabel="Thử lại" description={error} kind="error" onAction={() => void reload()} title="Cài đặt chưa được tải" />
       ) : data.length === 0 ? (
@@ -49,10 +47,13 @@ export default function SettingsScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => void reload(true)} refreshing={refreshing} tintColor={colors.brand} />}
+          ListHeaderComponent={<View style={styles.profileIntro}><Text style={styles.eyebrow}>TÀI KHOẢN</Text><Text accessibilityRole="header" style={styles.profileName}>{data.find((item) => item.id === 's1')?.description.split(' · ')[0] ?? 'MindCare'}</Text><Text style={styles.profileEmail}>{data.find((item) => item.id === 's1')?.description.split(' · ')[1] ?? ''}</Text></View>}
           renderSectionHeader={({ section }) => <Text style={styles.sectionTitle}>{section.title}</Text>}
           renderItem={({ item, index, section }) => (
             <ListItem
               description={item.description}
+              groupEnd={index === section.data.length - 1}
+              groupStart={index === 0}
               icon={iconMap[item.icon]}
               onPress={item.id === 's6' ? () => router.push('/(tabs)/health-connect') : item.id === 's7' ? () => router.push('/(tabs)/data-rights') : item.id === 's8' ? () => router.push('/(tabs)/reminders') : undefined}
               showDivider={index !== section.data.length - 1}
@@ -76,7 +77,11 @@ const iconMap = {
 
 const styles = StyleSheet.create({
   list: { paddingHorizontal: spacing.page, paddingBottom: 96 },
-  sectionTitle: { color: colors.tertiary, fontFamily: fonts.semibold, fontSize: type.caption, letterSpacing: 0.2, marginTop: spacing.lg, paddingBottom: spacing.xxs },
+  profileIntro: { borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: spacing.xl, paddingTop: spacing.sm },
+  eyebrow: { color: colors.muted, fontFamily: fonts.semibold, fontSize: type.caption, letterSpacing: .7 },
+  profileName: { color: colors.ink, fontFamily: fonts.bold, fontSize: type.title, letterSpacing: -.8, lineHeight: 38, marginTop: spacing.xxs },
+  profileEmail: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.label, marginTop: spacing.xxs },
+  sectionTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.section, letterSpacing: -.2, marginTop: spacing.xl, paddingBottom: spacing.sm },
   pressed: { backgroundColor: colors.surfaceMuted, opacity: 0.86 },
   signOut: { alignItems: 'center', borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth, height: 56, justifyContent: 'center', marginTop: spacing.lg },
   signOutText: { color: colors.danger, fontFamily: fonts.medium, fontSize: type.label },

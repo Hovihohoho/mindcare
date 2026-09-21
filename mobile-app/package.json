@@ -37,7 +37,6 @@
   },
   "scripts": {
     "start": "expo start --port 8086",
-    "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android --port 8086",
     "ios": "expo start --ios --port 8086",
     "web": "expo start --web --port 8086",

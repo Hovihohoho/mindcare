@@ -158,11 +158,11 @@ function capitalize(value: string) {
 }
 
 const styles = StyleSheet.create({
-  header: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.sm, paddingTop: spacing.lg },
-  back: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.input, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
+  header: { alignItems: 'center', borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.sm, minHeight: 60, paddingHorizontal: spacing.xs, paddingBottom: spacing.xs, paddingTop: spacing.xs },
+  back: { alignItems: 'center', borderRadius: radius.sm, height: 44, justifyContent: 'center', width: 44 },
   pressed: { backgroundColor: colors.surfacePressed, opacity: 0.86 },
   headerCopy: { flex: 1, minWidth: 0 },
-  title: { color: colors.ink, fontFamily: fonts.bold, fontSize: type.section, lineHeight: 28 },
+  title: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.label, lineHeight: 20 },
   description: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginTop: spacing.xxs },
   list: { gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: 96 },
   listHeader: { gap: spacing.sm },

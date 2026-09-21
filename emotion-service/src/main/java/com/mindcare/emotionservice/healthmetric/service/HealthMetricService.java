@@ -5,9 +5,11 @@ import com.mindcare.emotionservice.healthmetric.dto.HealthMetricBatchResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricTrendPointResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthSourceSummaryResponse;
+import com.mindcare.emotionservice.healthmetric.dto.HealthBenchmarkSnapshot;
 import com.mindcare.emotionservice.shared.dto.CursorPageResponse;
 
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
@@ -43,4 +45,13 @@ public interface HealthMetricService {
     HealthSourceSummaryResponse enableSourceSync(UUID userId, String sourceType);
 
     HealthSourceSummaryResponse revokeAndDeleteSourceData(UUID userId, String sourceType);
+
+    HealthBenchmarkSnapshot getBenchmarkSnapshot(UUID userId, int windowDays);
+
+    HealthBenchmarkSnapshot getBenchmarkSnapshot(
+            UUID userId,
+            LocalDate endDate,
+            int windowDays,
+            ZoneId timezone
+    );
 }

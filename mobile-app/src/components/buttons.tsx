@@ -37,8 +37,8 @@ export function ActionButton({ label, icon, tone = 'primary', compact = false, l
 }
 
 const styles = StyleSheet.create({
-  base: { alignItems: 'center', borderRadius: radius.input, flexDirection: 'row', gap: spacing.xs, height: 52, justifyContent: 'center', paddingHorizontal: spacing.md },
-  primary: { backgroundColor: colors.brandDark },
+  base: { alignItems: 'center', borderRadius: radius.sm, flexDirection: 'row', gap: spacing.xs, minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.md },
+  primary: { backgroundColor: colors.brand },
   secondary: { backgroundColor: colors.surface, borderColor: colors.line, borderWidth: 1 },
   danger: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerLine, borderWidth: 1 },
   link: { backgroundColor: colors.transparent },

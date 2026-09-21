@@ -1,0 +1,16 @@
+[
+  {
+    "date": "2026-09-11",
+    "macrostructure": "Narrative Workflow",
+    "theme": "Coral",
+    "enrichment": "none",
+    "brief": "Serious, human-centered daily health UI with restrained clinical hierarchy"
+  },
+  {
+    "date": "2026-09-11",
+    "macrostructure": "Workbench",
+    "theme": "Hum",
+    "enrichment": "native geometric moments",
+    "brief": "MindCare Expo UI-only mobile prototype"
+  }
+]

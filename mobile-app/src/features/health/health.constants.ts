@@ -5,6 +5,8 @@ export const HEALTH_PERMISSIONS: Permission[] = [
   { accessType: 'read', recordType: 'Steps' },
   { accessType: 'read', recordType: 'SleepSession' },
   { accessType: 'read', recordType: 'HeartRate' },
+  { accessType: 'read', recordType: 'RestingHeartRate' },
+  { accessType: 'read', recordType: 'OxygenSaturation' },
   { accessType: 'read', recordType: 'ExerciseSession' },
 ];
 
@@ -12,6 +14,8 @@ export const HEALTH_RECORD_TYPES: Record<HealthDataType, Permission['recordType'
   steps: 'Steps',
   sleep: 'SleepSession',
   heartRate: 'HeartRate',
+  restingHeartRate: 'RestingHeartRate',
+  oxygenSaturation: 'OxygenSaturation',
   exercise: 'ExerciseSession',
 };
 
@@ -20,6 +24,8 @@ export const EMPTY_HEALTH_PERMISSIONS: HealthPermissionState = {
   steps: false,
   sleep: false,
   heartRate: false,
+  restingHeartRate: false,
+  oxygenSaturation: false,
   exercise: false,
 };
 

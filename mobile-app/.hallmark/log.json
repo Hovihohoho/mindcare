@@ -1,5 +1,32 @@
 [
   {
+    "date": "2026-09-21",
+    "scope": "app",
+    "macrostructure": "Native Content Flow",
+    "theme": "custom",
+    "theme_axes": "warm-white / Be Vietnam Pro / restorative-green",
+    "enrichment": "none",
+    "brief": "Complete layout unification for every MindCare Mobile page and child route"
+  },
+  {
+    "date": "2026-09-10",
+    "scope": "app",
+    "macrostructure": "Native Content Flow",
+    "theme": "custom",
+    "theme_axes": "cool-white / restrained-sans / sky-blue-mint",
+    "enrichment": "none",
+    "brief": "Redesign MindCare Mobile with a restrained sky-blue and mint editorial personal-record system"
+  },
+  {
+    "date": "2026-08-28",
+    "scope": "screen",
+    "macrostructure": "Native Content Flow",
+    "theme": "custom",
+    "theme_axes": "cyan-tinted / restrained-sans / muted-teal",
+    "enrichment": "none",
+    "brief": "Redesign the emotion journal as the MindCare mobile home"
+  },
+  {
     "date": "2026-08-25",
     "scope": "screen",
     "macrostructure": "Native Content Flow",

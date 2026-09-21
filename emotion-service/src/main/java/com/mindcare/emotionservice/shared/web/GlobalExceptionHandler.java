@@ -244,7 +244,8 @@ public class GlobalExceptionHandler {
         LOGGER.error(
                 "event=unhandled_request_error traceId={} exceptionType={}",
                 traceId,
-                exception.getClass().getName()
+                exception.getClass().getName(),
+                exception
         );
         return response(
                 HttpStatus.INTERNAL_SERVER_ERROR,

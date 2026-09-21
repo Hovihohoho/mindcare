@@ -20,7 +20,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = "ai.chat.requests-per-minute=2")
-@Import(AiConversationMigrationIntegrationTest.ContainerConfiguration.class)
+@Import(PgVectorTestConfiguration.class)
 class ChatExecutionIntegrationTest {
     @Autowired ChatExecutionService execution;
     @Autowired AiConversationService conversations;

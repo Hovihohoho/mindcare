@@ -67,6 +67,7 @@ export default function HealthConnectScreen() {
   const stepPoints = health.trends.STEP_COUNT ?? [];
   const todaySteps = todayPoint(stepPoints)?.value;
   const todayHeartRate = todayPoint(health.trends.HEART_RATE ?? [])?.value;
+  const todaySpO2 = todayPoint(health.trends.SPO2 ?? [])?.value;
   const todaySleep = todayPoint(health.trends.SLEEP_SESSION ?? [])?.value;
   const todayExercise = todayPoint(health.trends.EXERCISE_SESSION ?? [])?.value;
   const recentSteps = stepPoints.filter((point) => dateKey(point.periodStart) !== dateKey(new Date()));
@@ -80,6 +81,8 @@ export default function HealthConnectScreen() {
     health.snapshot.permissions.steps,
     health.snapshot.permissions.sleep,
     health.snapshot.permissions.heartRate,
+    health.snapshot.permissions.restingHeartRate,
+    health.snapshot.permissions.oxygenSaturation,
     health.snapshot.permissions.exercise,
   ].filter(Boolean).length;
 
@@ -171,8 +174,9 @@ export default function HealthConnectScreen() {
                     value={numberOrDash(todaySteps)}
                   />
                   <HealthMetricItem icon="heart-outline" index={1} label="Nhịp tim" note={todayHeartRate === undefined ? undefined : 'Trung bình'} value={todayHeartRate === undefined ? '—' : Math.round(todayHeartRate) + ' bpm'} />
-                  <HealthMetricItem icon="moon-outline" index={2} label="Giấc ngủ" value={formatHours(todaySleep)} />
-                  <HealthMetricItem icon="fitness-outline" index={3} label="Hoạt động" note="Hôm nay" value={todayExercise === undefined ? '—' : Math.round(todayExercise * 60) + ' phút'} />
+                  <HealthMetricItem icon="water-outline" index={2} label="SpO₂" note={todaySpO2 === undefined ? undefined : 'Trung bình'} value={todaySpO2 === undefined ? '—' : Math.round(todaySpO2) + '%'} />
+                  <HealthMetricItem icon="moon-outline" index={3} label="Giấc ngủ" value={formatHours(todaySleep)} />
+                  <HealthMetricItem icon="fitness-outline" index={4} label="Hoạt động" note="Hôm nay" value={todayExercise === undefined ? '—' : Math.round(todayExercise * 60) + ' phút'} />
                 </View>
               </View>
 
@@ -207,6 +211,7 @@ export default function HealthConnectScreen() {
                 <Text style={styles.resultTitle}>{health.syncResult.acceptedCount + health.syncResult.duplicateCount === 0 ? 'Không có dữ liệu mới' : 'Đồng bộ hoàn tất'}</Text>
                 <Text style={styles.resultText}>{health.syncResult.acceptedCount} mới · {health.syncResult.updatedCount} cập nhật · {health.syncResult.duplicateCount} không đổi</Text>
                 {health.syncResult.invalidSkippedCount > 0 ? <Text style={styles.resultText}>{health.syncResult.invalidSkippedCount} bản ghi không hợp lệ đã được bỏ qua.</Text> : null}
+                {health.syncResult.alerts.map((alert) => <Text key={alert.id} style={styles.resultText}>⚠ {alert.triggerReason}</Text>)}
               </View>
             </View>
           ) : null}
@@ -217,6 +222,7 @@ export default function HealthConnectScreen() {
               <View style={styles.managementList}>
                 <ListItem
                   description={grantedPermissions + '/4 loại dữ liệu được phép đọc'}
+                  groupStart
                   icon="shield-checkmark-outline"
                   onPress={confirmDataPermission}
                   title={connected ? 'Cập nhật quyền truy cập' : 'Kết nối Health Connect'}
@@ -235,6 +241,7 @@ export default function HealthConnectScreen() {
                 />
                 <ListItem
                   description="Xóa vĩnh viễn dữ liệu Health Connect đang lưu trên MindCare"
+                  groupEnd
                   icon="trash-outline"
                   onPress={confirmDeleteStoredData}
                   showDivider={false}
@@ -263,7 +270,7 @@ function statusColor(tone: 'success' | 'warning' | 'neutral' | 'danger') {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.page, paddingBottom: 48 },
-  connection: { borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: spacing.lg },
+  connection: { backgroundColor: colors.mint, borderColor: colors.line, borderLeftColor: colors.brand, borderLeftWidth: 3, borderRadius: radius.card, borderWidth: 1, marginTop: spacing.sm, padding: spacing.md },
   connectionTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
   connectionBody: { flex: 1, minWidth: 0 },
   connectionTitleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
@@ -274,7 +281,7 @@ const styles = StyleSheet.create({
   section: { gap: spacing.md, paddingVertical: spacing.xl },
   ruledSection: { borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth },
   metricName: { color: colors.ink, fontFamily: fonts.medium, fontSize: type.label },
-  metricsGrid: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, flexDirection: 'row', flexWrap: 'wrap', overflow: 'hidden' },
+  metricsGrid: { backgroundColor: colors.surfaceMuted, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, flexDirection: 'row', flexWrap: 'wrap', overflow: 'hidden' },
   insight: { color: colors.ink, fontFamily: fonts.medium, fontSize: type.body, lineHeight: 24, maxWidth: 340 },
   detailButton: { alignItems: 'center', alignSelf: 'flex-start', borderRadius: radius.sm, flexDirection: 'row', minHeight: 44, paddingRight: spacing.xs },
   detailButtonText: { color: colors.brand, fontFamily: fonts.semibold, fontSize: type.label },
@@ -283,7 +290,7 @@ const styles = StyleSheet.create({
   resultBody: { flex: 1, minWidth: 0 },
   resultTitle: { color: colors.mintInk, fontFamily: fonts.semibold, fontSize: type.label },
   resultText: { color: colors.mintInk, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginTop: 2 },
-  managementList: { marginTop: -spacing.xs },
+  managementList: { borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, marginTop: -spacing.xs, overflow: 'hidden' },
   backgroundNote: { color: colors.warning, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, paddingVertical: spacing.sm, textAlign: 'center' },
   privacyNote: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, paddingVertical: spacing.md, textAlign: 'center' },
 });

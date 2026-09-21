@@ -26,6 +26,7 @@ import type {
   HealthSyncResult,
   HeartRateHealthRecord,
   NormalizedHealthData,
+  OxygenSaturationHealthRecord,
   SleepHealthRecord,
   StepHealthRecord,
 } from './health.types';
@@ -111,7 +112,7 @@ async function readAll<T extends RecordType>(
 }
 
 function emptyData(): NormalizedHealthData {
-  return { steps: [], sleep: [], heartRate: [], exercise: [] };
+  return { steps: [], sleep: [], heartRate: [], oxygenSaturation: [], exercise: [] };
 }
 
 function toBackendItems(data: NormalizedHealthData) {
@@ -137,6 +138,23 @@ function toBackendItems(data: NormalizedHealthData) {
     });
   });
 
+  data.oxygenSaturation.forEach((record) => {
+    if (!Number.isFinite(record.percentage) || record.percentage < 0 || record.percentage > 100) {
+      invalidSkippedCount += 1;
+      return;
+    }
+    items.push({
+      externalSampleId: record.recordId,
+      metricType: 'SPO2',
+      recordedAt: record.time,
+      unit: '%',
+      value: record.percentage,
+      sourceName: record.source.name,
+      dataOrigin: record.source.origin,
+      sourceLastModifiedAt: record.sourceLastModifiedAt,
+    });
+  });
+
   data.heartRate.forEach((record) => {
     if (!Number.isFinite(record.beatsPerMinute) || record.beatsPerMinute < 20 || record.beatsPerMinute > 250) {
       invalidSkippedCount += 1;
@@ -153,6 +171,7 @@ function toBackendItems(data: NormalizedHealthData) {
       sourceName: record.source.name,
       dataOrigin: record.source.origin,
       sourceLastModifiedAt: record.sourceLastModifiedAt,
+      details: record.resting ? { measurementContext: 'RESTING' } : undefined,
     });
   });
 
@@ -321,6 +340,37 @@ export const healthConnectService = {
     })));
   },
 
+  async readRestingHeartRate(startTime: string, endTime: string): Promise<HeartRateHealthRecord[]> {
+    const module = await nativeModule();
+    const records = await readAll(module, 'RestingHeartRate', startTime, endTime);
+    return records.map((record) => ({
+      metricType: 'HEART_RATE',
+      beatsPerMinute: record.beatsPerMinute,
+      resting: true,
+      time: record.time,
+      startTime: record.time,
+      endTime: record.time,
+      recordId: externalId('resting-heart-rate', record.metadata?.id, `${record.metadata?.dataOrigin}:${record.time}`),
+      source: sourceOf(record.metadata),
+      sourceLastModifiedAt: record.metadata?.lastModifiedTime,
+    }));
+  },
+
+  async readOxygenSaturation(startTime: string, endTime: string): Promise<OxygenSaturationHealthRecord[]> {
+    const module = await nativeModule();
+    const records = await readAll(module, 'OxygenSaturation', startTime, endTime);
+    return records.map((record) => ({
+      metricType: 'OXYGEN_SATURATION',
+      percentage: record.percentage,
+      time: record.time,
+      startTime: record.time,
+      endTime: record.time,
+      recordId: externalId('oxygen-saturation', record.metadata?.id, `${record.metadata?.dataOrigin}:${record.time}`),
+      source: sourceOf(record.metadata),
+      sourceLastModifiedAt: record.metadata?.lastModifiedTime,
+    }));
+  },
+
   async readExercise(startTime: string, endTime: string): Promise<ExerciseHealthRecord[]> {
     const module = await nativeModule();
     const records = await readAll(module, 'ExerciseSession', startTime, endTime);
@@ -354,7 +404,7 @@ export const healthConnectService = {
   async syncHealthData(userId: string, token: string): Promise<HealthSyncResult> {
     await this.initializeHealthConnect();
     const permissions = await this.getGrantedPermissions();
-    if (!(permissions.steps || permissions.sleep || permissions.heartRate || permissions.exercise)) {
+    if (!(permissions.steps || permissions.sleep || permissions.heartRate || permissions.restingHeartRate || permissions.oxygenSaturation || permissions.exercise)) {
       throw new HealthConnectError('NO_PERMISSIONS', 'MindCare chưa có quyền đọc dữ liệu Health Connect.');
     }
 
@@ -367,6 +417,8 @@ export const healthConnectService = {
       if (permissions.steps) data.steps = await this.readSteps(startTime, endTime);
       if (permissions.sleep) data.sleep = await this.readSleep(startTime, endTime);
       if (permissions.heartRate) data.heartRate = await this.readHeartRate(startTime, endTime);
+      if (permissions.restingHeartRate) data.heartRate.push(...await this.readRestingHeartRate(startTime, endTime));
+      if (permissions.oxygenSaturation) data.oxygenSaturation = await this.readOxygenSaturation(startTime, endTime);
       if (permissions.exercise) data.exercise = await this.readExercise(startTime, endTime);
     } catch (error) {
       throw new HealthConnectError('READ_FAILED', 'Health Connect không thể đọc dữ liệu trong khoảng đồng bộ.', error);
@@ -376,6 +428,8 @@ export const healthConnectService = {
       steps: data.steps.length,
       sleep: data.sleep.length,
       heartRate: data.heartRate.length,
+      restingHeartRate: data.heartRate.filter((record) => record.resting).length,
+      oxygenSaturation: data.oxygenSaturation.length,
       exercise: data.exercise.length,
     };
     debug('records returned', readCounts);
@@ -395,6 +449,7 @@ export const healthConnectService = {
       duplicateCount += response.duplicateCount;
       updatedCount += response.updatedCount;
     }
+    const alerts = await healthApi.analyzeHealthAlerts(token);
 
     await healthSyncStorage.setLastSyncTime(userId, endTime);
     const result = {
@@ -404,6 +459,7 @@ export const healthConnectService = {
       invalidSkippedCount,
       readCounts,
       syncedAt: endTime,
+      alerts,
     };
     debug('sync result', result);
     return result;

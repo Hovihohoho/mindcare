@@ -38,7 +38,7 @@ export function useHealthConnect() {
     if (!session) return;
     const to = new Date().toISOString();
     const from = new Date(Date.now() - 7 * 86_400_000).toISOString();
-    const types = ['STEP_COUNT', 'HEART_RATE', 'SLEEP_SESSION', 'EXERCISE_SESSION'] as const;
+    const types = ['STEP_COUNT', 'HEART_RATE', 'SPO2', 'SLEEP_SESSION', 'EXERCISE_SESSION'] as const;
     const results = await Promise.allSettled(types.map((metric) => healthApi.trends(session.accessToken, metric, from, to)));
     const next: Record<string, number> = {};
     const nextTrends: Partial<Record<HealthMetricSyncItem['metricType'], HealthTrendPoint[]>> = {};
@@ -46,7 +46,7 @@ export function useHealthConnect() {
       if (result.status !== 'fulfilled') return;
       const points = result.value;
       nextTrends[types[index]] = points;
-      next[types[index]] = types[index] === 'HEART_RATE'
+      next[types[index]] = types[index] === 'HEART_RATE' || types[index] === 'SPO2'
         ? points.reduce((sum, point) => sum + point.value * point.count, 0) / Math.max(1, points.reduce((sum, point) => sum + point.count, 0))
         : points.reduce((sum, point) => sum + point.value, 0);
     });
@@ -78,7 +78,7 @@ export function useHealthConnect() {
     try {
       const permissions = await healthConnectService.requestHealthPermissions();
       setSnapshot((current) => ({ ...current, availability: 'available', initialized: true, permissions }));
-      if (permissions.steps || permissions.sleep || permissions.heartRate || permissions.exercise) {
+      if (permissions.steps || permissions.sleep || permissions.heartRate || permissions.restingHeartRate || permissions.oxygenSaturation || permissions.exercise) {
         await healthApi.enableSource(session.accessToken);
         const result = await syncHealthIfDue(session.user.id, session.accessToken, { force: true });
         setSyncResult(result);
@@ -149,7 +149,8 @@ export function useHealthConnect() {
 
   const connectionStatus = useMemo(() => {
     if (snapshot.availability !== 'available') return 'unavailable' as const;
-    const values = [snapshot.permissions.steps, snapshot.permissions.sleep, snapshot.permissions.heartRate, snapshot.permissions.exercise];
+    const values = [snapshot.permissions.steps, snapshot.permissions.sleep, snapshot.permissions.heartRate,
+      snapshot.permissions.restingHeartRate, snapshot.permissions.oxygenSaturation, snapshot.permissions.exercise];
     if (values.every(Boolean)) return 'connected' as const;
     if (values.some(Boolean)) return 'partial' as const;
     return 'disconnected' as const;

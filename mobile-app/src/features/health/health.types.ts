@@ -1,4 +1,4 @@
-export type HealthDataType = 'steps' | 'sleep' | 'heartRate' | 'exercise';
+export type HealthDataType = 'steps' | 'sleep' | 'heartRate' | 'restingHeartRate' | 'oxygenSaturation' | 'exercise';
 
 export type HealthConnectAvailability =
   | 'available'
@@ -41,6 +41,13 @@ export type HeartRateHealthRecord = HealthRecordBase & {
   metricType: 'HEART_RATE';
   beatsPerMinute: number;
   time: string;
+  resting?: boolean;
+};
+
+export type OxygenSaturationHealthRecord = HealthRecordBase & {
+  metricType: 'OXYGEN_SATURATION';
+  percentage: number;
+  time: string;
 };
 
 export type ExerciseHealthRecord = HealthRecordBase & {
@@ -51,15 +58,16 @@ export type ExerciseHealthRecord = HealthRecordBase & {
 export type NormalizedHealthData = {
   exercise: ExerciseHealthRecord[];
   heartRate: HeartRateHealthRecord[];
+  oxygenSaturation: OxygenSaturationHealthRecord[];
   sleep: SleepHealthRecord[];
   steps: StepHealthRecord[];
 };
 
 export type HealthMetricSyncItem = {
   externalSampleId: string;
-  metricType: 'STEP_COUNT' | 'HEART_RATE' | 'SLEEP_SESSION' | 'EXERCISE_SESSION';
+  metricType: 'STEP_COUNT' | 'HEART_RATE' | 'SPO2' | 'SLEEP_SESSION' | 'EXERCISE_SESSION';
   recordedAt: string;
-  unit?: 'count' | 'bpm';
+  unit?: 'count' | 'bpm' | '%';
   value?: number;
   startTime?: string;
   endTime?: string;
@@ -83,6 +91,17 @@ export type HealthSyncResult = {
   invalidSkippedCount: number;
   readCounts: Record<HealthDataType, number>;
   syncedAt: string;
+  alerts: HealthBenchmarkAlert[];
+};
+
+export type HealthBenchmarkAlert = {
+  id: string;
+  alertLevel: string;
+  triggerReason: string;
+  metricType?: string;
+  observedValue?: number;
+  observedUnit?: string;
+  recommendedPlanTemplateCode?: string;
 };
 
 export type HealthConnectSnapshot = {

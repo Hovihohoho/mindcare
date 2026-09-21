@@ -6,7 +6,8 @@ AI and Health Connect behavior.
 
 ## Genre
 
-Modern-minimal: calm, trustworthy and human without reading as clinical.
+Modern-minimal with an editorial personal-record voice: bright, reassuring and
+human, without reading as clinical or like an AI SaaS product.
 
 ## Macrostructure family
 
@@ -16,14 +17,14 @@ Modern-minimal: calm, trustworthy and human without reading as clinical.
 
 ## Theme
 
-- `--color-paper`: oklch(98.2% 0.006 174)
-- `--color-paper-2`: oklch(100% 0 0)
-- `--color-ink`: oklch(27% 0.032 190)
-- `--color-ink-2`: oklch(53% 0.018 190)
-- `--color-rule`: oklch(92.5% 0.009 174)
-- `--color-accent`: oklch(55% 0.075 185)
+- `--color-paper`: oklch(98% 0.014 155)
+- `--color-paper-2`: oklch(99.8% 0.006 90)
+- `--color-ink`: oklch(28% 0.022 150)
+- `--color-ink-2`: oklch(50% 0.018 150)
+- `--color-rule`: oklch(90% 0.025 145)
+- `--color-accent`: oklch(52% 0.075 150)
 - `--color-accent-ink`: oklch(100% 0 0)
-- `--color-focus`: oklch(47% 0.074 185)
+- `--color-focus`: oklch(43% 0.13 250)
 
 ## Typography
 
@@ -51,7 +52,7 @@ section rhythm is 28–32px, and touch targets are at least 44px.
 
 ## CTA voice
 
-- Primary: solid muted teal, 12px radius, direct verb-first copy.
+- Primary: solid restorative green, 12px radius, direct verb-first copy.
 - Secondary: white or transparent surface with a quiet rule.
 
 ## Per-page allowances
@@ -59,10 +60,14 @@ section rhythm is 28–32px, and touch targets are at least 44px.
 - App pages do not use enrichment; function carries the page.
 - Shadows are reserved for modal and bottom-sheet elevation.
 - Cards are used only for bounded input or elevated content.
+- The journal home route may use `#edf8fc` as its page canvas with white
+  functional surfaces. It keeps a single next action above shortcuts.
+- Flat surfaces, hairline rules and natural contrast are preferred over cards
+  and shadows. A card must bound an input, safety message or irreversible action.
 
 ## What pages MUST share
 
-- Muted teal accent and warm white canvas.
+- Restorative green accent, soft mint and warm-white canvas.
 - Be Vietnam Pro typography.
 - 20px page gutter, compact headers and quiet dividers.
 - White system bottom navigation with a hairline top rule.

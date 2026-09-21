@@ -182,6 +182,27 @@ Request thiếu/sai timestamp trả `400 MALFORMED_REQUEST`; timezone không h�
 | POST | `/api/v1/health-metrics/sync` | USER | Nhận batch upsert idempotent (tối đa 100) |
 | GET | `/health-metrics` | USER | Truy vấn theo type/time range |
 | GET | `/api/v1/health-metrics/trends` | USER | Aggregate theo type/bucket/timezone |
+| GET | `/api/v1/health-metrics/stress-features` | USER | Tạo vector 25 feature PMData v2 từ dữ liệu sức khỏe của chính user |
+| GET | `/api/v1/health-metrics/wellness-features` | USER | Tạo vector LifeSnaps 42 feature theo đúng thứ tự model |
+| GET | `/api/v1/health-metrics/daily-evaluation` | USER | Đánh giá ngày hoàn tất gần nhất; benchmark khoa học là kết luận chính, baseline cá nhân 28 ngày là bổ sung |
+
+Stress feature request:
+
+```http
+GET /api/v1/health-metrics/stress-features
+    ?date=2026-09-09
+    &timezone=Asia%2FHo_Chi_Minh
+X-User-Id: <verified-user-uuid>
+X-User-Role: ROLE_USER
+```
+
+- `date` là ngày feature hiện tại; bỏ trống thì server dùng ngày hoàn tất gần nhất (hôm qua theo timezone).
+- Server chỉ đọc dữ liệu của user trong SecurityContext, dùng ngày hiện tại và tối đa 7 ngày lịch sử.
+- Thứ tự 25 giá trị cố định theo `pmdata-features-v2`; giá trị không có dữ liệu trả `null`, không tự coi là bình thường.
+- Heart rate dùng mean, population standard deviation và sample count; resting heart rate chỉ dùng sample có `measurementContext=RESTING`.
+- Sleep chọn session dài nhất trong ngày. Khi có stage, server tính asleep/deep/REM/awake và efficiency; khi không có stage chỉ dùng duration.
+- Trend 3/7 ngày chỉ dùng các ngày trước `date`, cùng quy tắc minimum 2/3 observation như pipeline train.
+- Response chứa `featureVersion`, `featureDate`, `timezone`, `featureNames`, `features` và `availableBaseFeatureCount`.
 
 ```json
 {
@@ -430,6 +451,13 @@ X-User-Role: ROLE_ADMIN
 - Archive không xóa catalog hoặc result lịch sử; ID không tồn tại/đã soft-delete trả `404 RESOURCE_NOT_FOUND`.
 
 ## Risk và truy cập nội bộ
+
+Health benchmark additions:
+
+- `GET /api/v1/health-metrics/benchmark-evaluations`: đánh giá deterministic cho ngủ, bước chân, nhịp tim lúc nghỉ và SpO₂.
+- `POST /api/v1/risk-alerts/analyze-health`: persist cảnh báo health benchmark mới theo cooldown và trả danh sách alert vừa tạo.
+- `GET /api/v1/self-care-plan/templates` và `GET /api/v1/self-care-plan/recommendations`: catalog cố định và đề xuất plan.
+- `POST /api/v1/self-care-plan/templates/{templateCode}:apply`: áp dụng một template nguyên vẹn.
 
 | Method | Path | Caller | Mục đích |
 |---|---|---|---|

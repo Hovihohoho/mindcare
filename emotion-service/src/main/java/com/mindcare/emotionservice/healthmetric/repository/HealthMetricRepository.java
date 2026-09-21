@@ -58,8 +58,15 @@ public interface HealthMetricRepository extends JpaRepository<HealthMetricEntity
 
     long countByUserIdAndSourceTypeAndDeletedAtIsNull(UUID userId, String sourceType);
 
-    @Query("SELECT MIN(metric.recordedAt), MAX(metric.recordedAt) FROM HealthMetricEntity metric WHERE metric.userId = :userId AND metric.sourceType = :sourceType AND metric.deletedAt IS NULL")
-    Object[] findActiveRange(@Param("userId") UUID userId, @Param("sourceType") String sourceType);
+    Optional<HealthMetricEntity> findFirstByUserIdAndSourceTypeAndDeletedAtIsNullOrderByRecordedAtAsc(
+            UUID userId,
+            String sourceType
+    );
+
+    Optional<HealthMetricEntity> findFirstByUserIdAndSourceTypeAndDeletedAtIsNullOrderByRecordedAtDesc(
+            UUID userId,
+            String sourceType
+    );
 
     @Query("SELECT metric.metricType, COUNT(metric) FROM HealthMetricEntity metric WHERE metric.userId = :userId AND metric.sourceType = :sourceType AND metric.deletedAt IS NULL GROUP BY metric.metricType")
     List<Object[]> countActiveByMetricType(@Param("userId") UUID userId, @Param("sourceType") String sourceType);

@@ -31,8 +31,8 @@ export function ChatBubbleLoading() {
 const styles = StyleSheet.create({
   row: { alignSelf: 'flex-start', maxWidth: '92%' },
   rowMine: { alignSelf: 'flex-end', maxWidth: '84%' },
-  content: { paddingVertical: spacing.xs },
-  mineBubble: { backgroundColor: colors.surfaceMuted, borderRadius: radius.card, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
+  content: { backgroundColor: colors.surfaceMuted, borderColor: colors.line, borderRadius: radius.card, borderTopLeftRadius: 2, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
+  mineBubble: { backgroundColor: colors.mint, borderColor: colors.mint, borderBottomRightRadius: 2, borderTopLeftRadius: radius.card },
   text: { color: colors.ink, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 23 },
   mineText: { color: colors.ink },
   sources: { color: colors.brandDark, fontFamily: fonts.medium, fontSize: type.caption, lineHeight: 18, marginTop: spacing.xs },

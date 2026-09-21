@@ -11,10 +11,8 @@ import java.util.UUID;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-@Component
 public class GatewayAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String USER_ID_HEADER = "X-User-Id";

@@ -149,6 +149,62 @@ if ($realEmailEnabled) {
 }
 if (-not $SkipAi) {
     Require-EnvironmentValue "GEMINI_API_KEY"
+
+    if ([string]::IsNullOrWhiteSpace($env:STRESS_MODEL_ENABLED)) {
+        $env:STRESS_MODEL_ENABLED = "true"
+    }
+    if ($env:STRESS_MODEL_ENABLED -notin @("true", "false")) {
+        throw "STRESS_MODEL_ENABLED must be true or false."
+    }
+    if ($env:STRESS_MODEL_ENABLED -eq "true") {
+        $configuredModelPath = $env:STRESS_MODEL_PATH
+        if ([string]::IsNullOrWhiteSpace($configuredModelPath)) {
+            $configuredModelPath = Join-Path $projectRoot `
+                "ml-training\models\stress-classifier-v3.onnx"
+        } elseif (-not [System.IO.Path]::IsPathRooted($configuredModelPath)) {
+            $configuredModelPath = Join-Path `
+                (Join-Path $projectRoot "ai-service") `
+                $configuredModelPath
+        }
+        $resolvedModelPath = [System.IO.Path]::GetFullPath($configuredModelPath)
+        if (-not (Test-Path -LiteralPath $resolvedModelPath -PathType Leaf)) {
+            throw "Stress model not found at $resolvedModelPath. Run PMData training first."
+        }
+        $env:STRESS_MODEL_PATH = $resolvedModelPath
+        if ([string]::IsNullOrWhiteSpace($env:STRESS_MODEL_VERSION)) {
+            $env:STRESS_MODEL_VERSION = "stress-classifier-v3"
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($env:WELLNESS_MODEL_ENABLED)) {
+        $env:WELLNESS_MODEL_ENABLED = "true"
+    }
+    if ($env:WELLNESS_MODEL_ENABLED -notin @("true", "false")) {
+        throw "WELLNESS_MODEL_ENABLED must be true or false."
+    }
+    if ($env:WELLNESS_MODEL_ENABLED -eq "true") {
+        $wellnessArtifacts = @(
+            @{ Variable = "WELLNESS_SLEEP_MODEL_PATH"; Default = "ml-training\models\lifesnaps-sleep-minutes-v1.onnx" },
+            @{ Variable = "WELLNESS_SLEEP_METADATA_PATH"; Default = "ml-training\models\lifesnaps-sleep-minutes-v1.metadata.json" },
+            @{ Variable = "WELLNESS_STEPS_MODEL_PATH"; Default = "ml-training\models\lifesnaps-steps-v1.onnx" },
+            @{ Variable = "WELLNESS_STEPS_METADATA_PATH"; Default = "ml-training\models\lifesnaps-steps-v1.metadata.json" },
+            @{ Variable = "WELLNESS_RESTING_HR_MODEL_PATH"; Default = "ml-training\models\lifesnaps-resting-hr-v1.onnx" },
+            @{ Variable = "WELLNESS_RESTING_HR_METADATA_PATH"; Default = "ml-training\models\lifesnaps-resting-hr-v1.metadata.json" }
+        )
+        foreach ($artifact in $wellnessArtifacts) {
+            $configuredPath = [Environment]::GetEnvironmentVariable($artifact.Variable, "Process")
+            if ([string]::IsNullOrWhiteSpace($configuredPath)) {
+                $configuredPath = Join-Path $projectRoot $artifact.Default
+            } elseif (-not [System.IO.Path]::IsPathRooted($configuredPath)) {
+                $configuredPath = Join-Path (Join-Path $projectRoot "ai-service") $configuredPath
+            }
+            $resolvedPath = [System.IO.Path]::GetFullPath($configuredPath)
+            if (-not (Test-Path -LiteralPath $resolvedPath -PathType Leaf)) {
+                throw "Wellness model artifact not found at $resolvedPath. Run LifeSnaps training first."
+            }
+            [Environment]::SetEnvironmentVariable($artifact.Variable, $resolvedPath, "Process")
+        }
+    }
 }
 
 $databasePort = 0

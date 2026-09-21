@@ -14,7 +14,6 @@ import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-c
 import { AuthProvider } from '@/features/auth/auth-context';
 import { HealthConnectGate } from '@/features/health/health-connect-gate';
 import '@/features/health/health-background.task';
-import '@/features/notifications/push-registration';
 import { PushNavigationGate } from '@/features/notifications/push-navigation-gate';
 
 SplashScreen.preventAutoHideAsync();
