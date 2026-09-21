@@ -1,6 +1,7 @@
 package com.mindcare.api_gateway;
 
 import java.util.UUID;
+import java.net.URI;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -29,11 +31,29 @@ public class VerifiedIdentityGlobalFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String path = exchange.getRequest().getPath().value();
+        boolean websocketRequest = path.startsWith("/ws/");
+        String websocketToken = websocketRequest
+                ? exchange.getRequest().getQueryParams().getFirst("access_token")
+                : null;
         ServerWebExchange sanitizedExchange = exchange.mutate()
-                .request(request -> request.headers(headers -> {
-                    headers.remove(USER_ID_HEADER);
-                    headers.remove(USER_ROLE_HEADER);
-                }))
+                .request(request -> {
+                    request.headers(headers -> {
+                        headers.remove(USER_ID_HEADER);
+                        headers.remove(USER_ROLE_HEADER);
+                        if (websocketToken != null && !websocketToken.isBlank()) {
+                            headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + websocketToken);
+                        }
+                    });
+                    if (websocketToken != null) {
+                        URI sanitizedUri = UriComponentsBuilder
+                                .fromUri(exchange.getRequest().getURI())
+                                .replaceQueryParam("access_token")
+                                .build(true)
+                                .toUri();
+                        request.uri(sanitizedUri);
+                    }
+                })
                 .build();
 
         String authorization = sanitizedExchange.getRequest()

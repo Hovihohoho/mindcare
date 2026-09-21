@@ -2,9 +2,9 @@ package com.mindcare.auth_service.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import java.time.LocalDateTime;
 import java.time.LocalDate;
-import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -37,18 +37,15 @@ public class User {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "avatar_url")
+    private String avatarUrl;
     private String phone;
+    @Column(name = "birth_date")
     private LocalDate birthDate;
     private String gender;
     private String address;
     @Column(columnDefinition = "TEXT")
     private String bio;
-    private String headline;
-    @Column(columnDefinition = "TEXT")
-    private String specialties;
-    private Integer yearsOfExperience;
-    private BigDecimal consultationFee;
-    private String workplace;
-    @Column(columnDefinition = "TEXT")
-    private String education;
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
 }

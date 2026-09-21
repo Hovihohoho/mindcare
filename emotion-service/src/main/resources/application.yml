@@ -1,6 +1,9 @@
 server:
   port: 8083
 
+app:
+  internal-secret: ${INTERNAL_SERVICE_SECRET:local-internal-secret}
+
 spring:
   application:
     name: emotion-service

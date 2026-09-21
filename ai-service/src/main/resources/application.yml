@@ -1,6 +1,9 @@
 server:
   port: 8084
 
+sleep:
+  inference-url: ${SLEEP_INFERENCE_URL:http://127.0.0.1:8085}
+
 spring:
   application:
     name: ai-service
@@ -24,8 +27,40 @@ gemini:
   chat-model: ${GEMINI_CHAT_MODEL:gemini-3.1-flash-lite}
   fallback-chat-model: ${GEMINI_FALLBACK_CHAT_MODEL:gemini-3.1-flash-lite}
   embedding-dimensions: 768
+  connect-timeout-seconds: ${GEMINI_CONNECT_TIMEOUT_SECONDS:3}
+  read-timeout-seconds: ${GEMINI_READ_TIMEOUT_SECONDS:15}
 
 rag:
   default-top-k: 5
   max-top-k: 10
   similarity-threshold: 0.35
+  chunk-size-characters: 1800
+  chunk-overlap-characters: 250
+
+ai:
+  chat:
+    requests-per-minute: ${AI_CHAT_REQUESTS_PER_MINUTE:12}
+  stress-model:
+    enabled: ${STRESS_MODEL_ENABLED:false}
+    path: ${STRESS_MODEL_PATH:../ml-training/models/stress-classifier-v3.onnx}
+    version: ${STRESS_MODEL_VERSION:stress-classifier-v3}
+    expected-features: 25
+  wellness-model:
+    enabled: ${WELLNESS_MODEL_ENABLED:false}
+    feature-version: lifesnaps-features-v1
+    expected-features: 42
+    version: lifesnaps-v1
+    sleep-minutes:
+      path: ${WELLNESS_SLEEP_MODEL_PATH:../ml-training/models/lifesnaps-sleep-minutes-v1.onnx}
+      metadata-path: ${WELLNESS_SLEEP_METADATA_PATH:../ml-training/models/lifesnaps-sleep-minutes-v1.metadata.json}
+      model-version: lifesnaps-sleep-minutes-v1
+    steps:
+      path: ${WELLNESS_STEPS_MODEL_PATH:../ml-training/models/lifesnaps-steps-v1.onnx}
+      metadata-path: ${WELLNESS_STEPS_METADATA_PATH:../ml-training/models/lifesnaps-steps-v1.metadata.json}
+      model-version: lifesnaps-steps-v1
+    resting-heart-rate:
+      path: ${WELLNESS_RESTING_HR_MODEL_PATH:../ml-training/models/lifesnaps-resting-hr-v1.onnx}
+      metadata-path: ${WELLNESS_RESTING_HR_METADATA_PATH:../ml-training/models/lifesnaps-resting-hr-v1.metadata.json}
+      model-version: lifesnaps-resting-hr-v1
+  conversation-retention-days: ${AI_CONVERSATION_RETENTION_DAYS:365}
+  conversation-retention-cron: ${AI_CONVERSATION_RETENTION_CRON:0 20 3 * * *}

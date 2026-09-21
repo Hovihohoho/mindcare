@@ -6,4 +6,4 @@ export { VerifyEmailPage } from "./pages/VerifyEmailPage";
 export { RequireRole } from "./components/RequireRole";
 export { authApi } from "./api/auth.api";
 export { useCurrentUser } from "./hooks/useCurrentUser";
-export type { AuthSession, AuthUser, UpdateProfilePayload, UserRole } from "./types/auth.types";
+export type { AuthSession, AuthUser, LoginSession, UpdateProfilePayload, UserRole } from "./types/auth.types";

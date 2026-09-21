@@ -11,6 +11,8 @@ import com.mindcare.emotionservice.shared.exception.InvalidRequestException;
 import com.mindcare.emotionservice.shared.exception.ResourceNotFoundException;
 import com.mindcare.emotionservice.shared.util.CursorCodec;
 import com.mindcare.emotionservice.shared.util.ServiceValidator;
+import com.mindcare.emotionservice.healthmetric.service.HealthBenchmarkService;
+import com.mindcare.emotionservice.healthmetric.dto.HealthBenchmarkEvaluation;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,32 +22,55 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
 public class RiskServiceImpl implements RiskService {
 
-    private static final String RULE_VERSION = "risk-v1";
+    private static final String RULE_VERSION = "risk-signal-v2";
 
     private final PsychologicalAlertLogRepository repository;
     private final RiskAlertMapper mapper;
     private final AssessmentService assessmentService;
     private final CursorCodec cursorCodec;
     private final Clock clock;
+    private final HealthBenchmarkService healthBenchmarkService;
 
     public RiskServiceImpl(
             PsychologicalAlertLogRepository repository,
             RiskAlertMapper mapper,
             AssessmentService assessmentService,
             CursorCodec cursorCodec,
-            Clock clock
+            Clock clock,
+            HealthBenchmarkService healthBenchmarkService
     ) {
         this.repository = repository;
         this.mapper = mapper;
         this.assessmentService = assessmentService;
         this.cursorCodec = cursorCodec;
         this.clock = clock;
+        this.healthBenchmarkService = healthBenchmarkService;
+    }
+
+    @Override
+    @Transactional
+    public List<RiskAlertResponse> analyzeHealthBenchmarks(UUID userId) {
+        ServiceValidator.requireUserId(userId);
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        return healthBenchmarkService.evaluate(userId).stream()
+                .filter(HealthBenchmarkEvaluation::alertTriggered)
+                .filter(evaluation -> !repository.existsByUserIdAndDeduplicationKeyAndDeletedAtIsNullAndCreatedAtGreaterThanEqual(
+                        userId, healthDeduplicationKey(evaluation), now.minus(healthCooldown(evaluation))))
+                .map(evaluation -> PsychologicalAlertLogEntity.healthBenchmark(
+                        userId, healthAlertLevel(evaluation), evaluation.message(), evaluation.reasonCode(),
+                        healthDeduplicationKey(evaluation), evaluation.policyKey(), evaluation.policyVersion(),
+                        evaluation.sourceUrl(), evaluation.metricType(), evaluation.observedValue(), evaluation.unit(),
+                        evaluation.recommendedPlanTemplateCode()))
+                .map(repository::saveAndFlush)
+                .map(mapper::toResponse)
+                .toList();
     }
 
     @Override
@@ -64,7 +89,7 @@ public class RiskServiceImpl implements RiskService {
             return Optional.empty();
         }
         AssessmentResultResponse result = results.items().get(0);
-        AlertDecision decision = decisionFor(result.riskLevel());
+        AlertDecision decision = decisionFor(result.riskSignals());
         if (decision == null) {
             return Optional.empty();
         }
@@ -143,21 +168,32 @@ public class RiskServiceImpl implements RiskService {
         }
     }
 
-    private AlertDecision decisionFor(String screeningLevel) {
-        return switch (screeningLevel) {
-            case "SEVERE" -> new AlertDecision(
-                    "ELEVATED",
-                    "ASSESSMENT_SEVERE",
-                    "Kết quả sàng lọc gần đây cho thấy bạn nên sớm trao đổi với chuyên gia sức khỏe tinh thần.",
-                    Duration.ofHours(72)
-            );
-            case "EXTREME" -> new AlertDecision(
-                    "HIGH",
-                    "ASSESSMENT_EXTREME",
-                    "Kết quả sàng lọc gần đây cho thấy bạn nên liên hệ chuyên gia sức khỏe tinh thần hoặc cơ sở y tế để được hỗ trợ trực tiếp.",
-                    Duration.ofHours(24)
-            );
-            default -> null;
+    private AlertDecision decisionFor(List<AssessmentResultResponse.RiskSignalResponse> signals) {
+        if (signals == null || signals.stream().noneMatch(signal -> "SELF_HARM_ITEM".equals(signal.type()))) {
+            return null;
+        }
+        return new AlertDecision(
+                "HIGH",
+                "PHQ9_SELF_HARM_ITEM",
+                "Câu trả lời gần đây cho thấy bạn có thể cần được hỗ trợ an toàn. Nếu bạn đang có ý định tự làm hại mình hoặc không thể giữ an toàn, hãy liên hệ dịch vụ cấp cứu tại địa phương, đến khoa cấp cứu gần nhất và nhờ một người tin cậy ở bên.",
+                Duration.ofHours(24)
+        );
+    }
+
+    private String healthDeduplicationKey(HealthBenchmarkEvaluation evaluation) {
+        return "health-benchmark-v1:" + evaluation.policyKey() + ':' + evaluation.reasonCode();
+    }
+
+    private Duration healthCooldown(HealthBenchmarkEvaluation evaluation) {
+        return Set.of("SLEEP_DURATION", "STEP_COUNT").contains(evaluation.metricType())
+                ? Duration.ofDays(7) : Duration.ofHours(24);
+    }
+
+    private String healthAlertLevel(HealthBenchmarkEvaluation evaluation) {
+        return switch (evaluation.metricType()) {
+            case "SPO2" -> "ELEVATED";
+            case "HEART_RATE" -> "CHECK";
+            default -> "WELLNESS";
         };
     }
 

@@ -1,0 +1,6 @@
+package com.mindcare.auth_service.notification;
+import com.mindcare.auth_service.repository.PushDeviceRepository; import java.util.Map; import lombok.RequiredArgsConstructor; import org.springframework.beans.factory.annotation.Value; import org.springframework.stereotype.Component; import org.springframework.web.client.RestClient;
+@Component @RequiredArgsConstructor
+public class ExpoPushSender { private final PushDeviceRepository devices; private final RestClient.Builder restClientBuilder; @Value("${app.push.enabled:false}") private boolean enabled; @Value("${app.push.expo-url:https://exp.host/--/api/v2/push/send}") private String expoUrl;
+ public void send(java.util.UUID userId,String title,String body,String actionUrl){if(!enabled)return;var client=restClientBuilder.build();for(var device:devices.findByUserIdAndEnabledTrue(userId)){try{client.post().uri(expoUrl).header("Accept","application/json").header("Accept-Encoding","gzip, deflate").body(Map.of("to",device.getPushToken(),"title",title,"body",body,"sound","default","data",Map.of("url",actionUrl))).retrieve().toBodilessEntity();}catch(RuntimeException ignored){/* inbox remains the durable fallback; delivery retry is a later outbox concern */}}}
+}

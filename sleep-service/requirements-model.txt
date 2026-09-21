@@ -1,0 +1,3 @@
+# Version recorded by the deployed Kaggle sleep_forecast.joblib artifact.
+-r requirements.txt
+scikit-learn==1.6.1

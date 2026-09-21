@@ -9,7 +9,14 @@ public record EmotionJournalResponse(
         UUID id,
         EmotionType emotionType,
         String content,
+        Integer energyLevel,
+        Integer stressLevel,
+        Integer sleepQuality,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
+    public EmotionJournalResponse(UUID id, EmotionType emotionType, String content,
+                                  OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+        this(id, emotionType, content, null, null, null, createdAt, updatedAt);
+    }
 }

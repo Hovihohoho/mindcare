@@ -7,8 +7,11 @@ public record HealthMetricTrendPointResponse(
         OffsetDateTime periodStart,
         OffsetDateTime periodEnd,
         String metricType,
-        BigDecimal averageValue,
+        BigDecimal value,
+        BigDecimal minimumValue,
+        BigDecimal maximumValue,
         long count,
-        String unit
+        String unit,
+        String aggregation
 ) {
 }

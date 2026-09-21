@@ -1,5 +1,5 @@
 import { httpClient, type CursorPage } from "@/shared";
-import type { Assessment, AssessmentResult } from "../types/assessment.types";
+import type { Assessment, AssessmentResult, RiskAlert } from "../types/assessment.types";
 
 export const assessmentApi = {
   async list(): Promise<Assessment[]> {
@@ -20,6 +20,10 @@ export const assessmentApi = {
   },
   async result(resultId: string): Promise<AssessmentResult> {
     const { data } = await httpClient.get<AssessmentResult>(`/api/v1/assessment-results/${resultId}`);
+    return data;
+  },
+  async analyzeRisk(): Promise<RiskAlert | null> {
+    const { data } = await httpClient.post<RiskAlert | null>("/api/v1/risk-alerts/analyze");
     return data;
   },
   async history(from: string, to: string) {

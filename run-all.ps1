@@ -1,7 +1,9 @@
 param(
     [switch]$SkipAi,
     [switch]$RestartExisting,
-    [switch]$UseRealEmail
+    [switch]$SeedDemo,
+    [switch]$UseRealEmail,
+    [switch]$UseMailpit
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,6 +11,10 @@ $projectRoot = $PSScriptRoot
 $envFile = Join-Path $projectRoot ".env"
 $runDirectory = Join-Path $projectRoot ".run"
 $frontendDirectory = Join-Path $projectRoot "mindcare-frontend\web-app"
+
+if ($SeedDemo) {
+    $env:SEED_ASSESSMENTS = "true"
+}
 
 if (-not (Test-Path -LiteralPath (Join-Path $frontendDirectory "package.json"))) {
     throw "Missing frontend project at $frontendDirectory."
@@ -113,7 +119,18 @@ function Start-LoggedProcess {
 
 Import-DotEnv -Path $envFile
 
-if ($UseRealEmail) {
+# Spring Boot interprets a machine-level DEBUG variable as its global debug
+# switch. Override it for local runs to keep demo logs concise and avoid
+# logging sensitive WebSocket query parameters.
+$env:DEBUG = "false"
+
+if ($UseRealEmail -and $UseMailpit) {
+    throw "Use only one email mode: -UseRealEmail or -UseMailpit."
+}
+$realEmailEnabled = $UseRealEmail -or
+    (-not $UseMailpit -and $env:SPRING_PROFILES_ACTIVE -eq "real-email")
+
+if ($realEmailEnabled) {
     $env:SPRING_PROFILES_ACTIVE = "real-email"
     Require-EnvironmentValue "SMTP_USERNAME"
     Require-EnvironmentValue "SMTP_PASSWORD"
@@ -132,6 +149,62 @@ if ($UseRealEmail) {
 }
 if (-not $SkipAi) {
     Require-EnvironmentValue "GEMINI_API_KEY"
+
+    if ([string]::IsNullOrWhiteSpace($env:STRESS_MODEL_ENABLED)) {
+        $env:STRESS_MODEL_ENABLED = "true"
+    }
+    if ($env:STRESS_MODEL_ENABLED -notin @("true", "false")) {
+        throw "STRESS_MODEL_ENABLED must be true or false."
+    }
+    if ($env:STRESS_MODEL_ENABLED -eq "true") {
+        $configuredModelPath = $env:STRESS_MODEL_PATH
+        if ([string]::IsNullOrWhiteSpace($configuredModelPath)) {
+            $configuredModelPath = Join-Path $projectRoot `
+                "ml-training\models\stress-classifier-v3.onnx"
+        } elseif (-not [System.IO.Path]::IsPathRooted($configuredModelPath)) {
+            $configuredModelPath = Join-Path `
+                (Join-Path $projectRoot "ai-service") `
+                $configuredModelPath
+        }
+        $resolvedModelPath = [System.IO.Path]::GetFullPath($configuredModelPath)
+        if (-not (Test-Path -LiteralPath $resolvedModelPath -PathType Leaf)) {
+            throw "Stress model not found at $resolvedModelPath. Run PMData training first."
+        }
+        $env:STRESS_MODEL_PATH = $resolvedModelPath
+        if ([string]::IsNullOrWhiteSpace($env:STRESS_MODEL_VERSION)) {
+            $env:STRESS_MODEL_VERSION = "stress-classifier-v3"
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($env:WELLNESS_MODEL_ENABLED)) {
+        $env:WELLNESS_MODEL_ENABLED = "true"
+    }
+    if ($env:WELLNESS_MODEL_ENABLED -notin @("true", "false")) {
+        throw "WELLNESS_MODEL_ENABLED must be true or false."
+    }
+    if ($env:WELLNESS_MODEL_ENABLED -eq "true") {
+        $wellnessArtifacts = @(
+            @{ Variable = "WELLNESS_SLEEP_MODEL_PATH"; Default = "ml-training\models\lifesnaps-sleep-minutes-v1.onnx" },
+            @{ Variable = "WELLNESS_SLEEP_METADATA_PATH"; Default = "ml-training\models\lifesnaps-sleep-minutes-v1.metadata.json" },
+            @{ Variable = "WELLNESS_STEPS_MODEL_PATH"; Default = "ml-training\models\lifesnaps-steps-v1.onnx" },
+            @{ Variable = "WELLNESS_STEPS_METADATA_PATH"; Default = "ml-training\models\lifesnaps-steps-v1.metadata.json" },
+            @{ Variable = "WELLNESS_RESTING_HR_MODEL_PATH"; Default = "ml-training\models\lifesnaps-resting-hr-v1.onnx" },
+            @{ Variable = "WELLNESS_RESTING_HR_METADATA_PATH"; Default = "ml-training\models\lifesnaps-resting-hr-v1.metadata.json" }
+        )
+        foreach ($artifact in $wellnessArtifacts) {
+            $configuredPath = [Environment]::GetEnvironmentVariable($artifact.Variable, "Process")
+            if ([string]::IsNullOrWhiteSpace($configuredPath)) {
+                $configuredPath = Join-Path $projectRoot $artifact.Default
+            } elseif (-not [System.IO.Path]::IsPathRooted($configuredPath)) {
+                $configuredPath = Join-Path (Join-Path $projectRoot "ai-service") $configuredPath
+            }
+            $resolvedPath = [System.IO.Path]::GetFullPath($configuredPath)
+            if (-not (Test-Path -LiteralPath $resolvedPath -PathType Leaf)) {
+                throw "Wellness model artifact not found at $resolvedPath. Run LifeSnaps training first."
+            }
+            [Environment]::SetEnvironmentVariable($artifact.Variable, $resolvedPath, "Process")
+        }
+    }
 }
 
 $databasePort = 0
@@ -153,17 +226,13 @@ $databaseName = if ([string]::IsNullOrWhiteSpace($env:POSTGRES_DB)) {
     $env:POSTGRES_DB
 }
 $env:DB_URL = "jdbc:postgresql://127.0.0.1:$databasePort/$databaseName"
-if ([string]::IsNullOrWhiteSpace($env:BOOKING_AUTH_ADAPTER_MODE)) {
-    $env:BOOKING_AUTH_ADAPTER_MODE = "local"
-}
-if ([string]::IsNullOrWhiteSpace($env:BOOKING_PAYMENT_REQUIRED)) {
-    $env:BOOKING_PAYMENT_REQUIRED = "false"
+if ([string]::IsNullOrWhiteSpace($env:JWT_SECRET)) {
+    $env:JWT_SECRET = "TWluZENhcmUtTG9jYWwtT25seS1KV1QtU2VjcmV0LTIwMjYh"
 }
 
 $ports = [ordered]@{
     "API Gateway" = 8079
     "Auth Service" = 8081
-    "Booking Service" = 8082
     "Emotion Service" = 8083
     "AI Service" = 8084
     "Frontend" = 5173
@@ -186,7 +255,11 @@ if ($occupied.Count -gt 0) {
 New-Item -ItemType Directory -Path $runDirectory -Force | Out-Null
 
 Write-Host "Starting PostgreSQL on port $databasePort and pgAdmin..."
-& docker compose --file (Join-Path $projectRoot "infrastructure\docker-compose.yml") up -d postgres pgadmin
+$infrastructureServices = @("postgres", "pgadmin")
+if (-not $realEmailEnabled) {
+    $infrastructureServices += "mailpit"
+}
+& docker compose --file (Join-Path $projectRoot "infrastructure\docker-compose.yml") up -d $infrastructureServices
 if ($LASTEXITCODE -ne 0) {
     throw "Could not start Docker infrastructure."
 }
@@ -194,21 +267,18 @@ if ($LASTEXITCODE -ne 0) {
 $maven = Get-MavenExecutable
 $processes = @()
 $processes += Start-LoggedProcess -Name "auth-service" -FilePath $maven `
-    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "auth-service")
-
-$processes += Start-LoggedProcess -Name "booking-service" -FilePath $maven `
-    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "booking-service")
+    -Arguments @("clean", "spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "auth-service")
 
 $processes += Start-LoggedProcess -Name "emotion-service" -FilePath $maven `
-    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "emotion-service")
+    -Arguments @("clean", "spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "emotion-service")
 
 if (-not $SkipAi) {
     $processes += Start-LoggedProcess -Name "ai-service" -FilePath $maven `
-        -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "ai-service")
+        -Arguments @("clean", "spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "ai-service")
 }
 
 $processes += Start-LoggedProcess -Name "api-gateway" -FilePath $maven `
-    -Arguments @("spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "api-gateway")
+    -Arguments @("clean", "spring-boot:run") -WorkingDirectory (Join-Path $projectRoot "api-gateway")
 
 if ([string]::IsNullOrWhiteSpace($env:VITE_API_URL)) {
     $env:VITE_API_URL = "http://localhost:8079"
@@ -260,11 +330,28 @@ if ($waiting.Count -gt 0) {
     exit 1
 }
 
+if ($SeedDemo) {
+    Write-Host "Loading idempotent demo data..."
+    $databaseUser = if ([string]::IsNullOrWhiteSpace($env:POSTGRES_USER)) { "postgres_admin" } else { $env:POSTGRES_USER }
+    $databaseName = if ([string]::IsNullOrWhiteSpace($env:POSTGRES_DB)) { "mindcare_db" } else { $env:POSTGRES_DB }
+    & docker exec mindcare_postgres psql -v ON_ERROR_STOP=1 -U $databaseUser -d $databaseName -f /opt/mindcare/seed-data.sql
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not load demo seed data. Check that every service completed its Flyway migrations."
+    }
+}
+
 Write-Host ""
 Write-Host "MindCare is ready:"
 Write-Host "  Frontend:    http://localhost:5173"
 Write-Host "  API Gateway: http://localhost:8079"
 Write-Host "  pgAdmin:     http://localhost:5050"
 Write-Host "Frontend API URL: $env:VITE_API_URL"
-Write-Host "Real SMTP sender: $env:SMTP_USERNAME"
+if ($realEmailEnabled) {
+    Write-Host "Email mode:   Gmail SMTP ($env:SMTP_USERNAME)"
+} else {
+    Write-Host "Email mode:   Mailpit (http://localhost:8025)"
+}
 Write-Host "Stop application processes with: .\stop-all.ps1"
+if (-not $SeedDemo) {
+    Write-Host "Tip: run with -SeedDemo to load local demo accounts and sample activity."
+}

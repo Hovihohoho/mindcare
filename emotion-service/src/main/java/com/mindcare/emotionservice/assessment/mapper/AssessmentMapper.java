@@ -23,13 +23,6 @@ import java.util.List;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface AssessmentMapper {
 
-    AssessmentSummaryResponse toSummaryResponse(AssessmentEntity entity);
-
-    AssessmentDetailResponse toDetailResponse(
-            AssessmentEntity entity,
-            List<QuestionResponse> questions
-    );
-
     QuestionResponse toQuestionResponse(
             QuestionEntity entity,
             List<AnswerOptionResponse> answerOptions
@@ -52,10 +45,25 @@ public interface AssessmentMapper {
     @Mapping(target = "resultId", source = "entity.id")
     @Mapping(target = "assessmentCode", source = "entity.assessment.code")
     @Mapping(target = "recommendations", source = "recommendationTexts")
+    @Mapping(target = "riskSignals", source = "riskSignalResponses")
     AssessmentResultResponse toResultResponse(
             AssessmentResultEntity entity,
-            List<String> recommendationTexts
+            List<String> recommendationTexts,
+            List<AssessmentResultResponse.RiskSignalResponse> riskSignalResponses
     );
+
+    default AssessmentResultResponse toResultResponse(
+            AssessmentResultEntity entity,
+            List<String> recommendationTexts
+    ) {
+        List<AssessmentResultResponse.RiskSignalResponse> signals = new java.util.ArrayList<>();
+        if (entity.getRiskSignals() != null && entity.getRiskSignals().isArray()) {
+            entity.getRiskSignals().forEach(node -> signals.add(new AssessmentResultResponse.RiskSignalResponse(
+                    node.path("type").asText(), node.path("reasonCode").asText(),
+                    node.path("responseValue").asInt(), node.path("ruleVersion").asText())));
+        }
+        return toResultResponse(entity, recommendationTexts, signals);
+    }
 
     default AssessmentEntity toEntity(UpsertAssessmentRequest request) {
         return new AssessmentEntity(request.code(), request.title(), request.description());

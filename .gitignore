@@ -9,6 +9,16 @@ node_modules/
 dist/
 build/
 *.log
+uploads/
+
+# Raw datasets and generated ML artifacts (kept local only)
+training/
+ml-training/data/
+ml-training/models/
+ml-training/reports/
+ml-training/.venv/
+__pycache__/
+*.py[cod]
 
 # IDEs and OS
 .idea/

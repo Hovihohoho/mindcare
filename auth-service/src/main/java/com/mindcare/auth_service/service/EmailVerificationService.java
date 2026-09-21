@@ -27,15 +27,15 @@ public class EmailVerificationService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Value("${app.mail-from}") private String mailFrom;
-    @Value("${app.verification-expiration-minutes:10}") private long expirationMinutes;
+    @Value("${app.verification-expiration-minutes:30}") private long expirationMinutes;
 
     @Transactional
     public void sendVerification(User user) {
         tokenRepository.deleteByUserId(user.getId());
-        String code = "%06d".formatted(secureRandom.nextInt(1_000_000));
+        String verificationCode = String.format("%06d", secureRandom.nextInt(1_000_000));
         EmailVerificationToken token = new EmailVerificationToken();
         token.setUser(user);
-        token.setTokenHash(hash(code));
+        token.setTokenHash(hash(codeKey(user.getEmail(), verificationCode)));
         token.setExpiresAt(Instant.now().plus(expirationMinutes, ChronoUnit.MINUTES));
         tokenRepository.save(token);
 
@@ -44,32 +44,27 @@ public class EmailVerificationService {
         message.setTo(user.getEmail());
         message.setSubject("Mã xác thực tài khoản MindCare");
         message.setText("Xin chào " + user.getFullName() + ",\n\n"
-                + "Mã xác thực tài khoản MindCare của bạn là:\n\n"
-                + code + "\n\n"
-                + "Mã có hiệu lực trong " + expirationMinutes + " phút. "
-                + "Không chia sẻ mã này với bất kỳ ai.\n\n"
+                + "Mã xác thực MindCare của bạn là: " + verificationCode + "\n\n"
+                + "Mã có hiệu lực " + expirationMinutes + " phút. Không chia sẻ mã này với bất kỳ ai.\n\n"
                 + "Nếu bạn không đăng ký MindCare, hãy bỏ qua email này.");
         mailSender.send(message);
     }
 
     @Transactional
-    public void verifyCode(String email, String code) {
-        if (email == null || code == null || !code.matches("\\d{6}")) {
-            throw new RuntimeException("Email hoặc mã xác thực không hợp lệ");
+    public void verify(String email, String verificationCode) {
+        if (verificationCode == null || !verificationCode.matches("\\d{6}")) {
+            throw new RuntimeException("Mã xác thực phải gồm đúng 6 chữ số");
         }
-        User user = userRepository.findByEmail(email.trim().toLowerCase())
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
+        EmailVerificationToken token = tokenRepository
+                .findByTokenHash(hash(codeKey(normalizedEmail, verificationCode)))
                 .orElseThrow(() -> new RuntimeException("Mã xác thực không hợp lệ"));
-        if (Boolean.TRUE.equals(user.getEmailVerified())) {
+        if (token.getUsedAt() != null && Boolean.TRUE.equals(token.getUser().getEmailVerified())) {
             return;
         }
-        EmailVerificationToken token = tokenRepository.findByUserIdAndTokenHash(user.getId(), hash(code))
-                .orElseThrow(() -> new RuntimeException("Mã xác thực không đúng"));
-        if (token.getUsedAt() != null) {
-            throw new RuntimeException("Mã xác thực đã được sử dụng");
-        }
-        if (token.getExpiresAt().isBefore(Instant.now())) {
-            throw new RuntimeException("Mã xác thực đã hết hạn");
-        }
+        if (token.getUsedAt() != null) throw new RuntimeException("Mã xác thực đã được sử dụng");
+        if (token.getExpiresAt().isBefore(Instant.now())) throw new RuntimeException("Mã xác thực đã hết hạn");
+        User user = token.getUser();
         user.setEmailVerified(true);
         userRepository.save(user);
         token.setUsedAt(Instant.now());
@@ -78,7 +73,6 @@ public class EmailVerificationService {
 
     @Transactional
     public void resend(String email) {
-        if (email == null || email.isBlank()) return;
         userRepository.findByEmail(email.trim().toLowerCase())
                 .filter(user -> !Boolean.TRUE.equals(user.getEmailVerified()))
                 .ifPresent(this::sendVerification);
@@ -91,5 +85,9 @@ public class EmailVerificationService {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(exception);
         }
+    }
+
+    private String codeKey(String email, String verificationCode) {
+        return email.trim().toLowerCase() + ":" + verificationCode;
     }
 }

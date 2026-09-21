@@ -1,5 +1,14 @@
 import { httpClient, type ApiResponse } from "@/shared";
-import type { NotificationItem } from "../types/notification.types";
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  content: string;
+  notificationType: string;
+  actionUrl?: string;
+  readAt?: string;
+  createdAt: string;
+}
 
 export const notificationApi = {
   async list() {
@@ -11,7 +20,9 @@ export const notificationApi = {
     return data.data;
   },
   async markRead(id: string) {
-    const { data } = await httpClient.patch<ApiResponse<NotificationItem>>(`/api/auth/notifications/${id}/read`);
-    return data.data;
+    await httpClient.patch(`/api/auth/notifications/${id}/read`);
+  },
+  async markAllRead() {
+    await httpClient.patch("/api/auth/notifications/read-all");
   },
 };

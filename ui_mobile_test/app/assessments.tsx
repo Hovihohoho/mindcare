@@ -1,0 +1,8 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
+import { DetailScreen, PageIntro, Row, Surface } from '../src/components/secondary-ui';
+import { palette, space, type } from '../src/theme/tokens';
+const items = [{ code: 'phq-9', title: 'Sàng lọc triệu chứng trầm cảm', detail: '9 câu hỏi · khoảng 3 phút' }, { code: 'gad-7', title: 'Sàng lọc lo âu', detail: '7 câu hỏi · khoảng 2 phút' }, { code: 'stress', title: 'Tự kiểm tra mức căng thẳng', detail: '10 câu hỏi · khoảng 4 phút' }];
+export default function AssessmentsScreen() { const router = useRouter(); return <DetailScreen title="Đánh giá"><PageIntro eyebrow="TỰ ĐÁNH GIÁ" title="Hiểu rõ hơn điều bạn đang trải qua" text="Các bảng hỏi chỉ giúp bạn tự nhìn nhận, không thay thế chẩn đoán chuyên môn." /><Surface>{items.map((item, index) => <Row key={item.code} icon="clipboard-outline" title={item.title} detail={item.detail} last={index === items.length - 1} onPress={() => router.push({ pathname: '/assessment/[code]', params: { code: item.code } })} />)}</Surface><View style={styles.callout}><Ionicons color={palette.warning} name="information-circle-outline" size={20} /><Text style={styles.calloutText}>Nếu cảm thấy không an toàn hoặc cần giúp đỡ ngay, hãy tìm dịch vụ khẩn cấp tại địa phương hoặc người bạn tin cậy.</Text></View></DetailScreen>; }
+const styles = StyleSheet.create({ callout: { alignItems: 'flex-start', backgroundColor: palette.apricot, borderLeftColor: palette.warning, borderLeftWidth: 3, flexDirection: 'row', gap: space.sm, padding: space.md }, calloutText: { color: palette.ink, flex: 1, fontSize: 12, lineHeight: 18 } });

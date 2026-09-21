@@ -1,0 +1,9 @@
+{
+  "scannedAt": "2026-08-02",
+  "framework": "React 19 + Vite 7 + Tailwind CSS 4",
+  "fontStack": "Be Vietnam Pro",
+  "palette": "MindCare brand blue, mint, slate neutrals",
+  "motion": "motion-cut; CSS transitions only",
+  "spacing": "Tailwind 4-point scale",
+  "preserved": ["font stack", "palette", "spacing", "existing application chrome"]
+}

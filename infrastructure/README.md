@@ -39,3 +39,24 @@ production.
 - SMTP: `localhost:1025`
 
 Mailpit captures local verification emails and does not deliver them to the public internet.
+
+## Demo data
+
+Start the complete application and load the idempotent demo dataset with:
+
+```powershell
+$env:GEMINI_API_KEY="your-key"
+.\run-all.ps1 -SeedDemo
+```
+
+Re-running the command updates the same demo records instead of duplicating them. Demo accounts
+use the password `MindCare@123`. Useful logins include:
+
+| Role | Email |
+| --- | --- |
+| Admin | `admin@mindcare.local` |
+| User | `user1@mindcare.local` through `user6@mindcare.local` |
+
+The dataset includes user/admin accounts. Application seeders and migrations provide
+assessment, AI knowledge, notification, bookmark, emotion journal, and health metric
+results, and AI knowledge documents.

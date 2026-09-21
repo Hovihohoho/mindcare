@@ -1,24 +1,44 @@
-import { useState, type FormEvent } from "react";
-import { BellRing, Send } from "lucide-react";
-import { Button, Card, Input, PageHeader, Textarea } from "@/shared";
+import { useState } from "react";
+import { Button, Card, getApiErrorMessage, Input, PageHeader, Textarea } from "@/shared";
 import { adminApi } from "../api/admin.api";
 
 export function AdminNotificationsPage() {
+  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [sending, setSending] = useState(false);
-  const [result, setResult] = useState("");
-  async function submit(event: FormEvent<HTMLFormElement>) {
+
+  async function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSending(true);
-    setResult("");
     const form = event.currentTarget;
-    const values = Object.fromEntries(new FormData(form));
+    const data = new FormData(form);
+    setSending(true);
+    setMessage(null);
     try {
-      const count = await adminApi.broadcast({ title: String(values.title), content: String(values.content), actionUrl: String(values.actionUrl) || null });
-      setResult(`Đã gửi thông báo đến ${count} tài khoản đang hoạt động.`);
+      const count = await adminApi.broadcast(
+        String(data.get("title")),
+        String(data.get("content")),
+        String(data.get("actionUrl") || "") || undefined,
+      );
       form.reset();
+      setMessage({ text: `Đã gửi tới ${count} người dùng.`, error: false });
+    } catch (error) {
+      setMessage({ text: getApiErrorMessage(error, "Không thể gửi thông báo."), error: true });
     } finally {
       setSending(false);
     }
   }
-  return <div className="space-y-7"><PageHeader title="Gửi thông báo" description="Phát thông báo hệ thống đến tất cả người dùng đang hoạt động." /><Card className="max-w-3xl p-7"><h2 className="flex items-center gap-2 text-xl font-bold"><BellRing className="text-brand-700" />Nội dung thông báo</h2><form className="mt-6 space-y-5" onSubmit={submit}><Input label="Tiêu đề" maxLength={255} name="title" required /><Textarea label="Nội dung" maxLength={5000} name="content" required rows={6} /><Input hint="Ví dụ: /assessments hoặc /experts" label="Đường dẫn khi nhấn thông báo" maxLength={500} name="actionUrl" />{result && <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{result}</p>}<Button leftIcon={<Send className="size-4" />} loading={sending} type="submit">Gửi đến người dùng</Button></form></Card></div>;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Thông báo toàn hệ thống" description="Gửi thông báo tới tất cả tài khoản đang hoạt động." />
+      <Card className="p-7">
+        <form className="grid gap-4" onSubmit={send}>
+          <Input label="Tiêu đề" name="title" required />
+          <Textarea label="Nội dung" name="content" required rows={6} />
+          <Input label="Đường dẫn hành động" name="actionUrl" placeholder="/notifications" />
+          <Button className="w-fit" loading={sending}>Gửi thông báo</Button>
+          {message && <p role="status" className={message.error ? "text-rose-700" : "text-emerald-700"}>{message.text}</p>}
+        </form>
+      </Card>
+    </div>
+  );
 }

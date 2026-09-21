@@ -9,6 +9,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(ChatRequestException.class)
+    ResponseEntity<ApiResponse<Void>> chatRequest(ChatRequestException exception) {
+        var response = ResponseEntity.status(exception.status());
+        if (exception.status() == HttpStatus.TOO_MANY_REQUESTS) response.header("Retry-After", "60");
+        return response.body(ApiResponse.error(exception.getMessage()));
+    }
+    @ExceptionHandler(ConversationNotFoundException.class)
+    ResponseEntity<ApiResponse<Void>> notFound(ConversationNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(exception.getMessage()));
+    }
+
     @ExceptionHandler(IllegalStateException.class)
     ResponseEntity<ApiResponse<Void>> unavailable(IllegalStateException exception) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

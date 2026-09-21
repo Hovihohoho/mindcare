@@ -39,7 +39,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
     private PostgreSQLContainer postgreSqlContainer;
 
     @Test
-    void flywayAppliesV1ThroughV4OnEmptyPostgreSql() {
+    void flywayAppliesAllMigrationsOnEmptyPostgreSql() {
         String currentVersion = jdbcTemplate.queryForObject(
                 """
                 SELECT version
@@ -50,7 +50,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
                 """,
                 String.class
         );
-        assertThat(currentVersion).isEqualTo("4");
+        assertThat(currentVersion).isEqualTo("11");
         assertThat(flyway.info().pending()).isEmpty();
 
         List<String> tables = jdbcTemplate.queryForList(
@@ -153,7 +153,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
     }
 
     @Test
-    void existingV1DataUpgradesThroughV2AndV3WithoutLoss() throws Exception {
+    void existingV1DataUpgradesThroughLatestVersionWithoutLoss() throws Exception {
         String databaseName = "emotion_upgrade_" + UUID.randomUUID().toString().replace("-", "");
         jdbcTemplate.execute("CREATE DATABASE " + databaseName);
         String upgradeUrl = "jdbc:postgresql://%s:%d/%s".formatted(
@@ -232,7 +232,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
                 """);
              var result = statement.executeQuery()) {
             assertThat(result.next()).isTrue();
-            assertThat(result.getString("version")).isEqualTo("4");
+            assertThat(result.getString("version")).isEqualTo("11");
         }
     }
 }

@@ -178,6 +178,36 @@ Không chuyển `Provisional` thành `Accepted` nếu chưa có phê duyệt th�
 - Hệ quả: cả service lock/invariant và database constraint cùng bảo vệ thao tác; writer khác không thể tạo draft active thứ hai cho cùng code.
 - Migration: V4 thêm partial unique index `uq_assessment_one_draft_version` trên `assessments(code)` khi `status = 'DRAFT' AND deleted_at IS NULL`; không sửa V1-V3.
 
+## DEC-018 - Health Connect lưu record nguồn và aggregate theo metric
+
+- Trạng thái: **Accepted**
+- Ngày ghi nhận: 2026-08-21
+- Người duyệt: chủ dự án, qua chỉ thị trực tiếp triển khai luồng Health Connect production.
+- Quyết định: client đọc rolling window 7 ngày, gửi batch tối đa 100; backend upsert theo `(user_id, source_type, external_sample_id)` và chỉ nhận thay đổi nguồn mới hơn khi có `sourceLastModifiedAt`.
+- Quyết định: point metric giữ value/unit; sleep và exercise giữ start/end cùng JSON details. Trend theo ngày dùng average cho heart rate và sum cho steps/duration session, timezone mặc định `Asia/Ho_Chi_Minh`.
+- Lý do: record nguồn có thể bị sửa sau lần ingest đầu; insert-ignore làm aggregate cũ vĩnh viễn và mô hình value-only làm mất session.
+- Migration: V7 mở rộng `health_metrics`, giữ unique key xuyên soft-delete và thêm index daily aggregation.
+
+## DEC-019 - Health benchmark và self-care plan là policy cố định có version
+
+- Trạng thái: **Accepted**
+- Ngày ghi nhận: 2026-08-28
+- Quyết định: backend sở hữu catalog plan và rule benchmark; client/AI không được tạo task hoặc thay đổi ngưỡng. Mọi alert health lưu policy key/version/source và dữ liệu quan sát tối thiểu để truy vết.
+- Quyết định: ngủ và bước chân dùng cửa sổ 7 ngày; nhịp tim chỉ đánh giá mẫu được gắn ngữ cảnh lúc nghỉ; SpO₂ cần phép đo lặp lại. Thiếu dữ liệu không tạo cảnh báo.
+- Quyết định: đề xuất plan không tự ghi đè plan hiện tại; user phải chủ động áp dụng template.
+- Migration: V11 thêm metadata template và alert health benchmark; không sửa migration cũ.
+
+## DEC-021 - Đánh giá ngày hoàn tất kết hợp ngưỡng chung và baseline cá nhân
+
+- Trạng thái: **Accepted**
+- Ngày ghi nhận: 2026-09-11
+- Quyết định: `emotion-service` sở hữu rule `daily-wellness-v2.0`; mặc định đánh giá hôm qua theo timezone của request và không đánh giá ngày hiện tại chưa hoàn tất.
+- Quyết định: benchmark khoa học là kết luận chính và quyết định `status`; baseline cá nhân chỉ bổ sung ngữ cảnh, dùng trung vị tối đa 28 ngày trước đó và chỉ bật khi có ít nhất 7 ngày dữ liệu cho chỉ số tương ứng.
+- Quyết định: ngủ/nhịp tim nghỉ/SpO₂ dùng nguồn CDC/AHA/FDA. Bước chân dùng chỉ số dưới 5.000 bước/ngày từ tổng quan Tudor-Locke et al., không diễn giải thành chẩn đoán hoặc mục tiêu điều trị.
+- Quyết định: các điều kiện tỷ lệ/MAD là guardrail bổ sung của MindCare có version, phải được kiểm định và duyệt chuyên môn trước production clinical use.
+- Hệ quả: response trả riêng hai cờ `generalThresholdTriggered` và `personalDeviationTriggered`, nguồn URL, số ngày baseline, độ lệch tuyệt đối/phần trăm và luôn ghi `clinicalDiagnosis=false`.
+- Migration: không có; đánh giá được tính từ health metrics hiện có và không persist.
+
 ## Quyết định mở cần ưu tiên
 
 | ID | Câu hỏi | Người/nhóm cần tham gia | Chặn |
@@ -201,3 +231,13 @@ Không chuyển `Provisional` thành `Accepted` nếu chưa có phê duyệt th�
 - Hệ quả/rủi ro:
 - Kế hoạch migration/rollback:
 ```
+
+## DEC-020 - Emotion Service sở hữu hợp đồng feature LifeSnaps
+
+- Trạng thái: **Accepted for local validation**
+- Ngày: 2026-09-11
+- Quyết định: `emotion-service` tạo và sắp xếp 42 feature theo contract
+  `lifesnaps-features-v1`; client không tự tính lại công thức.
+- Giá trị thiếu dùng JSON `null` và chỉ chuyển thành IEEE `NaN` bên trong AI Service.
+- AI Service kiểm tra thứ tự feature, metadata và SHA-256 của ONNX khi khởi động.
+- Đầu ra là ước lượng wearable cho ngày tiếp theo, không phải chẩn đoán lâm sàng.

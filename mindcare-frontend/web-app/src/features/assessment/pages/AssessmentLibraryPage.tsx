@@ -15,7 +15,7 @@ export function AssessmentLibraryPage() {
       )}
       <div className="flex gap-4 rounded-2xl bg-brand-900 p-6 text-white md:p-8">
         <ShieldCheck className="size-8 shrink-0 text-brand-100" />
-        <div><h3 className="font-extrabold">Dữ liệu của bạn được bảo mật tuyệt đối</h3><p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Kết quả chỉ được lưu trong tài khoản cá nhân và không chia sẻ khi chưa có sự đồng ý của bạn.</p></div>
+        <div><h3 className="font-extrabold">Nguồn và giới hạn được công khai</h3><p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Mỗi bài đánh giá hiển thị tổ chức phát hành, tài liệu gốc, phiên bản và giới hạn sử dụng trước khi bạn trả lời.</p></div>
       </div>
     </div>
   );

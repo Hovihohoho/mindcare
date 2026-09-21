@@ -1,47 +1,53 @@
 # MindCare AI Service
 
-## Cấu hình Gemini
+Chat reliability and privacy: [conversation contract](docs/CONVERSATION-HISTORY.md).
+Vietnamese RAG evaluation: [dataset, runner and release gate](evaluation/README.md).
+V7 adds transactional chat deduplication and per-user quota counters; deploy the
+backend migration before web clients start sending retry IDs. No sleep model or
+sleep inference contract is changed by these chat additions.
 
-Tạo API key trong Google AI Studio rồi cập nhật file `.env` ở thư mục gốc:
+## Sleep prediction
 
-```env
-GEMINI_API_KEY=your-real-api-key
-GEMINI_EMBEDDING_MODEL=gemini-embedding-2
-GEMINI_CHAT_MODEL=gemini-3.1-flash-lite
-GEMINI_FALLBACK_CHAT_MODEL=gemini-3.1-flash-lite
-```
+`POST /api/ai/sleep/predict` accepts daily wearable measurements for authenticated
+users and returns next-day sleep duration. See [setup and request examples](../sleep-service/README.md).
+Requires the internal Python inference service and the trained Kaggle artifact.
 
-Khởi động đầy đủ AI Service:
+## Gemini configuration
+
+Set `GEMINI_API_KEY` before starting the service. The default models are:
+
+- Embedding: `gemini-embedding-2`, 768 dimensions.
+- Chat: `gemini-3.1-flash-lite` (configurable, with an optional fallback model).
 
 ```powershell
-.\run-all.ps1 -RestartExisting
+cd ..\auth-service
+$env:GEMINI_API_KEY='your-google-ai-studio-key'
+.\mvnw.cmd -f ..\ai-service\pom.xml spring-boot:run
 ```
 
-Không dùng `-SkipAi` khi muốn chat hoặc tạo embedding.
+## RAG endpoints
 
-## Nạp dữ liệu cho AI
+- `POST /api/ai/documents`: save a document and generate its embedding (`ROLE_ADMIN`).
+- `POST /api/ai/documents/{id}/reindex`: regenerate one embedding (`ROLE_ADMIN`).
+- `POST /api/ai/documents/reindex-all`: regenerate all active embeddings (`ROLE_ADMIN`).
+- `POST /api/ai/chat`: similarity search plus grounded Gemini response (authenticated user).
 
-1. Đăng nhập bằng tài khoản `ROLE_ADMIN`.
-2. Mở `/admin/ai-documents`.
-3. Chọn **Thêm tài liệu** để nhập nội dung, hoặc **Nhập TXT/MD**.
-4. Điền nguồn tham khảo và loại tài liệu.
-5. Chỉ bật **Cho phép AI sử dụng** sau khi nội dung đã được kiểm duyệt.
-6. Nhấn **Lưu và tạo embedding**. AI Service lưu văn bản và gọi Gemini Embedding.
-7. Khi đổi model embedding hoặc cần làm mới dữ liệu, dùng **Reindex tất cả**.
+Documents are retrieved by sentence-aware chunks using hybrid vector/full-text search and Reciprocal Rank
+Fusion. Source governance and the production evaluation gate are documented in `docs/RAG-ARCHITECTURE.md`.
 
-File nhập hỗ trợ `.txt` và `.md`, tối đa 2 MB ở giao diện. Không nạp hồ sơ cá nhân,
-thông tin nhận dạng, hội thoại riêng tư hoặc tài liệu chưa xác minh. Nên chia tài
-liệu dài thành các chủ đề độc lập để kết quả tìm kiếm RAG chính xác hơn.
+The service trusts `X-User-Id` and `X-User-Role` only when it is reachable through
+the API Gateway. Do not expose port `8084` publicly; the Gateway removes
+client-supplied identity headers and replaces them with verified JWT claims.
 
-## API quản trị
+The separately trained offline PMData model is documented in
+`docs/STRESS-MODEL.md`.
 
-- `GET /api/ai/documents`: danh sách tài liệu.
-- `POST /api/ai/documents`: lưu tài liệu và tạo embedding.
-- `PUT /api/ai/documents/{id}`: cập nhật và tạo lại embedding.
-- `POST /api/ai/documents/{id}/reindex`: tạo lại một embedding.
-- `POST /api/ai/documents/reindex-all`: tạo lại embedding của mọi tài liệu active.
-- `DELETE /api/ai/documents/{id}`: xóa tài liệu.
-- `POST /api/ai/chat`: tìm kiếm vector và tạo câu trả lời có grounding.
+The three offline LifeSnaps next-day wearable forecasts are documented in
+`docs/WELLNESS-MODEL.md`. Enable them with `WELLNESS_MODEL_ENABLED=true`; the
+root `run-all.ps1` resolves and verifies all ONNX and metadata paths.
 
-AI Service chỉ nên được truy cập qua API Gateway. Không công khai trực tiếp cổng
-`8084`, vì Gateway chịu trách nhiệm xác minh JWT và gắn danh tính người dùng.
+Example chat body:
+
+```json
+{ "question": "Tôi nên làm gì khi đang hoảng loạn?", "topK": 5 }
+```

@@ -2,12 +2,12 @@ import { httpClient, type CursorPage } from "@/shared";
 import type { EmotionJournal, EmotionLevel, EmotionTrendPoint } from "../types/emotion.types";
 
 export const emotionApi = {
-  async create(payload: { emotionType: EmotionLevel; content: string }) {
+  async create(payload: { emotionType: EmotionLevel; content: string; energyLevel?: number; stressLevel?: number; sleepQuality?: number }) {
     const { data } = await httpClient.post<EmotionJournal>("/api/v1/emotion-journals", payload);
     return data;
   },
-  async history(from: string, to: string): Promise<CursorPage<EmotionJournal>> {
-    const { data } = await httpClient.get<CursorPage<EmotionJournal>>("/api/v1/emotion-journals", { params: { from, to, limit: 30 } });
+  async history(from: string, to: string, limit = 30): Promise<CursorPage<EmotionJournal>> {
+    const { data } = await httpClient.get<CursorPage<EmotionJournal>>("/api/v1/emotion-journals", { params: { from, to, limit } });
     return data;
   },
   async trends(from: string, to: string): Promise<EmotionTrendPoint[]> {

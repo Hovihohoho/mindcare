@@ -21,17 +21,21 @@ public class JwtUtil {
         this.expirationMs = expirationMs;
     }
 
-    public String generateToken(UUID userId, String email, String role) {
+    public String generateToken(UUID userId, String email, String role, UUID sessionId) {
         long now = System.currentTimeMillis();
         return Jwts.builder().setSubject(email)
                 .claim("userId", userId.toString())
                 .claim("role", role)
+                .claim("sessionId", sessionId.toString())
                 .setIssuedAt(new Date(now)).setExpiration(new Date(now + expirationMs))
                 .signWith(signingKey).compact();
     }
 
     public String extractEmail(String token) { return claims(token).getSubject(); }
     public String extractRole(String token) { return claims(token).get("role", String.class); }
+    public UUID extractSessionId(String token) {
+        return UUID.fromString(claims(token).get("sessionId", String.class));
+    }
     public boolean isTokenValid(String token) { return claims(token).getExpiration().after(new Date()); }
     public long getExpirationSeconds() { return expirationMs / 1000; }
 

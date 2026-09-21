@@ -9,6 +9,12 @@ public record AssessmentSummaryResponse(
         AssessmentCode code,
         Integer assessmentVersion,
         String title,
-        String description
+        String description,
+        AssessmentEvidenceResponse evidence
 ) {
+    public AssessmentSummaryResponse(
+            UUID id, AssessmentCode code, Integer assessmentVersion,
+            String title, String description) {
+        this(id, code, assessmentVersion, title, description, null);
+    }
 }

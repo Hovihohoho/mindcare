@@ -50,10 +50,17 @@ public class SecurityConfiguration {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers("/api/v1/internal/reminder-status/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAuthority(UserRole.ROLE_ADMIN.name())
                         .requestMatchers("/api/v1/assessments", "/api/v1/assessments/**")
                         .hasAuthority(UserRole.ROLE_USER.name())
                         .requestMatchers("/api/v1/assessment-results", "/api/v1/assessment-results/**")
+                        .hasAuthority(UserRole.ROLE_USER.name())
+                        .requestMatchers("/api/v1/risk-alerts", "/api/v1/risk-alerts/**", "/api/v1/privacy/**")
+                        .hasAuthority(UserRole.ROLE_USER.name())
+                        .requestMatchers("/api/v1/health-metrics", "/api/v1/health-metrics/**")
+                        .hasAuthority(UserRole.ROLE_USER.name())
+                        .requestMatchers("/api/v1/self-care-plan", "/api/v1/self-care-plan/**")
                         .hasAuthority(UserRole.ROLE_USER.name())
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions

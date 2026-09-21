@@ -13,4 +13,6 @@ public interface HealthMetricSyncRequestRepository extends JpaRepository<HealthM
             String sourceType,
             String idempotencyKey
     );
+
+    long deleteByUserIdAndSourceType(UUID userId, String sourceType);
 }

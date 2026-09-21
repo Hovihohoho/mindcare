@@ -1,0 +1,6 @@
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+pandas>=2.2,<3
+joblib>=1.4,<2
+# Install the exact scikit-learn version printed by the training notebook.
+scikit-learn

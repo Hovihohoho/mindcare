@@ -1,31 +1,16 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { tokenStorage, userStorage } from "@/shared/lib/storage";
 import type { AuthUser, UserRole } from "../types/auth.types";
+import { tokenStorage, userStorage } from "@/shared/lib/storage";
 
-interface RequireRoleProps {
-  roles: UserRole[];
-  children: ReactNode;
-}
-
-export function RequireRole({ roles, children }: RequireRoleProps) {
+export function RequireRole({ roles, children }: { roles: UserRole[]; children: ReactNode }) {
   const location = useLocation();
-  const token = tokenStorage.get();
   const user = userStorage.get<AuthUser>();
-
-  if (!token || !user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (!tokenStorage.get() || !user) {
+    return <Navigate replace state={{ from: location.pathname }} to="/login" />;
   }
-
   if (!roles.includes(user.role)) {
-    const fallback =
-      user.role === "ROLE_ADMIN"
-        ? "/admin"
-        : user.role === "ROLE_EXPERT"
-          ? "/expert"
-          : "/";
-    return <Navigate to={fallback} replace />;
+    return <Navigate replace to="/forbidden" />;
   }
-
   return children;
 }

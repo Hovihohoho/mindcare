@@ -1,6 +1,16 @@
 export interface ChatSource {
+  citationNumber: number;
+  id?: string;
   title: string;
-  excerpt?: string;
+  sourceUrl: string;
+  similarity?: number;
+}
+
+export interface ChatSafetyDirective {
+  level: "NONE" | "CHECK_IN" | "EXPLICIT" | "IMMINENT";
+  showSafetyCheck: boolean;
+  showEmergencyActions: boolean;
+  emergencyNumber?: string | null;
 }
 
 export interface ChatMessage {
@@ -9,4 +19,5 @@ export interface ChatMessage {
   content: string;
   createdAt: string;
   sources?: ChatSource[];
+  safety?: ChatSafetyDirective;
 }

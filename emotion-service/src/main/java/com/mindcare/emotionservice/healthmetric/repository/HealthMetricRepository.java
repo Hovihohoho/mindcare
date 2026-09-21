@@ -5,14 +5,22 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Modifying;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 public interface HealthMetricRepository extends JpaRepository<HealthMetricEntity, UUID> {
 
     boolean existsByUserIdAndSourceTypeAndExternalSampleIdAndDeletedAtIsNull(
+            UUID userId,
+            String sourceType,
+            String externalSampleId
+    );
+
+    Optional<HealthMetricEntity> findByUserIdAndSourceTypeAndExternalSampleId(
             UUID userId,
             String sourceType,
             String externalSampleId
@@ -47,4 +55,22 @@ public interface HealthMetricRepository extends JpaRepository<HealthMetricEntity
             OffsetDateTime from,
             OffsetDateTime to
     );
+
+    long countByUserIdAndSourceTypeAndDeletedAtIsNull(UUID userId, String sourceType);
+
+    Optional<HealthMetricEntity> findFirstByUserIdAndSourceTypeAndDeletedAtIsNullOrderByRecordedAtAsc(
+            UUID userId,
+            String sourceType
+    );
+
+    Optional<HealthMetricEntity> findFirstByUserIdAndSourceTypeAndDeletedAtIsNullOrderByRecordedAtDesc(
+            UUID userId,
+            String sourceType
+    );
+
+    @Query("SELECT metric.metricType, COUNT(metric) FROM HealthMetricEntity metric WHERE metric.userId = :userId AND metric.sourceType = :sourceType AND metric.deletedAt IS NULL GROUP BY metric.metricType")
+    List<Object[]> countActiveByMetricType(@Param("userId") UUID userId, @Param("sourceType") String sourceType);
+
+    @Modifying
+    long deleteByUserIdAndSourceType(UUID userId, String sourceType);
 }

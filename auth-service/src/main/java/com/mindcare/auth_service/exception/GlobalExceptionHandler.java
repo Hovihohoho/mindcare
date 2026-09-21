@@ -7,10 +7,18 @@ import org.springframework.mail.MailException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+    @ExceptionHandler(ResponseStatusException.class)
+    ResponseEntity<ApiResponse<Void>> status(ResponseStatusException exception) {
+        return ResponseEntity.status(exception.getStatusCode())
+                .body(ApiResponse.error(exception.getReason() == null
+                        ? "Yêu cầu không hợp lệ" : exception.getReason()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ApiResponse<Void>> validation(MethodArgumentNotValidException exception) {
         String message = exception.getBindingResult().getFieldErrors().stream().findFirst()
@@ -23,7 +31,7 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiResponse<Void>> mail(MailException exception) {
         log.error("Could not send verification email through the configured SMTP server", exception);
         return ResponseEntity.status(502).body(ApiResponse.error(
-                "Không thể gửi email xác thực. Vui lòng kiểm tra cấu hình SMTP hoặc mật khẩu ứng dụng Gmail"));
+                "Không thể gửi email. Vui lòng kiểm tra cấu hình SMTP hoặc mật khẩu ứng dụng Gmail"));
     }
 
     @ExceptionHandler(RuntimeException.class)

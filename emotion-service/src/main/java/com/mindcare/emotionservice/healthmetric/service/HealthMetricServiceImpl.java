@@ -7,11 +7,14 @@ import com.mindcare.emotionservice.healthmetric.dto.HealthMetricBatchResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricItemRequest;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricTrendPointResponse;
+import com.mindcare.emotionservice.healthmetric.dto.HealthSourceSummaryResponse;
+import com.mindcare.emotionservice.healthmetric.dto.HealthBenchmarkSnapshot;
 import com.mindcare.emotionservice.healthmetric.entity.HealthMetricEntity;
 import com.mindcare.emotionservice.healthmetric.entity.HealthMetricSyncRequestEntity;
 import com.mindcare.emotionservice.healthmetric.mapper.HealthMetricMapper;
 import com.mindcare.emotionservice.healthmetric.repository.HealthMetricRepository;
 import com.mindcare.emotionservice.healthmetric.repository.HealthMetricSyncRequestRepository;
+import com.mindcare.emotionservice.healthmetric.repository.HealthSourceConsentRepository;
 import com.mindcare.emotionservice.shared.dto.CursorPageResponse;
 import com.mindcare.emotionservice.shared.exception.InvalidRequestException;
 import com.mindcare.emotionservice.shared.exception.ResourceConflictException;
@@ -26,41 +29,42 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
 public class HealthMetricServiceImpl implements HealthMetricService {
-
     private static final int MAX_BATCH_SIZE = 100;
-    private static final Set<String> SOURCE_TYPES = Set.of("APPLE_HEALTH", "GOOGLE_HEALTH", "MANUAL");
+    private static final Set<String> SOURCE_TYPES = Set.of("APPLE_HEALTH", "HEALTH_CONNECT", "GOOGLE_HEALTH", "MANUAL");
+    private static final Set<String> METRIC_TYPES = Set.of(
+            "SLEEP_HOURS", "SLEEP_SESSION", "HEART_RATE", "SPO2", "STEP_COUNT",
+            "EXERCISE_SESSION", "TOTAL_CALORIES_BURNED", "DISTANCE");
 
     private final HealthMetricRepository repository;
     private final HealthMetricSyncRequestRepository syncRequestRepository;
+    private final HealthSourceConsentRepository consentRepository;
     private final HealthMetricMapper mapper;
     private final CursorCodec cursorCodec;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    public HealthMetricServiceImpl(
-            HealthMetricRepository repository,
-            HealthMetricSyncRequestRepository syncRequestRepository,
-            HealthMetricMapper mapper,
-            CursorCodec cursorCodec,
-            ObjectMapper objectMapper,
-            Clock clock
-    ) {
+    public HealthMetricServiceImpl(HealthMetricRepository repository, HealthMetricSyncRequestRepository syncRequestRepository,
+                                   HealthSourceConsentRepository consentRepository, HealthMetricMapper mapper,
+                                   CursorCodec cursorCodec, ObjectMapper objectMapper, Clock clock) {
         this.repository = repository;
         this.syncRequestRepository = syncRequestRepository;
+        this.consentRepository = consentRepository;
         this.mapper = mapper;
         this.cursorCodec = cursorCodec;
         this.objectMapper = objectMapper;
@@ -69,268 +73,370 @@ public class HealthMetricServiceImpl implements HealthMetricService {
 
     @Override
     @Transactional
-    public HealthMetricBatchResponse synchronizeMetrics(
-            UUID userId,
-            String idempotencyKey,
-            HealthMetricBatchRequest request
-    ) {
+    public HealthMetricBatchResponse synchronizeMetrics(UUID userId, String idempotencyKey, HealthMetricBatchRequest request) {
         ServiceValidator.requireUserId(userId);
         String key = ServiceValidator.requireText(idempotencyKey, "idempotencyKey", 255);
-        if (request == null) {
-            throw new InvalidRequestException("INVALID_REQUEST", "request must not be null");
-        }
+        if (request == null) throw invalid("INVALID_REQUEST", "request must not be null");
         String sourceType = normalizeSource(request.sourceType());
+        var consent = consentRepository.findByUserIdAndSourceType(userId, sourceType)
+                .orElseGet(() -> consentRepository.save(new com.mindcare.emotionservice.healthmetric.entity.HealthSourceConsentEntity(userId, sourceType)));
+        if (!consent.isEnabled()) {
+            throw invalid("HEALTH_SOURCE_CONSENT_REQUIRED", "Health data synchronization must be enabled again before uploading data");
+        }
         String requestHash = hashRequest(request, sourceType);
         var previous = syncRequestRepository.findByUserIdAndSourceTypeAndIdempotencyKey(userId, sourceType, key);
         if (previous.isPresent()) {
             if (!previous.get().getRequestHash().equals(requestHash)) {
-                throw new ResourceConflictException(
-                        "IDEMPOTENCY_CONFLICT",
-                        "idempotencyKey was already used with a different payload"
-                );
+                throw new ResourceConflictException("IDEMPOTENCY_CONFLICT", "idempotencyKey was already used with a different payload");
             }
-            return readStoredResponse(previous.get());
+            return storedResponse(previous.get());
         }
-
         if (request.items() == null || request.items().isEmpty() || request.items().size() > MAX_BATCH_SIZE) {
-            throw new InvalidRequestException(
-                    "INVALID_BATCH_SIZE",
-                    "items must contain between 1 and " + MAX_BATCH_SIZE + " entries"
-            );
+            throw invalid("INVALID_BATCH_SIZE", "items must contain between 1 and " + MAX_BATCH_SIZE + " entries");
+        }
+        List<PreparedMetric> prepared = request.items().stream().map(item -> prepare(item, sourceType)).toList();
+        long externalIdCount = prepared.stream().map(PreparedMetric::externalId).filter(Objects::nonNull).count();
+        if (prepared.stream().map(PreparedMetric::externalId).filter(Objects::nonNull).distinct().count() != externalIdCount) {
+            throw invalid("DUPLICATE_EXTERNAL_SAMPLE_ID", "items must not repeat externalSampleId");
         }
 
-        List<PreparedMetric> preparedMetrics = request.items().stream()
-                .map(item -> prepareMetric(item, sourceType))
-                .toList();
-        Set<String> seenSamples = new HashSet<>();
-        List<HealthMetricEntity> newEntities = new ArrayList<>();
-        int duplicateCount = 0;
-        for (PreparedMetric prepared : preparedMetrics) {
-            String externalSampleId = prepared.externalSampleId();
-            boolean duplicateInBatch = externalSampleId != null && !seenSamples.add(externalSampleId);
-            boolean duplicateInDatabase = externalSampleId != null
-                    && repository.existsByUserIdAndSourceTypeAndExternalSampleIdAndDeletedAtIsNull(
-                    userId,
-                    sourceType,
-                    externalSampleId
-            );
-            if (duplicateInBatch || duplicateInDatabase) {
-                duplicateCount++;
-                continue;
+        List<HealthMetricEntity> changed = new ArrayList<>();
+        int accepted = 0;
+        int updated = 0;
+        int duplicates = 0;
+        for (PreparedMetric metric : prepared) {
+            var existing = repository.findByUserIdAndSourceTypeAndExternalSampleId(userId, sourceType, metric.externalId());
+            if (existing.isEmpty()) {
+                changed.add(new HealthMetricEntity(userId, metric.type(), metric.value(), metric.unit(), sourceType,
+                        metric.externalId(), metric.recordedAt(), metric.startTime(), metric.endTime(), metric.sourceName(),
+                        metric.dataOrigin(), metric.sourceModifiedAt(), metric.details()));
+                accepted++;
+            } else if (isUnchanged(existing.get(), metric)) {
+                duplicates++;
+            } else {
+                existing.get().applyUpsert(metric.type(), metric.value(), metric.unit(), metric.recordedAt(), metric.startTime(),
+                        metric.endTime(), metric.sourceName(), metric.dataOrigin(), metric.sourceModifiedAt(), metric.details());
+                changed.add(existing.get());
+                updated++;
             }
-            newEntities.add(new HealthMetricEntity(
-                    userId,
-                    prepared.metricType(),
-                    prepared.value(),
-                    prepared.unit(),
-                    sourceType,
-                    externalSampleId,
-                    prepared.recordedAt()
-            ));
         }
-
-        List<HealthMetricEntity> saved = repository.saveAllAndFlush(newEntities);
-        HealthMetricBatchResponse response = new HealthMetricBatchResponse(
-                saved.size(),
-                duplicateCount,
-                saved.stream().map(HealthMetricEntity::getId).toList()
-        );
-        syncRequestRepository.save(new HealthMetricSyncRequestEntity(
-                userId,
-                sourceType,
-                key,
-                requestHash,
-                objectMapper.valueToTree(response)
-        ));
+        List<HealthMetricEntity> saved = repository.saveAllAndFlush(changed);
+        HealthMetricBatchResponse response = new HealthMetricBatchResponse(accepted, updated, duplicates,
+                saved.stream().map(HealthMetricEntity::getId).toList());
+        syncRequestRepository.save(new HealthMetricSyncRequestEntity(userId, sourceType, key, requestHash, objectMapper.valueToTree(response)));
         return response;
     }
 
     @Override
-    public CursorPageResponse<HealthMetricResponse> getMetrics(
-            UUID userId,
-            String metricType,
-            OffsetDateTime from,
-            OffsetDateTime to,
-            String cursor,
-            int limit
-    ) {
+    public CursorPageResponse<HealthMetricResponse> getMetrics(UUID userId, String metricType, OffsetDateTime from,
+                                                               OffsetDateTime to, String cursor, int limit) {
         ServiceValidator.requireUserId(userId);
         ServiceValidator.validateTimeRange(from, to, 365);
         ServiceValidator.validateLimit(limit);
-        String normalizedMetricType = normalizeMetricType(metricType);
-        String scope = "health:" + userId + ':' + normalizedMetricType + ':' + from + ':' + to;
+        String type = normalizeMetricType(metricType);
+        String scope = "health:" + userId + ':' + type + ':' + from + ':' + to;
         CursorCodec.CursorPosition position = cursorCodec.decode(cursor, scope);
-        List<HealthMetricEntity> entities = repository.findHistory(
-                userId,
-                normalizedMetricType,
-                from,
-                to,
-                position.timestamp() != null,
-                position.timestamp(),
-                position.id(),
-                PageRequest.of(0, limit + 1)
-        );
+        List<HealthMetricEntity> entities = repository.findHistory(userId, type, from, to, position.timestamp() != null,
+                position.timestamp(), position.id(), PageRequest.of(0, limit + 1));
         boolean hasMore = entities.size() > limit;
         List<HealthMetricEntity> page = entities.subList(0, Math.min(limit, entities.size()));
-        String nextCursor = hasMore
-                ? cursorCodec.encode(page.get(page.size() - 1).getRecordedAt(), page.get(page.size() - 1).getId(), scope)
-                : null;
-        return new CursorPageResponse<>(page.stream().map(mapper::toResponse).toList(), nextCursor, hasMore);
+        String next = hasMore ? cursorCodec.encode(page.get(page.size() - 1).getRecordedAt(), page.get(page.size() - 1).getId(), scope) : null;
+        return new CursorPageResponse<>(page.stream().map(mapper::toResponse).toList(), next, hasMore);
     }
 
     @Override
-    public List<HealthMetricTrendPointResponse> getMetricTrends(
+    public List<HealthMetricTrendPointResponse> getMetricTrends(UUID userId, String metricType, OffsetDateTime from,
+                                                                OffsetDateTime to, String bucket, ZoneId timezone) {
+        ServiceValidator.requireUserId(userId);
+        ServiceValidator.validateTimeRange(from, to, 730);
+        if (timezone == null) throw invalid("INVALID_TIMEZONE", "timezone must not be null");
+        String type = normalizeMetricType(metricType);
+        TrendBucket trendBucket = TrendBucket.parse(bucket);
+        Map<OffsetDateTime, Values> groups = new LinkedHashMap<>();
+        repository.findByUserIdAndMetricTypeAndDeletedAtIsNullAndRecordedAtGreaterThanEqualAndRecordedAtLessThanOrderByRecordedAtAsc(
+                userId, type, from, to).forEach(metric -> {
+            BigDecimal value = aggregateValue(metric);
+            if (value != null) groups.computeIfAbsent(trendBucket.startOf(metric.getRecordedAt(), timezone), ignored -> new Values()).add(value);
+        });
+        List<HealthMetricTrendPointResponse> result = new ArrayList<>();
+        groups.forEach((start, values) -> result.add(new HealthMetricTrendPointResponse(start, trendBucket.endOf(start, timezone), type,
+                Set.of("HEART_RATE", "SPO2").contains(type) ? values.average() : values.sum(), values.minimum, values.maximum, values.count,
+                canonicalUnit(type), Set.of("HEART_RATE", "SPO2").contains(type) ? "AVERAGE" : "SUM")));
+        return List.copyOf(result);
+    }
+
+    @Override
+    public HealthSourceSummaryResponse getSourceSummary(UUID userId, String sourceType) {
+        ServiceValidator.requireUserId(userId);
+        return sourceSummary(userId, normalizeSource(sourceType));
+    }
+
+    @Override
+    @Transactional
+    public HealthSourceSummaryResponse enableSourceSync(UUID userId, String sourceType) {
+        ServiceValidator.requireUserId(userId);
+        String source = normalizeSource(sourceType);
+        var consent = consentRepository.findByUserIdAndSourceType(userId, source)
+                .orElseGet(() -> new com.mindcare.emotionservice.healthmetric.entity.HealthSourceConsentEntity(userId, source));
+        consent.enable();
+        consentRepository.saveAndFlush(consent);
+        return sourceSummary(userId, source);
+    }
+
+    @Override
+    @Transactional
+    public HealthSourceSummaryResponse revokeAndDeleteSourceData(UUID userId, String sourceType) {
+        ServiceValidator.requireUserId(userId);
+        String source = normalizeSource(sourceType);
+        var consent = consentRepository.findByUserIdAndSourceType(userId, source)
+                .orElseGet(() -> new com.mindcare.emotionservice.healthmetric.entity.HealthSourceConsentEntity(userId, source));
+        consent.revoke(OffsetDateTime.now(clock));
+        consentRepository.saveAndFlush(consent);
+        syncRequestRepository.deleteByUserIdAndSourceType(userId, source);
+        repository.deleteByUserIdAndSourceType(userId, source);
+        repository.flush();
+        return sourceSummary(userId, source);
+    }
+
+    @Override
+    public HealthBenchmarkSnapshot getBenchmarkSnapshot(UUID userId, int windowDays) {
+        ZoneId timezone = ZoneId.of("Asia/Ho_Chi_Minh");
+        LocalDate endDate = OffsetDateTime.now(clock).atZoneSameInstant(timezone).toLocalDate();
+        return getBenchmarkSnapshot(userId, endDate, windowDays, timezone);
+    }
+
+    @Override
+    public HealthBenchmarkSnapshot getBenchmarkSnapshot(
             UUID userId,
-            String metricType,
-            OffsetDateTime from,
-            OffsetDateTime to,
-            String bucket,
+            LocalDate endDate,
+            int windowDays,
             ZoneId timezone
     ) {
         ServiceValidator.requireUserId(userId);
-        ServiceValidator.validateTimeRange(from, to, 730);
-        if (timezone == null) {
-            throw new InvalidRequestException("INVALID_TIMEZONE", "timezone must not be null");
+        if (windowDays < 1 || windowDays > 30) throw invalid("INVALID_BENCHMARK_WINDOW", "windowDays must be between 1 and 30");
+        if (endDate == null) throw invalid("INVALID_BENCHMARK_DATE", "endDate is required");
+        if (timezone == null) throw invalid("INVALID_TIMEZONE", "timezone is required");
+        OffsetDateTime from = endDate.minusDays(windowDays - 1L)
+                .atStartOfDay(timezone).toOffsetDateTime();
+        OffsetDateTime to = endDate.plusDays(1).atStartOfDay(timezone).toOffsetDateTime();
+        Map<LocalDate, DailyBenchmarkValues> daily = new LinkedHashMap<>();
+        for (int index = windowDays - 1; index >= 0; index--) {
+            daily.put(endDate.minusDays(index), new DailyBenchmarkValues());
         }
-        String normalizedMetricType = normalizeMetricType(metricType);
-        TrendBucket trendBucket = TrendBucket.parse(bucket);
-        List<HealthMetricEntity> metrics = repository
-                .findByUserIdAndMetricTypeAndDeletedAtIsNullAndRecordedAtGreaterThanEqualAndRecordedAtLessThanOrderByRecordedAtAsc(
-                        userId,
-                        normalizedMetricType,
-                        from,
-                        to
-                );
-        Map<OffsetDateTime, ValueAccumulator> groups = new LinkedHashMap<>();
-        metrics.forEach(metric -> groups
-                .computeIfAbsent(trendBucket.startOf(metric.getRecordedAt(), timezone), ignored -> new ValueAccumulator())
-                .add(metric.getMetricValue()));
-        List<HealthMetricTrendPointResponse> response = new ArrayList<>();
-        groups.forEach((periodStart, accumulator) -> response.add(new HealthMetricTrendPointResponse(
-                periodStart,
-                trendBucket.endOf(periodStart, timezone),
-                normalizedMetricType,
-                accumulator.average(),
-                accumulator.count,
-                canonicalUnit(normalizedMetricType)
-        )));
-        return List.copyOf(response);
+        for (String type : List.of("SLEEP_HOURS", "SLEEP_SESSION", "STEP_COUNT")) {
+            repository.findByUserIdAndMetricTypeAndDeletedAtIsNullAndRecordedAtGreaterThanEqualAndRecordedAtLessThanOrderByRecordedAtAsc(
+                    userId, type, from, to).forEach(metric -> {
+                LocalDate date = metric.getRecordedAt().atZoneSameInstant(timezone).toLocalDate();
+                DailyBenchmarkValues values = daily.get(date);
+                if (values == null) return;
+                BigDecimal value = aggregateValue(metric);
+                if (value == null) return;
+                if ("STEP_COUNT".equals(type)) {
+                    values.steps = values.steps.add(value);
+                    values.hasSteps = true;
+                } else if ("SLEEP_SESSION".equals(type)) {
+                    values.sessionSleep = values.sessionSleep.add(value);
+                    values.hasSessionSleep = true;
+                } else {
+                    values.pointSleep = values.pointSleep.add(value);
+                    values.hasPointSleep = true;
+                }
+            });
+        }
+        List<HealthBenchmarkSnapshot.DailySummary> summaries = daily.entrySet().stream().map(entry -> {
+            DailyBenchmarkValues value = entry.getValue();
+            BigDecimal sleep = value.hasSessionSleep ? value.sessionSleep
+                    : value.hasPointSleep ? value.pointSleep : null;
+            BigDecimal steps = value.hasSteps ? value.steps : null;
+            return new HealthBenchmarkSnapshot.DailySummary(entry.getKey(), sleep, steps);
+        }).toList();
+        List<HealthBenchmarkSnapshot.Observation> restingHeartRates = observations(userId, "HEART_RATE", from, to, true);
+        List<HealthBenchmarkSnapshot.Observation> oxygenSaturations = observations(userId, "SPO2", from, to, false);
+        return new HealthBenchmarkSnapshot(summaries, restingHeartRates, oxygenSaturations);
     }
 
-    private PreparedMetric prepareMetric(HealthMetricItemRequest item, String sourceType) {
-        if (item == null || item.value() == null || item.recordedAt() == null) {
-            throw new InvalidRequestException("INVALID_HEALTH_METRIC", "metric value and recordedAt are required");
-        }
-        String metricType = normalizeMetricType(item.metricType());
-        String externalSampleId = normalizeOptionalText(item.externalSampleId(), 255);
-        if (!"MANUAL".equals(sourceType) && externalSampleId == null) {
-            throw new InvalidRequestException(
-                    "EXTERNAL_SAMPLE_ID_REQUIRED",
-                    "externalSampleId is required for device health sources"
-            );
-        }
-        OffsetDateTime now = OffsetDateTime.now(clock);
-        if (item.recordedAt().isAfter(now.plusMinutes(5)) || item.recordedAt().isBefore(now.minusDays(30))) {
-            throw new InvalidRequestException(
-                    "INVALID_RECORDED_AT",
-                    "recordedAt must be within the accepted 30-day synchronization window"
-            );
-        }
-        return canonicalize(metricType, item.value(), item.unit(), item.recordedAt(), externalSampleId);
+    private List<HealthBenchmarkSnapshot.Observation> observations(UUID userId, String type, OffsetDateTime from,
+                                                                    OffsetDateTime to, boolean restingOnly) {
+        return repository.findByUserIdAndMetricTypeAndDeletedAtIsNullAndRecordedAtGreaterThanEqualAndRecordedAtLessThanOrderByRecordedAtAsc(
+                        userId, type, from, to).stream()
+                .filter(metric -> metric.getMetricValue() != null)
+                .filter(metric -> !restingOnly || isResting(metric.getDetails()))
+                .map(metric -> new HealthBenchmarkSnapshot.Observation(metric.getRecordedAt(), metric.getMetricValue()))
+                .toList();
     }
 
-    private PreparedMetric canonicalize(
-            String metricType,
-            BigDecimal value,
-            String unit,
-            OffsetDateTime recordedAt,
-            String externalSampleId
-    ) {
+    private boolean isResting(Map<String, Object> details) {
+        if (details == null) return false;
+        Object context = details.get("measurementContext");
+        return context != null && "RESTING".equalsIgnoreCase(context.toString());
+    }
+
+    private HealthSourceSummaryResponse sourceSummary(UUID userId, String source) {
+        var consent = consentRepository.findByUserIdAndSourceType(userId, source);
+        OffsetDateTime oldestRecordAt = repository
+                .findFirstByUserIdAndSourceTypeAndDeletedAtIsNullOrderByRecordedAtAsc(userId, source)
+                .map(HealthMetricEntity::getRecordedAt)
+                .orElse(null);
+        OffsetDateTime newestRecordAt = repository
+                .findFirstByUserIdAndSourceTypeAndDeletedAtIsNullOrderByRecordedAtDesc(userId, source)
+                .map(HealthMetricEntity::getRecordedAt)
+                .orElse(null);
+        Map<String, Long> counts = new LinkedHashMap<>();
+        repository.countActiveByMetricType(userId, source).forEach(row ->
+                counts.put((String) row[0], (Long) row[1]));
+        return new HealthSourceSummaryResponse(source,
+                consent.map(com.mindcare.emotionservice.healthmetric.entity.HealthSourceConsentEntity::isEnabled).orElse(true),
+                consent.map(com.mindcare.emotionservice.healthmetric.entity.HealthSourceConsentEntity::getRevokedAt).orElse(null),
+                repository.countByUserIdAndSourceTypeAndDeletedAtIsNull(userId, source),
+                oldestRecordAt,
+                newestRecordAt,
+                Map.copyOf(counts));
+    }
+
+    private PreparedMetric prepare(HealthMetricItemRequest item, String sourceType) {
+        if (item == null) throw invalid("INVALID_HEALTH_METRIC", "item must not be null");
+        String externalId = text(item.externalSampleId(), 255);
+        if (!"MANUAL".equals(sourceType) && externalId == null) throw invalid("EXTERNAL_SAMPLE_ID_REQUIRED", "externalSampleId is required");
+        String type = normalizeMetricType(item.metricType());
+        OffsetDateTime recordedAt = item.recordedAt() != null ? item.recordedAt() : item.endTime();
+        validateTime(recordedAt, "recordedAt");
+        if (item.sourceLastModifiedAt() != null && item.sourceLastModifiedAt().isAfter(OffsetDateTime.now(clock).plusMinutes(5))) {
+            throw invalid("INVALID_SOURCE_MODIFIED_AT", "sourceLastModifiedAt is in the future");
+        }
+        Map<String, Object> details = item.details() == null ? Map.of() : item.details();
+        try {
+            if (objectMapper.writeValueAsString(details).length() > 20_000) throw invalid("HEALTH_DETAILS_TOO_LARGE", "details exceeds maximum size");
+        } catch (JsonProcessingException exception) {
+            throw invalid("INVALID_HEALTH_DETAILS", "details is not valid JSON");
+        }
+        if (Set.of("SLEEP_SESSION", "EXERCISE_SESSION").contains(type)) {
+            if (item.startTime() == null || item.endTime() == null || !item.startTime().isBefore(item.endTime())) {
+                throw invalid("INVALID_SESSION_RANGE", "session requires startTime before endTime");
+            }
+            validateTime(item.endTime(), "endTime");
+            return new PreparedMetric(externalId, type, null, null, recordedAt, item.startTime(), item.endTime(), text(item.sourceName(), 255),
+                    text(item.dataOrigin(), 255), item.sourceLastModifiedAt(), details);
+        }
+        Canonical canonical = canonicalize(type, item.value(), item.unit());
+        return new PreparedMetric(externalId, type, canonical.value(), canonical.unit(), recordedAt, item.startTime(), item.endTime(),
+                text(item.sourceName(), 255), text(item.dataOrigin(), 255), item.sourceLastModifiedAt(), details);
+    }
+
+    private Canonical canonicalize(String type, BigDecimal value, String unit) {
+        if (value == null) throw invalid("INVALID_HEALTH_METRIC", "value is required for " + type);
         String normalizedUnit = ServiceValidator.requireText(unit, "unit", 20).toLowerCase(Locale.ROOT);
-        BigDecimal canonicalValue;
-        String canonicalUnit = canonicalUnit(metricType);
-        switch (metricType) {
-            case "SLEEP_HOURS" -> {
-                canonicalValue = switch (normalizedUnit) {
-                    case "h", "hour", "hours" -> value;
-                    case "min", "minute", "minutes" -> value.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-                    default -> throw invalidUnit(metricType);
-                };
-                validateRange(canonicalValue, BigDecimal.ZERO, BigDecimal.valueOf(24), metricType);
+        if ("SLEEP_HOURS".equals(type)) {
+            BigDecimal hours = Set.of("h", "hour", "hours").contains(normalizedUnit) ? value
+                    : Set.of("min", "minute", "minutes").contains(normalizedUnit) ? value.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP)
+                    : null;
+            if (hours == null) throw invalid("INVALID_METRIC_UNIT", "unit is not supported for " + type);
+            range(hours, BigDecimal.ZERO, BigDecimal.valueOf(24), type);
+            return new Canonical(hours, "h");
+        }
+        if ("HEART_RATE".equals(type)) {
+            if (!"bpm".equals(normalizedUnit)) throw invalid("INVALID_METRIC_UNIT", "unit is not supported for " + type);
+            range(value, BigDecimal.valueOf(20), BigDecimal.valueOf(250), type);
+            return new Canonical(value, "bpm");
+        }
+        if ("SPO2".equals(type)) {
+            if (!Set.of("%", "percent", "percentage").contains(normalizedUnit)) {
+                throw invalid("INVALID_METRIC_UNIT", "unit is not supported for " + type);
             }
-            case "HEART_RATE" -> {
-                if (!"bpm".equals(normalizedUnit)) {
-                    throw invalidUnit(metricType);
-                }
-                canonicalValue = value;
-                validateRange(canonicalValue, BigDecimal.valueOf(20), BigDecimal.valueOf(250), metricType);
-            }
-            case "STEP_COUNT" -> {
-                if (!Set.of("count", "step", "steps").contains(normalizedUnit)) {
-                    throw invalidUnit(metricType);
-                }
-                if (value.stripTrailingZeros().scale() > 0) {
-                    throw new InvalidRequestException("INVALID_METRIC_VALUE", "STEP_COUNT must be an integer");
-                }
-                canonicalValue = value;
-                validateRange(canonicalValue, BigDecimal.ZERO, BigDecimal.valueOf(200_000), metricType);
-            }
-            default -> throw new InvalidRequestException("INVALID_METRIC_TYPE", "unsupported metricType");
+            range(value, BigDecimal.ZERO, BigDecimal.valueOf(100), type);
+            return new Canonical(value, "%");
         }
-        return new PreparedMetric(metricType, canonicalValue, canonicalUnit, recordedAt, externalSampleId);
+        if ("TOTAL_CALORIES_BURNED".equals(type)) {
+            BigDecimal kilocalories = Set.of("kcal", "calorie", "calories").contains(normalizedUnit) ? value
+                    : "kj".equals(normalizedUnit)
+                    ? value.divide(BigDecimal.valueOf(4.184), 4, RoundingMode.HALF_UP)
+                    : null;
+            if (kilocalories == null) throw invalid("INVALID_METRIC_UNIT", "unit is not supported for " + type);
+            range(kilocalories, BigDecimal.ZERO, BigDecimal.valueOf(15_000), type);
+            return new Canonical(kilocalories, "kcal");
+        }
+        if ("DISTANCE".equals(type)) {
+            BigDecimal meters = "m".equals(normalizedUnit) ? value
+                    : Set.of("km", "kilometer", "kilometers").contains(normalizedUnit)
+                    ? value.multiply(BigDecimal.valueOf(1_000))
+                    : null;
+            if (meters == null) throw invalid("INVALID_METRIC_UNIT", "unit is not supported for " + type);
+            range(meters, BigDecimal.ZERO, BigDecimal.valueOf(100_000), type);
+            return new Canonical(meters, "m");
+        }
+        if (!Set.of("count", "step", "steps").contains(normalizedUnit) || value.stripTrailingZeros().scale() > 0) {
+            throw invalid("INVALID_METRIC_VALUE", "STEP_COUNT requires an integer count");
+        }
+        range(value, BigDecimal.ZERO, BigDecimal.valueOf(200_000), type);
+        return new Canonical(value, "count");
     }
 
-    private void validateRange(BigDecimal value, BigDecimal minimum, BigDecimal maximum, String metricType) {
-        if (value.compareTo(minimum) < 0 || value.compareTo(maximum) > 0) {
-            throw new InvalidRequestException("INVALID_METRIC_VALUE", metricType + " is outside the ingest range");
+    private boolean isUnchanged(HealthMetricEntity entity, PreparedMetric metric) {
+        if (metric.sourceModifiedAt() != null && entity.getSourceLastModifiedAt() != null) {
+            return !metric.sourceModifiedAt().isAfter(entity.getSourceLastModifiedAt());
+        }
+        return entity.getDeletedAt() == null && Objects.equals(entity.getMetricType(), metric.type())
+                && Objects.equals(entity.getMetricValue(), metric.value()) && Objects.equals(entity.getUnit(), metric.unit())
+                && Objects.equals(entity.getRecordedAt(), metric.recordedAt()) && Objects.equals(entity.getStartTime(), metric.startTime())
+                && Objects.equals(entity.getEndTime(), metric.endTime()) && Objects.equals(entity.getDetails(), metric.details());
+    }
+
+    private BigDecimal aggregateValue(HealthMetricEntity metric) {
+        if (Set.of("SLEEP_SESSION", "EXERCISE_SESSION").contains(metric.getMetricType())) {
+            if (metric.getStartTime() == null || metric.getEndTime() == null) return null;
+            return BigDecimal.valueOf(Duration.between(metric.getStartTime(), metric.getEndTime()).toMinutes())
+                    .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        }
+        return metric.getMetricValue();
+    }
+
+    private void validateTime(OffsetDateTime value, String field) {
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        if (value == null || value.isAfter(now.plusMinutes(5)) || value.isBefore(now.minusDays(30))) {
+            throw invalid("INVALID_RECORDED_AT", field + " must be within the accepted 30-day synchronization window");
         }
     }
 
-    private InvalidRequestException invalidUnit(String metricType) {
-        return new InvalidRequestException("INVALID_METRIC_UNIT", "unit is not supported for " + metricType);
+    private String normalizeSource(String source) {
+        String value = ServiceValidator.requireText(source, "sourceType", 50).toUpperCase(Locale.ROOT);
+        if ("GOOGLE_HEALTH".equals(value)) value = "HEALTH_CONNECT";
+        if (!SOURCE_TYPES.contains(value)) throw invalid("INVALID_SOURCE_TYPE", "unsupported sourceType");
+        return value;
     }
 
-    private String normalizeSource(String sourceType) {
-        String normalized = ServiceValidator.requireText(sourceType, "sourceType", 50).toUpperCase(Locale.ROOT);
-        if (!SOURCE_TYPES.contains(normalized)) {
-            throw new InvalidRequestException("INVALID_SOURCE_TYPE", "unsupported sourceType");
-        }
-        return normalized;
+    private String normalizeMetricType(String type) {
+        String value = ServiceValidator.requireText(type, "metricType", 50).toUpperCase(Locale.ROOT);
+        if (!METRIC_TYPES.contains(value)) throw invalid("INVALID_METRIC_TYPE", "unsupported metricType");
+        return value;
     }
 
-    private String normalizeMetricType(String metricType) {
-        String normalized = ServiceValidator.requireText(metricType, "metricType", 50).toUpperCase(Locale.ROOT);
-        if (!Set.of("SLEEP_HOURS", "HEART_RATE", "STEP_COUNT").contains(normalized)) {
-            throw new InvalidRequestException("INVALID_METRIC_TYPE", "unsupported metricType");
-        }
-        return normalized;
-    }
-
-    private String canonicalUnit(String metricType) {
-        return switch (metricType) {
-            case "SLEEP_HOURS" -> "h";
+    private String canonicalUnit(String type) {
+        return switch (type) {
             case "HEART_RATE" -> "bpm";
+            case "SPO2" -> "%";
             case "STEP_COUNT" -> "count";
-            default -> throw new InvalidRequestException("INVALID_METRIC_TYPE", "unsupported metricType");
+            case "TOTAL_CALORIES_BURNED" -> "kcal";
+            case "DISTANCE" -> "m";
+            default -> "h";
         };
     }
 
-    private String normalizeOptionalText(String value, int maximumLength) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return ServiceValidator.requireText(value, "externalSampleId", maximumLength);
+    private void range(BigDecimal value, BigDecimal min, BigDecimal max, String type) {
+        if (value.compareTo(min) < 0 || value.compareTo(max) > 0) throw invalid("INVALID_METRIC_VALUE", type + " is outside ingest range");
     }
 
-    private String hashRequest(HealthMetricBatchRequest request, String sourceType) {
-        StringBuilder canonical = new StringBuilder(sourceType);
-        if (request.items() != null) {
-            request.items().forEach(item -> canonical.append('|').append(item));
-        }
-        return RequestHasher.sha256(canonical.toString());
+    private String text(String value, int max) {
+        return value == null || value.isBlank() ? null : ServiceValidator.requireText(value, "text", max);
     }
 
-    private HealthMetricBatchResponse readStoredResponse(HealthMetricSyncRequestEntity entity) {
+    private String hashRequest(HealthMetricBatchRequest request, String source) {
+        try {
+            return RequestHasher.sha256(source + '|' + objectMapper.writeValueAsString(request));
+        } catch (JsonProcessingException exception) {
+            throw invalid("INVALID_REQUEST", "request cannot be serialized");
+        }
+    }
+
+    private HealthMetricBatchResponse storedResponse(HealthMetricSyncRequestEntity entity) {
         try {
             return objectMapper.treeToValue(entity.getResponsePayload(), HealthMetricBatchResponse.class);
         } catch (JsonProcessingException exception) {
@@ -338,26 +444,33 @@ public class HealthMetricServiceImpl implements HealthMetricService {
         }
     }
 
-    private record PreparedMetric(
-            String metricType,
-            BigDecimal value,
-            String unit,
-            OffsetDateTime recordedAt,
-            String externalSampleId
-    ) {
-    }
+    private InvalidRequestException invalid(String code, String message) { return new InvalidRequestException(code, message); }
+    private record Canonical(BigDecimal value, String unit) {}
+    private record PreparedMetric(String externalId, String type, BigDecimal value, String unit, OffsetDateTime recordedAt,
+                                  OffsetDateTime startTime, OffsetDateTime endTime, String sourceName, String dataOrigin,
+                                  OffsetDateTime sourceModifiedAt, Map<String, Object> details) {}
 
-    private static final class ValueAccumulator {
+    private static final class Values {
         private BigDecimal sum = BigDecimal.ZERO;
+        private BigDecimal minimum;
+        private BigDecimal maximum;
         private long count;
-
         void add(BigDecimal value) {
             sum = sum.add(value);
+            minimum = minimum == null || value.compareTo(minimum) < 0 ? value : minimum;
+            maximum = maximum == null || value.compareTo(maximum) > 0 ? value : maximum;
             count++;
         }
+        BigDecimal sum() { return sum.setScale(2, RoundingMode.HALF_UP); }
+        BigDecimal average() { return count == 0 ? null : sum.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP); }
+    }
 
-        BigDecimal average() {
-            return sum.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP);
-        }
+    private static final class DailyBenchmarkValues {
+        private BigDecimal sessionSleep = BigDecimal.ZERO;
+        private BigDecimal pointSleep = BigDecimal.ZERO;
+        private BigDecimal steps = BigDecimal.ZERO;
+        private boolean hasSessionSleep;
+        private boolean hasPointSleep;
+        private boolean hasSteps;
     }
 }

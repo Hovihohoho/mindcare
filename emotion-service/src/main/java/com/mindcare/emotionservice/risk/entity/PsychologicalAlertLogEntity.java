@@ -17,6 +17,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 @Getter
 @Entity
@@ -54,6 +55,30 @@ public class PsychologicalAlertLogEntity {
     @Column(name = "deduplication_key", updatable = false, length = 255)
     private String deduplicationKey;
 
+    @Column(name = "alert_category", nullable = false, updatable = false, length = 30)
+    private String alertCategory;
+
+    @Column(name = "benchmark_policy_key", updatable = false, length = 100)
+    private String benchmarkPolicyKey;
+
+    @Column(name = "benchmark_policy_version", updatable = false, length = 30)
+    private String benchmarkPolicyVersion;
+
+    @Column(name = "benchmark_source_url", updatable = false, length = 500)
+    private String benchmarkSourceUrl;
+
+    @Column(name = "metric_type", updatable = false, length = 50)
+    private String metricType;
+
+    @Column(name = "observed_value", updatable = false, precision = 12, scale = 2)
+    private BigDecimal observedValue;
+
+    @Column(name = "observed_unit", updatable = false, length = 20)
+    private String observedUnit;
+
+    @Column(name = "recommended_plan_template_code", updatable = false, length = 60)
+    private String recommendedPlanTemplateCode;
+
     @Column(name = "notified_at")
     private OffsetDateTime notifiedAt;
 
@@ -84,7 +109,35 @@ public class PsychologicalAlertLogEntity {
         this.reasonCode = Objects.requireNonNull(reasonCode, "reasonCode must not be null");
         this.sourceResultId = sourceResultId;
         this.deduplicationKey = deduplicationKey;
+        this.alertCategory = "PSYCHOLOGICAL";
         this.notified = false;
+    }
+
+    public static PsychologicalAlertLogEntity healthBenchmark(
+            UUID userId,
+            String alertLevel,
+            String triggerReason,
+            String reasonCode,
+            String deduplicationKey,
+            String policyKey,
+            String policyVersion,
+            String sourceUrl,
+            String metricType,
+            BigDecimal observedValue,
+            String observedUnit,
+            String recommendedPlanTemplateCode
+    ) {
+        PsychologicalAlertLogEntity alert = new PsychologicalAlertLogEntity(userId, alertLevel, triggerReason,
+                "health-benchmark-v1", reasonCode, null, deduplicationKey);
+        alert.alertCategory = "HEALTH_BENCHMARK";
+        alert.benchmarkPolicyKey = policyKey;
+        alert.benchmarkPolicyVersion = policyVersion;
+        alert.benchmarkSourceUrl = sourceUrl;
+        alert.metricType = metricType;
+        alert.observedValue = observedValue;
+        alert.observedUnit = observedUnit;
+        alert.recommendedPlanTemplateCode = recommendedPlanTemplateCode;
+        return alert;
     }
 
     public void markNotified(OffsetDateTime notifiedAt) {

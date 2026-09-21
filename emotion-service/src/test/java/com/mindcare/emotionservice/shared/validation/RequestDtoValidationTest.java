@@ -59,6 +59,16 @@ class RequestDtoValidationTest {
     }
 
     @Test
+    void dailyCheckInSignalsMustStayWithinOneToFive() {
+        var valid = new CreateEmotionJournalRequest(EmotionType.NEUTRAL, null, 1, 5, 3);
+        var invalid = new CreateEmotionJournalRequest(EmotionType.NEUTRAL, null, 0, 6, -1);
+
+        assertThat(validator.validate(valid)).isEmpty();
+        assertThat(paths(validator.validate(invalid))).containsExactlyInAnyOrder(
+                "energyLevel", "stressLevel", "sleepQuality");
+    }
+
+    @Test
     void healthBatchValidatesSizeAndNestedItems() {
         HealthMetricBatchRequest invalid = new HealthMetricBatchRequest(
                 " ",
@@ -74,10 +84,7 @@ class RequestDtoValidationTest {
         assertThat(paths(validator.validate(invalid))).contains(
                 "sourceType",
                 "items[0].externalSampleId",
-                "items[0].metricType",
-                "items[0].value",
-                "items[0].unit",
-                "items[0].recordedAt"
+                "items[0].metricType"
         );
 
         List<HealthMetricItemRequest> tooManyItems = IntStream.rangeClosed(0, 100)

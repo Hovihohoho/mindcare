@@ -1,31 +1,60 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, ExternalLink } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Card, EmptyState, Loading, PageHeader } from "@/shared";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { Button, Card, EmptyState, getApiErrorMessage, Loading, PageHeader } from "@/shared";
 import { notificationApi } from "../api/notification.api";
 
 export function NotificationsPage() {
-  const client = useQueryClient();
+  const navigate = useNavigate();
+  const [actionError, setActionError] = useState<string | null>(null);
   const notifications = useQuery({ queryKey: ["notifications"], queryFn: notificationApi.list });
-  const markRead = useMutation({
-    mutationFn: notificationApi.markRead,
-    onSuccess: () => {
-      client.invalidateQueries({ queryKey: ["notifications"] });
-      client.invalidateQueries({ queryKey: ["notifications", "unread"] });
-    },
-  });
+  if (notifications.isLoading) return <Loading />;
+
+  async function open(id: string, actionUrl?: string) {
+    setActionError(null);
+    try {
+      await notificationApi.markRead(id);
+      await notifications.refetch();
+      if (actionUrl?.startsWith("/") && !actionUrl.startsWith("//")) navigate(actionUrl);
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, "Không thể cập nhật thông báo."));
+    }
+  }
+
+  async function markAllRead() {
+    setActionError(null);
+    try {
+      await notificationApi.markAllRead();
+      await notifications.refetch();
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, "Không thể đánh dấu thông báo."));
+    }
+  }
+
   return (
-    <div className="page-container space-y-7 py-10">
-      <PageHeader title="Thông báo" description="Cập nhật mới nhất từ MindCare." />
-      {notifications.isLoading ? <Loading /> : notifications.data?.length ? (
-        <div className="space-y-3">{notifications.data.map((item) => (
-          <Card className={`p-5 ${item.read ? "bg-white" : "border-brand-200 bg-brand-50/50"}`} key={item.id}>
-            <button className="w-full text-left" onClick={() => !item.read && markRead.mutate(item.id)}>
-              <div className="flex gap-4"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-brand-700"><Bell className="size-5" /></span><div className="min-w-0 flex-1"><div className="flex justify-between gap-3"><h2 className="font-bold">{item.title}</h2><time className="shrink-0 text-xs text-muted">{new Date(item.createdAt).toLocaleString("vi-VN")}</time></div><p className="mt-2 text-sm leading-6 text-slate-600">{item.content}</p>{item.actionUrl && <Link className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700" to={item.actionUrl}>Xem chi tiết <ExternalLink className="size-3" /></Link>}</div></div>
+    <div className="space-y-6">
+      <PageHeader title="Thông báo" description="Các cập nhật về tài khoản, hồ sơ và hoạt động của bạn." />
+      {actionError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{actionError}</p>}
+      {!!notifications.data?.some((item) => !item.readAt) && (
+        <Button onClick={() => { void markAllRead(); }} variant="outline">
+          Đánh dấu tất cả đã đọc
+        </Button>
+      )}
+      {!notifications.data?.length && <EmptyState title="Bạn chưa có thông báo" />}
+      <div className="space-y-3">
+        {notifications.data?.map((item) => (
+          <Card className={item.readAt ? "p-5 opacity-70" : "border-brand-200 bg-brand-50/40 p-5"} key={item.id}>
+            <button className="w-full text-left" onClick={() => { void open(item.id, item.actionUrl); }}>
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="font-bold">{item.title}</h2>
+                {!item.readAt && <span className="mt-1 size-2 shrink-0 rounded-full bg-brand-600" />}
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{item.content}</p>
+              <time className="mt-3 block text-xs text-muted">{new Date(item.createdAt).toLocaleString("vi-VN")}</time>
             </button>
           </Card>
-        ))}</div>
-      ) : <EmptyState title="Chưa có thông báo" description="Thông báo từ MindCare sẽ xuất hiện tại đây." />}
+        ))}
+      </div>
     </div>
   );
 }
