@@ -9,6 +9,7 @@ import com.mindcare.emotionservice.risk.mapper.RiskAlertMapper;
 import com.mindcare.emotionservice.risk.repository.PsychologicalAlertLogRepository;
 import com.mindcare.emotionservice.shared.dto.CursorPageResponse;
 import com.mindcare.emotionservice.shared.util.CursorCodec;
+import com.mindcare.emotionservice.healthmetric.service.HealthBenchmarkService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +39,8 @@ class RiskServiceImplTest {
     private RiskAlertMapper mapper;
     @Mock
     private AssessmentService assessmentService;
+    @Mock
+    private HealthBenchmarkService healthBenchmarkService;
 
     private RiskServiceImpl service;
 
@@ -48,7 +51,8 @@ class RiskServiceImplTest {
                 mapper,
                 assessmentService,
                 new CursorCodec(),
-                Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC)
+                Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC),
+                healthBenchmarkService
         );
     }
 

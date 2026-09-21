@@ -62,7 +62,7 @@ export default function DataRightsScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader description="Tải bản sao hoặc xóa dữ liệu của bạn" title="Quyền dữ liệu" />
+      <ScreenHeader description="Tải bản sao hoặc xóa dữ liệu của bạn" onBack={() => router.back()} title="Quyền dữ liệu" />
       <View style={styles.card}>
         <Text style={styles.title}>Tải dữ liệu của tôi</Text>
         <Text style={styles.description}>Bao gồm hồ sơ, nhật ký, đánh giá, Health Connect, kế hoạch tự chăm sóc và hội thoại AI.</Text>
@@ -79,10 +79,10 @@ export default function DataRightsScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: spacing.md, marginHorizontal: spacing.page, marginTop: spacing.md, padding: spacing.md },
-  dangerCard: { borderColor: colors.dangerLine },
+  card: { backgroundColor: colors.surfaceMuted, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: spacing.md, marginHorizontal: spacing.page, marginTop: spacing.md, padding: spacing.md },
+  dangerCard: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerLine },
   title: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.cardTitle },
   dangerTitle: { color: colors.danger },
   description: { color: colors.inkSoft, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 20 },
-  input: { backgroundColor: colors.surface, borderColor: colors.lineStrong, borderRadius: radius.input, borderWidth: 1, color: colors.ink, fontFamily: fonts.regular, minHeight: 48, paddingHorizontal: spacing.md },
+  input: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.sm, borderWidth: 1, color: colors.ink, fontFamily: fonts.regular, minHeight: 48, paddingHorizontal: spacing.md },
 });

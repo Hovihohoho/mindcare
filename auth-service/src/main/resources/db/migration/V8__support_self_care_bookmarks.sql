@@ -3,4 +3,4 @@ ALTER TABLE auth_schema.bookmarks
 
 ALTER TABLE auth_schema.bookmarks
     ADD CONSTRAINT ck_bookmarks_target_type
-        CHECK (target_type IN ('EXPERT', 'ASSESSMENT', 'SELF_CARE_CONTENT'));
+        CHECK (target_type IN ('ASSESSMENT', 'SELF_CARE_CONTENT'));

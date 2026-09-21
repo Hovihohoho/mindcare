@@ -15,6 +15,9 @@ completion trong tuần hiện tại, tính từ thứ Hai.
 - `PUT /api/v1/self-care-plan`: tạo hoặc thay thế kế hoạch.
 - `POST /api/v1/self-care-plan/activities/{id}/completions`: đánh dấu hoàn thành.
 - `DELETE /api/v1/self-care-plan/activities/{id}/completions/{date}`: bỏ đánh dấu.
+- `GET /api/v1/self-care-plan/templates`: lấy bốn form cố định có version và nguồn hướng dẫn thực hiện.
+- `GET /api/v1/self-care-plan/recommendations`: đề xuất form ngủ/vận động từ benchmark 7 ngày; không tự áp dụng.
+- `POST /api/v1/self-care-plan/templates/{templateCode}:apply`: áp dụng nguyên form đã duyệt.
 
 Các endpoint chỉ dành cho `ROLE_USER`; chủ sở hữu luôn lấy từ SecurityContext.
 
@@ -29,3 +32,15 @@ Mỗi user có một plan; activity code và thứ tự là duy nhất trong pla
 - Dữ liệu thuộc Emotion Service và PostgreSQL là nguồn sự thật duy nhất.
 - Mục tiêu là enum đóng: giảm căng thẳng, cải thiện giấc ngủ, quản lý lo âu và xây dựng cân bằng.
 - Không lưu chẩn đoán, phác đồ hoặc cam kết hiệu quả y khoa trong kế hoạch.
+- Client không được tự tạo hoặc sửa task. `PUT` cũ chỉ còn được chấp nhận khi payload khớp tuyệt đối một template trong registry.
+
+## Catalog cố định v1
+
+| Template | Mục tiêu | Nguồn nội dung và hướng dẫn |
+|---|---|---|
+| `STRESS_WHO_V1` | Giảm căng thẳng | WHO, *Doing What Matters in Times of Stress* |
+| `ANXIETY_WHO_V1` | Hỗ trợ quản lý lo âu | WHO, *Doing What Matters in Times of Stress* |
+| `SLEEP_WELLNESS_V1` | Hỗ trợ giấc ngủ | AASM Patient Guide và VA CBT-i Coach |
+| `LOW_ACTIVITY_MACTIVE_V1` | Tăng vận động bằng đi bộ | WHO/ITU mActive implementation handbook |
+
+Plan giấc ngủ chỉ dùng phần theo dõi/thói quen/thư giãn; không tự triển khai sleep restriction hoặc tuyên bố là CBT-I điều trị. Plan vận động bắt đầu bằng đi bộ 10 phút, theo dõi hằng ngày và tăng dần theo khả năng.

@@ -5,18 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(properties = "spring.task.scheduling.enabled=false")
-@Import(AiConversationMigrationIntegrationTest.ContainerConfiguration.class)
+@Import(PgVectorTestConfiguration.class)
 class AiConversationMigrationIntegrationTest {
     @Autowired JdbcTemplate jdbcTemplate;
 
@@ -35,20 +30,5 @@ class AiConversationMigrationIntegrationTest {
 
         assertThat(tables).isEqualTo(2);
         assertThat(version).isEqualTo("6");
-    }
-
-    @TestConfiguration(proxyBeanMethods = false)
-    static class ContainerConfiguration {
-        @Bean
-        @ServiceConnection
-        PostgreSQLContainer postgres() {
-            DockerImageName image = DockerImageName.parse("ankane/pgvector:v0.5.1")
-                    .asCompatibleSubstituteFor("postgres");
-            return new PostgreSQLContainer(image)
-                    .withDatabaseName("ai_service_integration")
-                    .withUsername("ai_test")
-                    .withPassword("ai_test")
-                    .withInitScript("init-pgvector.sql");
-        }
     }
 }

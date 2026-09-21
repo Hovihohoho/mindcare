@@ -3,11 +3,9 @@ import { useRouter } from 'expo-router';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@/components/app-screen';
 import { DataFeedback, SkeletonList } from '@/components/data-states';
-import { ScreenHeader } from '@/components/screen-header';
-import { SectionHeader } from '@/components/section-header';
 import { useAuthenticatedList } from '@/hooks/use-authenticated-list';
 import { assessmentService, type AssessmentSummary } from '@/services/assessment/assessment.service';
-import { colors, fonts, spacing, type } from '@/theme/tokens';
+import { colors, fonts, radius, spacing, type } from '@/theme/tokens';
 
 type AssessmentItem = AssessmentSummary & { completed: boolean; questionCount: number };
 
@@ -31,7 +29,6 @@ export default function AssessmentsScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader title="Bài đánh giá" description="Theo dõi sức khỏe tinh thần bằng các công cụ sàng lọc tiêu chuẩn." />
       {loading ? <SkeletonList rows={3} /> : error ? (
         <DataFeedback actionLabel="Thử lại" description={error} kind="error" onAction={() => void reload()} title="Thư viện chưa được tải" />
       ) : data.length === 0 ? (
@@ -43,8 +40,8 @@ export default function AssessmentsScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => void reload(true)} refreshing={refreshing} tintColor={colors.brand} />}
-          ListHeaderComponent={<SectionHeader title="Tất cả bài đánh giá" />}
-          renderItem={({ item, index }) => <AssessmentItemRow item={item} last={index === data.length - 1} onPress={() => router.push({ pathname: '/assessment/[code]', params: { code: item.code } })} />}
+          ListHeaderComponent={<View style={styles.pageIntro}><Text style={styles.eyebrow}>TỰ ĐÁNH GIÁ</Text><Text accessibilityRole="header" style={styles.pageTitle}>Hiểu rõ hơn điều bạn đang trải qua</Text><Text style={styles.intro}>Các bảng hỏi chỉ giúp bạn tự nhìn nhận, không thay thế chẩn đoán chuyên môn.</Text><View style={styles.rule} /></View>}
+          renderItem={({ item, index }) => <AssessmentItemRow first={index === 0} item={item} last={index === data.length - 1} onPress={() => router.push({ pathname: '/assessment/[code]', params: { code: item.code } })} />}
           ListFooterComponent={(
             <View style={styles.disclaimer}>
               <Ionicons color={colors.muted} name="information-circle-outline" size={19} />
@@ -57,9 +54,9 @@ export default function AssessmentsScreen() {
   );
 }
 
-function AssessmentItemRow({ item, onPress, last }: { item: AssessmentItem; onPress(): void; last: boolean }) {
+function AssessmentItemRow({ item, onPress, first, last }: { item: AssessmentItem; onPress(): void; first: boolean; last: boolean }) {
   return (
-    <Pressable accessibilityLabel={`${item.title}, ${item.questionCount} câu`} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.item, !last && styles.itemDivider, pressed && styles.itemPressed]}>
+    <Pressable accessibilityLabel={`${item.title}, ${item.questionCount} câu`} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.item, first && styles.itemFirst, last && styles.itemLast, !last && styles.itemDivider, pressed && styles.itemPressed]}>
       <View style={styles.body}>
         <View style={styles.titleRow}>
           <Text style={styles.code}>{item.code}</Text>
@@ -76,9 +73,16 @@ function AssessmentItemRow({ item, onPress, last }: { item: AssessmentItem; onPr
 
 const styles = StyleSheet.create({
   list: { paddingHorizontal: spacing.page, paddingBottom: 96 },
-  item: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm, minHeight: 124, paddingVertical: spacing.md },
+  pageIntro: { paddingTop: spacing.sm },
+  eyebrow: { color: colors.muted, fontFamily: fonts.semibold, fontSize: type.caption, letterSpacing: .7 },
+  pageTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: type.title, letterSpacing: -.8, lineHeight: 38, marginTop: spacing.xxs },
+  intro: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 23, marginTop: spacing.xs },
+  rule: { backgroundColor: colors.line, height: StyleSheet.hairlineWidth, marginVertical: spacing.xl },
+  item: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderLeftColor: colors.line, borderLeftWidth: StyleSheet.hairlineWidth, borderRightColor: colors.line, borderRightWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.sm, minHeight: 124, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  itemFirst: { borderTopColor: colors.line, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, borderTopWidth: StyleSheet.hairlineWidth },
+  itemLast: { borderBottomColor: colors.line, borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card, borderBottomWidth: StyleSheet.hairlineWidth },
   itemDivider: { borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth },
-  itemPressed: { backgroundColor: colors.surfacePressed, opacity: 0.84 },
+  itemPressed: { backgroundColor: colors.mint, opacity: 0.84 },
   body: { flex: 1, minWidth: 0 },
   titleRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   code: { color: colors.brandDark, fontFamily: fonts.semibold, fontSize: type.label },

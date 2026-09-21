@@ -1,15 +1,11 @@
-/* Hallmark · macrostructure: Long Document · tone: soft · anchor hue: MindCare blue
- * pre-emit critique: P5 H5 E5 S5 R5 V5 · design-system: design.md · designed-as-app
- */
+/* Hallmark · genre: modern-minimal · macrostructure: Native Content Flow · design-system: design.md · designed-as-app */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
-
+import { useMemo, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ActionButton } from '@/components/buttons';
 import { AppScreen } from '@/components/app-screen';
 import { SectionHeader } from '@/components/section-header';
-import { useAuth } from '@/features/auth/auth-context';
 import { emotionOptionMap } from '@/features/emotion/emotion.constants';
 import { EmotionFaceIcon } from '@/features/emotion/emotion-face';
 import { EmotionPicker } from '@/features/emotion/emotion-picker';
@@ -21,202 +17,40 @@ import { colors, fonts, radius, spacing, type } from '@/theme/tokens';
 
 export default function JournalScreen() {
   const router = useRouter();
-  const { session } = useAuth();
   const { entries, trends, loading, refreshing, error, reload, token } = useEmotionJournal();
   const [emotion, setEmotion] = useState<EmotionLevel>();
   const [note, setNote] = useState('');
-  const [noteFocused, setNoteFocused] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saved, setSaved] = useState(false);
-  const fullName = session?.user.fullName.trim();
-  const greetingName = fullName ? fullName.split(/\s+/).slice(-1)[0] : 'bạn';
-
+  const checkInsThisWeek = useMemo(() => trends.reduce((total, point) => total + point.count, 0), [trends]);
   const save = async () => {
     if (!token || !emotion || saving) return;
-    setSaving(true);
-    setSaveError('');
-    setSaved(false);
-    try {
-      await emotionService.create(token, { emotionType: emotion, content: note.trim() });
-      setEmotion(undefined);
-      setNote('');
-      setSaved(true);
-      await reload(true);
-    } catch (caught) {
-      setSaveError(caught instanceof Error ? caught.message : 'Không thể lưu nhật ký. Vui lòng thử lại.');
-    } finally {
-      setSaving(false);
-    }
+    setSaving(true); setSaveError(''); setSaved(false);
+    try { await emotionService.create(token, { emotionType: emotion, content: note.trim() }); setEmotion(undefined); setNote(''); setSaved(true); await reload(true); }
+    catch (caught) { setSaveError(caught instanceof Error ? caught.message : 'Không thể lưu nhật ký. Vui lòng thử lại.'); }
+    finally { setSaving(false); }
   };
-
-  return (
-    <AppScreen>
-      <FlatList
-        contentContainerStyle={styles.list}
-        data={loading || error ? [] : entries.slice(0, 5)}
-        keyExtractor={(item) => item.id}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => void reload(true)} refreshing={refreshing} tintColor={colors.brand} />}
-        renderItem={({ item }) => <JournalCard item={item} />}
-        ListHeaderComponent={(
-          <View>
-            <View style={styles.header}>
-              <Text accessibilityRole="header" style={styles.greeting}>Xin chào, {greetingName}</Text>
-              <Text style={styles.prompt}>Hôm nay bạn cảm thấy thế nào?</Text>
-            </View>
-
-            <View style={styles.checkInSection}>
-              <View style={styles.pickerWrap}>
-                <EmotionPicker disabled={saving} onChange={(value) => { setEmotion(value); setSaved(false); }} value={emotion} />
-              </View>
-              <Text style={styles.inputLabel}>Điều gì đang ở trong tâm trí bạn?</Text>
-              <TextInput
-                accessibilityLabel="Viết thêm về ngày hôm nay"
-                maxLength={5000}
-                multiline
-                onBlur={() => setNoteFocused(false)}
-                onChangeText={(value) => { setNote(value); setSaved(false); }}
-                onFocus={() => setNoteFocused(true)}
-                placeholder="Viết một vài dòng nếu bạn muốn…"
-                placeholderTextColor={colors.muted}
-                style={[styles.noteInput, noteFocused && styles.noteInputFocused]}
-                textAlignVertical="top"
-                value={note}
-              />
-              <View style={styles.formMeta}>
-                <Text style={styles.counter}>{note.length}/5000</Text>
-                {saved ? <Text accessibilityLiveRegion="polite" style={styles.savedText}>Đã lưu nhật ký</Text> : null}
-              </View>
-              {saveError ? <InlineError compact message={saveError} onRetry={() => void save()} /> : null}
-              <View style={styles.formActions}>
-                <ActionButton disabled={saving || (!emotion && !note)} label="Xóa" onPress={() => { setEmotion(undefined); setNote(''); setSaveError(''); }} style={styles.formButton} tone="secondary" />
-                <ActionButton disabled={!emotion || saving} label={saveError ? 'Thử lại' : 'Lưu nhật ký'} loading={saving} onPress={() => void save()} style={styles.formButton} />
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <SectionHeader actionLabel="Xem chi tiết" onAction={() => router.push('/(tabs)/journal-history')} title="Cảm xúc tuần này" />
-              <View style={styles.chartWrap}>
-                {loading ? <EmotionTrendSkeleton /> : error ? <InlineError message={error} onRetry={() => void reload()} /> : <EmotionTrendChart points={trends} />}
-              </View>
-            </View>
-
-            <View style={styles.historyHeader}>
-              <SectionHeader actionLabel="Xem tất cả" onAction={() => router.push('/(tabs)/journal-history')} title="Gần đây" />
-            </View>
-            {loading ? <HistorySkeleton /> : null}
-          </View>
-        )}
-        ListEmptyComponent={loading ? null : error ? null : (
-          <EmptyHistory />
-        )}
-      />
-    </AppScreen>
-  );
+  return <AppScreen><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => void reload(true)} refreshing={refreshing} tintColor={colors.brand} />} showsVerticalScrollIndicator={false}>
+    <View style={styles.header}><View><Text style={styles.date}>{new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()).toLocaleUpperCase('vi-VN')}</Text><Text accessibilityRole="header" style={styles.title}>Hôm nay</Text></View><Pressable accessibilityLabel="Dữ liệu sức khỏe" accessibilityRole="button" onPress={() => router.push('/(tabs)/health-connect')} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}><Ionicons color={colors.ink} name="fitness-outline" size={21} /></Pressable></View>
+    <View style={styles.statusLine}><View style={styles.statusDot} /><View style={styles.statusCopy}><Text style={styles.statusTitle}>{loading ? 'Đang cập nhật nhật ký của bạn' : 'Nhật ký cảm xúc đã sẵn sàng'}</Text><Text style={styles.statusText}>{error ? 'Kéo xuống để thử tải lại dữ liệu.' : 'Ghi một check-in ngắn để theo dõi thay đổi theo thời gian.'}</Text></View></View>
+    <SectionHeader title="Bạn đang cảm thấy thế nào?" />
+    <View style={styles.moodPanel}><EmotionPicker disabled={saving} onChange={(value) => { setEmotion(value); setSaved(false); }} value={emotion} /><Text style={styles.inputLabel}>Điều gì đang ở trong tâm trí bạn?</Text><TextInput accessibilityLabel="Viết thêm về ngày hôm nay" maxLength={5000} multiline onChangeText={(value) => { setNote(value); setSaved(false); }} placeholder="Viết một vài dòng nếu bạn muốn…" placeholderTextColor={colors.muted} style={styles.noteInput} textAlignVertical="top" value={note} /><View style={styles.formMeta}><Text style={styles.counter}>{note.length}/5000</Text>{saved ? <Text accessibilityLiveRegion="polite" style={styles.savedText}>Đã lưu nhật ký</Text> : null}</View>{saveError ? <Text accessibilityRole="alert" style={styles.errorText}>{saveError}</Text> : null}<View style={styles.formActions}><ActionButton disabled={saving || (!emotion && !note)} label="Xóa" onPress={() => { setEmotion(undefined); setNote(''); setSaveError(''); }} style={styles.formButton} tone="secondary" /><ActionButton disabled={!emotion || saving} label={saveError ? 'Thử lại' : 'Lưu check-in'} loading={saving} onPress={() => void save()} style={styles.formButton} /></View><Text style={styles.moodNote}>Check-in này chỉ dành cho bạn và giúp bạn nhìn lại xu hướng cảm xúc theo thời gian.</Text></View>
+    <View style={styles.rule} /><SectionHeader actionLabel="Xem lịch" onAction={() => router.push('/(tabs)/journal-history')} title="Cảm xúc gần đây" /><View style={styles.chartCard}>{loading ? <EmotionTrendSkeleton /> : error ? <Text style={styles.errorText}>{error}</Text> : <EmotionTrendChart points={trends} />}<Text style={styles.caption}>{checkInsThisWeek ? `${checkInsThisWeek} check-in trong 7 ngày gần đây.` : 'Chưa có check-in nào trong 7 ngày gần đây.'}</Text></View>
+    <View style={styles.rule} /><SectionHeader title="Một việc đơn giản tiếp theo" /><View style={styles.recommendation}><View style={styles.recommendationIcon}><Ionicons color={colors.brand} name="walk-outline" size={21} /></View><View style={styles.recommendationBody}><Text style={styles.recommendationTitle}>Dành 10 phút cho bản thân</Text><Text style={styles.recommendationText}>Một hoạt động nhẹ nhàng có thể giúp bạn tạm dừng và lắng nghe cơ thể.</Text><Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/progress')} style={({ pressed }) => [styles.softAction, pressed && styles.pressed]}><Text style={styles.softActionText}>Xem tiến trình</Text><Ionicons color={colors.brand} name="arrow-forward" size={17} /></Pressable></View></View>
+    {entries.length ? <><View style={styles.rule} /><SectionHeader actionLabel="Xem tất cả" onAction={() => router.push('/(tabs)/journal-history')} title="Nhật ký gần đây" /><View style={styles.recent}>{entries.slice(0, 3).map((entry, index) => <JournalRow entry={entry} key={entry.id} last={index === Math.min(entries.length, 3) - 1} />)}</View></> : null}
+  </ScrollView></AppScreen>;
 }
 
-export function JournalCard({ item }: { item: EmotionJournal }) {
-  const option = emotionOptionMap[item.emotionType];
-  return (
-    <View style={styles.card}>
-      <View style={[styles.toneIcon, { backgroundColor: option.surface }]}>
-        <EmotionFaceIcon color={option.color} face={option.face} size={34} />
-      </View>
-      <View style={styles.cardBody}>
-        <View style={styles.cardTitleRow}>
-          <Text numberOfLines={1} style={styles.cardTitle}>{option.label}</Text>
-          <Text style={styles.date}>{formatDate(item.createdAt)}</Text>
-        </View>
-        <Text numberOfLines={3} style={styles.note}>{item.content || 'Không có ghi chú'}</Text>
-      </View>
-    </View>
-  );
-}
+function JournalRow({ entry, last }: { entry: EmotionJournal; last: boolean }) { const option = emotionOptionMap[entry.emotionType]; return <View style={[styles.journalRow, !last && styles.journalRowRule]}><EmotionFaceIcon color={option.color} face={option.face} size={36} /><View style={styles.journalCopy}><Text style={styles.journalTitle}>{option.label}</Text><Text numberOfLines={2} style={styles.journalNote}>{entry.content || 'Không có ghi chú'}</Text></View><Text style={styles.journalDate}>{new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' }).format(new Date(entry.createdAt))}</Text></View>; }
 
-function InlineError({ message, onRetry, compact = false }: { message: string; onRetry(): void; compact?: boolean }) {
-  return (
-    <View style={[styles.inlineError, compact && styles.inlineErrorCompact]}>
-      <Ionicons color={colors.danger} name="cloud-offline-outline" size={22} />
-      <View style={styles.inlineErrorBody}>
-        <Text style={styles.inlineErrorTitle}>Không thể tải dữ liệu</Text>
-        <Text style={styles.inlineErrorText}>{message}</Text>
-      </View>
-      <Pressable accessibilityRole="button" onPress={onRetry} style={({ pressed }) => [styles.retry, pressed && styles.pressed]}>
-        <Text numberOfLines={1} style={styles.retryText}>Thử lại</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function EmptyHistory() {
-  return (
-    <View style={styles.emptyHistory}>
-      <View style={styles.emptyIcon}><Ionicons color={colors.brand} name="book-outline" size={24} /></View>
-      <Text style={styles.emptyTitle}>Chưa có nhật ký</Text>
-      <Text style={styles.emptyText}>Chọn một cảm xúc phía trên để tạo bản ghi đầu tiên.</Text>
-    </View>
-  );
-}
-
-function HistorySkeleton() {
-  return (
-    <View style={styles.skeletonList}>
-      {[0, 1, 2].map((item) => (
-        <View key={item} style={styles.skeletonCard}>
-          <View style={styles.skeletonIcon} />
-          <View style={styles.skeletonBody}><View style={styles.skeletonTitle} /><View style={styles.skeletonLine} /></View>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
-}
+export function JournalCard({ item }: { item: EmotionJournal }) { return <JournalRow entry={item} last />; }
 
 const styles = StyleSheet.create({
-  list: { paddingHorizontal: spacing.page, paddingBottom: 96 },
-  header: { paddingBottom: spacing.lg, paddingTop: spacing.md },
-  greeting: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.title, letterSpacing: -0.7, lineHeight: 38 },
-  prompt: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 22, marginTop: spacing.xxs },
-  checkInSection: { borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: spacing.xl },
-  section: { paddingBottom: spacing.xl, paddingTop: spacing.xl },
-  chartWrap: { marginTop: spacing.md },
-  pressed: { backgroundColor: colors.surfacePressed, opacity: 0.84 },
-  pickerWrap: { marginBottom: spacing.lg, marginHorizontal: -spacing.xs },
-  inputLabel: { color: colors.ink, fontFamily: fonts.medium, fontSize: type.label, marginBottom: spacing.xs },
-  noteInput: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.input, borderWidth: 1, color: colors.ink, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 22, minHeight: 104, padding: spacing.sm },
-  noteInputFocused: { borderColor: colors.brand },
-  formMeta: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 28 },
-  counter: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption },
-  savedText: { color: colors.mintInk, fontFamily: fonts.medium, fontSize: type.caption },
-  formActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  formButton: { flex: 1 },
-  historyHeader: { borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.xl },
-  card: { alignItems: 'center', borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.sm, minHeight: 88, paddingVertical: spacing.md },
-  toneIcon: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
-  cardBody: { flex: 1, minWidth: 0 },
-  cardTitleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, justifyContent: 'space-between' },
-  cardTitle: { color: colors.ink, flex: 1, fontFamily: fonts.bold, fontSize: type.cardTitle },
-  date: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption },
-  note: { color: colors.inkSoft, fontFamily: fonts.regular, fontSize: type.label, lineHeight: 20, marginTop: spacing.xs },
-  inlineError: { alignItems: 'center', backgroundColor: colors.dangerSoft, borderColor: colors.dangerLine, borderRadius: radius.input, borderWidth: 1, flexDirection: 'row', gap: spacing.xs, minHeight: 88, padding: spacing.sm },
-  inlineErrorCompact: { marginTop: spacing.sm },
-  inlineErrorBody: { flex: 1, minWidth: 0 },
-  inlineErrorTitle: { color: colors.danger, fontFamily: fonts.semibold, fontSize: type.label },
-  inlineErrorText: { color: colors.inkSoft, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginTop: spacing.xxs },
-  retry: { alignItems: 'center', borderRadius: radius.sm, height: 44, justifyContent: 'center', paddingHorizontal: spacing.xs },
-  retryText: { color: colors.danger, fontFamily: fonts.semibold, fontSize: type.caption },
-  emptyHistory: { alignItems: 'center', padding: spacing.lg },
-  emptyIcon: { alignItems: 'center', height: 44, justifyContent: 'center', marginBottom: spacing.xs, width: 44 },
-  emptyTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.cardTitle },
-  emptyText: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.label, lineHeight: 20, marginBottom: spacing.md, marginTop: spacing.xs, textAlign: 'center' },
-  skeletonList: {},
-  skeletonCard: { alignItems: 'center', borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.sm, minHeight: 88, paddingVertical: spacing.md },
-  skeletonIcon: { backgroundColor: colors.skeleton, borderRadius: radius.pill, height: 40, width: 40 },
-  skeletonBody: { flex: 1, gap: spacing.sm },
-  skeletonTitle: { backgroundColor: colors.skeleton, borderRadius: radius.sm, height: 16, width: '52%' },
-  skeletonLine: { backgroundColor: colors.skeleton, borderRadius: radius.sm, height: 12, width: '88%' },
+  content: { padding: spacing.page, paddingBottom: 40 }, header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.lg }, date: { color: colors.muted, fontFamily: fonts.semibold, fontSize: type.caption, letterSpacing: .7 }, title: { color: colors.ink, fontFamily: fonts.bold, fontSize: type.title, letterSpacing: -.8, lineHeight: 38, marginTop: spacing.xxs }, iconButton: { alignItems: 'center', borderColor: colors.line, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth, height: 44, justifyContent: 'center', width: 44 },
+  statusLine: { alignItems: 'flex-start', backgroundColor: colors.mint, borderLeftColor: colors.brand, borderLeftWidth: 3, flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xl, padding: spacing.md }, statusDot: { backgroundColor: colors.brand, borderRadius: 4, height: 8, marginTop: 5, width: 8 }, statusCopy: { flex: 1 }, statusTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.label }, statusText: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginTop: 3 },
+  moodPanel: { backgroundColor: colors.brandSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, marginTop: spacing.md, padding: spacing.md }, inputLabel: { color: colors.ink, fontFamily: fonts.medium, fontSize: type.label, marginBottom: spacing.xs, marginTop: spacing.lg }, noteInput: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.sm, borderWidth: 1, color: colors.ink, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 22, minHeight: 96, padding: spacing.sm }, formMeta: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 28 }, counter: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption }, savedText: { color: colors.mintInk, fontFamily: fonts.medium, fontSize: type.caption }, errorText: { color: colors.danger, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginTop: spacing.xs }, formActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }, formButton: { flex: 1 }, moodNote: { borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth, color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginTop: spacing.md, paddingTop: spacing.md },
+  rule: { backgroundColor: colors.line, height: StyleSheet.hairlineWidth, marginVertical: spacing.xl }, chartCard: { backgroundColor: colors.surfaceMuted, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, marginTop: spacing.md, padding: spacing.md }, caption: { borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth, color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginTop: spacing.md, paddingTop: spacing.md },
+  recommendation: { alignItems: 'flex-start', backgroundColor: colors.warningSoft, borderColor: colors.line, borderLeftColor: colors.warning, borderLeftWidth: 3, borderRadius: radius.card, borderWidth: 1, flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, padding: spacing.md }, recommendationIcon: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.sm, height: 42, justifyContent: 'center', width: 42 }, recommendationBody: { flex: 1, gap: 7 }, recommendationTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.body }, recommendationText: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.label, lineHeight: 19 }, softAction: { alignItems: 'center', alignSelf: 'flex-start', borderColor: colors.brand, borderRadius: radius.sm, borderWidth: 1, flexDirection: 'row', gap: 7, minHeight: 44, paddingHorizontal: spacing.sm }, softActionText: { color: colors.brand, fontFamily: fonts.semibold, fontSize: type.label },
+  recent: { backgroundColor: colors.surfaceMuted, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, marginTop: spacing.md, overflow: 'hidden' }, journalRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm, minHeight: 76, paddingHorizontal: spacing.md }, journalRowRule: { borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth }, journalCopy: { flex: 1, minWidth: 0 }, journalTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.label }, journalNote: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, marginTop: 3 }, journalDate: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption }, pressed: { opacity: .72, transform: [{ translateY: 1 }] },
 });

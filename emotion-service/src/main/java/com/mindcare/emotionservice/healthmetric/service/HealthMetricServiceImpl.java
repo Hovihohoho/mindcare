@@ -8,6 +8,7 @@ import com.mindcare.emotionservice.healthmetric.dto.HealthMetricItemRequest;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricTrendPointResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthSourceSummaryResponse;
+import com.mindcare.emotionservice.healthmetric.dto.HealthBenchmarkSnapshot;
 import com.mindcare.emotionservice.healthmetric.entity.HealthMetricEntity;
 import com.mindcare.emotionservice.healthmetric.entity.HealthMetricSyncRequestEntity;
 import com.mindcare.emotionservice.healthmetric.mapper.HealthMetricMapper;
@@ -30,6 +31,7 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -45,7 +47,9 @@ import java.util.UUID;
 public class HealthMetricServiceImpl implements HealthMetricService {
     private static final int MAX_BATCH_SIZE = 100;
     private static final Set<String> SOURCE_TYPES = Set.of("APPLE_HEALTH", "HEALTH_CONNECT", "GOOGLE_HEALTH", "MANUAL");
-    private static final Set<String> METRIC_TYPES = Set.of("SLEEP_HOURS", "SLEEP_SESSION", "HEART_RATE", "STEP_COUNT", "EXERCISE_SESSION");
+    private static final Set<String> METRIC_TYPES = Set.of(
+            "SLEEP_HOURS", "SLEEP_SESSION", "HEART_RATE", "SPO2", "STEP_COUNT",
+            "EXERCISE_SESSION", "TOTAL_CALORIES_BURNED", "DISTANCE");
 
     private final HealthMetricRepository repository;
     private final HealthMetricSyncRequestRepository syncRequestRepository;
@@ -156,8 +160,8 @@ public class HealthMetricServiceImpl implements HealthMetricService {
         });
         List<HealthMetricTrendPointResponse> result = new ArrayList<>();
         groups.forEach((start, values) -> result.add(new HealthMetricTrendPointResponse(start, trendBucket.endOf(start, timezone), type,
-                "HEART_RATE".equals(type) ? values.average() : values.sum(), values.minimum, values.maximum, values.count,
-                canonicalUnit(type), "HEART_RATE".equals(type) ? "AVERAGE" : "SUM")));
+                Set.of("HEART_RATE", "SPO2").contains(type) ? values.average() : values.sum(), values.minimum, values.maximum, values.count,
+                canonicalUnit(type), Set.of("HEART_RATE", "SPO2").contains(type) ? "AVERAGE" : "SUM")));
         return List.copyOf(result);
     }
 
@@ -194,9 +198,89 @@ public class HealthMetricServiceImpl implements HealthMetricService {
         return sourceSummary(userId, source);
     }
 
+    @Override
+    public HealthBenchmarkSnapshot getBenchmarkSnapshot(UUID userId, int windowDays) {
+        ZoneId timezone = ZoneId.of("Asia/Ho_Chi_Minh");
+        LocalDate endDate = OffsetDateTime.now(clock).atZoneSameInstant(timezone).toLocalDate();
+        return getBenchmarkSnapshot(userId, endDate, windowDays, timezone);
+    }
+
+    @Override
+    public HealthBenchmarkSnapshot getBenchmarkSnapshot(
+            UUID userId,
+            LocalDate endDate,
+            int windowDays,
+            ZoneId timezone
+    ) {
+        ServiceValidator.requireUserId(userId);
+        if (windowDays < 1 || windowDays > 30) throw invalid("INVALID_BENCHMARK_WINDOW", "windowDays must be between 1 and 30");
+        if (endDate == null) throw invalid("INVALID_BENCHMARK_DATE", "endDate is required");
+        if (timezone == null) throw invalid("INVALID_TIMEZONE", "timezone is required");
+        OffsetDateTime from = endDate.minusDays(windowDays - 1L)
+                .atStartOfDay(timezone).toOffsetDateTime();
+        OffsetDateTime to = endDate.plusDays(1).atStartOfDay(timezone).toOffsetDateTime();
+        Map<LocalDate, DailyBenchmarkValues> daily = new LinkedHashMap<>();
+        for (int index = windowDays - 1; index >= 0; index--) {
+            daily.put(endDate.minusDays(index), new DailyBenchmarkValues());
+        }
+        for (String type : List.of("SLEEP_HOURS", "SLEEP_SESSION", "STEP_COUNT")) {
+            repository.findByUserIdAndMetricTypeAndDeletedAtIsNullAndRecordedAtGreaterThanEqualAndRecordedAtLessThanOrderByRecordedAtAsc(
+                    userId, type, from, to).forEach(metric -> {
+                LocalDate date = metric.getRecordedAt().atZoneSameInstant(timezone).toLocalDate();
+                DailyBenchmarkValues values = daily.get(date);
+                if (values == null) return;
+                BigDecimal value = aggregateValue(metric);
+                if (value == null) return;
+                if ("STEP_COUNT".equals(type)) {
+                    values.steps = values.steps.add(value);
+                    values.hasSteps = true;
+                } else if ("SLEEP_SESSION".equals(type)) {
+                    values.sessionSleep = values.sessionSleep.add(value);
+                    values.hasSessionSleep = true;
+                } else {
+                    values.pointSleep = values.pointSleep.add(value);
+                    values.hasPointSleep = true;
+                }
+            });
+        }
+        List<HealthBenchmarkSnapshot.DailySummary> summaries = daily.entrySet().stream().map(entry -> {
+            DailyBenchmarkValues value = entry.getValue();
+            BigDecimal sleep = value.hasSessionSleep ? value.sessionSleep
+                    : value.hasPointSleep ? value.pointSleep : null;
+            BigDecimal steps = value.hasSteps ? value.steps : null;
+            return new HealthBenchmarkSnapshot.DailySummary(entry.getKey(), sleep, steps);
+        }).toList();
+        List<HealthBenchmarkSnapshot.Observation> restingHeartRates = observations(userId, "HEART_RATE", from, to, true);
+        List<HealthBenchmarkSnapshot.Observation> oxygenSaturations = observations(userId, "SPO2", from, to, false);
+        return new HealthBenchmarkSnapshot(summaries, restingHeartRates, oxygenSaturations);
+    }
+
+    private List<HealthBenchmarkSnapshot.Observation> observations(UUID userId, String type, OffsetDateTime from,
+                                                                    OffsetDateTime to, boolean restingOnly) {
+        return repository.findByUserIdAndMetricTypeAndDeletedAtIsNullAndRecordedAtGreaterThanEqualAndRecordedAtLessThanOrderByRecordedAtAsc(
+                        userId, type, from, to).stream()
+                .filter(metric -> metric.getMetricValue() != null)
+                .filter(metric -> !restingOnly || isResting(metric.getDetails()))
+                .map(metric -> new HealthBenchmarkSnapshot.Observation(metric.getRecordedAt(), metric.getMetricValue()))
+                .toList();
+    }
+
+    private boolean isResting(Map<String, Object> details) {
+        if (details == null) return false;
+        Object context = details.get("measurementContext");
+        return context != null && "RESTING".equalsIgnoreCase(context.toString());
+    }
+
     private HealthSourceSummaryResponse sourceSummary(UUID userId, String source) {
         var consent = consentRepository.findByUserIdAndSourceType(userId, source);
-        Object[] range = repository.findActiveRange(userId, source);
+        OffsetDateTime oldestRecordAt = repository
+                .findFirstByUserIdAndSourceTypeAndDeletedAtIsNullOrderByRecordedAtAsc(userId, source)
+                .map(HealthMetricEntity::getRecordedAt)
+                .orElse(null);
+        OffsetDateTime newestRecordAt = repository
+                .findFirstByUserIdAndSourceTypeAndDeletedAtIsNullOrderByRecordedAtDesc(userId, source)
+                .map(HealthMetricEntity::getRecordedAt)
+                .orElse(null);
         Map<String, Long> counts = new LinkedHashMap<>();
         repository.countActiveByMetricType(userId, source).forEach(row ->
                 counts.put((String) row[0], (Long) row[1]));
@@ -204,8 +288,8 @@ public class HealthMetricServiceImpl implements HealthMetricService {
                 consent.map(com.mindcare.emotionservice.healthmetric.entity.HealthSourceConsentEntity::isEnabled).orElse(true),
                 consent.map(com.mindcare.emotionservice.healthmetric.entity.HealthSourceConsentEntity::getRevokedAt).orElse(null),
                 repository.countByUserIdAndSourceTypeAndDeletedAtIsNull(userId, source),
-                range == null || range.length == 0 ? null : (OffsetDateTime) range[0],
-                range == null || range.length < 2 ? null : (OffsetDateTime) range[1],
+                oldestRecordAt,
+                newestRecordAt,
                 Map.copyOf(counts));
     }
 
@@ -253,6 +337,31 @@ public class HealthMetricServiceImpl implements HealthMetricService {
             if (!"bpm".equals(normalizedUnit)) throw invalid("INVALID_METRIC_UNIT", "unit is not supported for " + type);
             range(value, BigDecimal.valueOf(20), BigDecimal.valueOf(250), type);
             return new Canonical(value, "bpm");
+        }
+        if ("SPO2".equals(type)) {
+            if (!Set.of("%", "percent", "percentage").contains(normalizedUnit)) {
+                throw invalid("INVALID_METRIC_UNIT", "unit is not supported for " + type);
+            }
+            range(value, BigDecimal.ZERO, BigDecimal.valueOf(100), type);
+            return new Canonical(value, "%");
+        }
+        if ("TOTAL_CALORIES_BURNED".equals(type)) {
+            BigDecimal kilocalories = Set.of("kcal", "calorie", "calories").contains(normalizedUnit) ? value
+                    : "kj".equals(normalizedUnit)
+                    ? value.divide(BigDecimal.valueOf(4.184), 4, RoundingMode.HALF_UP)
+                    : null;
+            if (kilocalories == null) throw invalid("INVALID_METRIC_UNIT", "unit is not supported for " + type);
+            range(kilocalories, BigDecimal.ZERO, BigDecimal.valueOf(15_000), type);
+            return new Canonical(kilocalories, "kcal");
+        }
+        if ("DISTANCE".equals(type)) {
+            BigDecimal meters = "m".equals(normalizedUnit) ? value
+                    : Set.of("km", "kilometer", "kilometers").contains(normalizedUnit)
+                    ? value.multiply(BigDecimal.valueOf(1_000))
+                    : null;
+            if (meters == null) throw invalid("INVALID_METRIC_UNIT", "unit is not supported for " + type);
+            range(meters, BigDecimal.ZERO, BigDecimal.valueOf(100_000), type);
+            return new Canonical(meters, "m");
         }
         if (!Set.of("count", "step", "steps").contains(normalizedUnit) || value.stripTrailingZeros().scale() > 0) {
             throw invalid("INVALID_METRIC_VALUE", "STEP_COUNT requires an integer count");
@@ -303,7 +412,10 @@ public class HealthMetricServiceImpl implements HealthMetricService {
     private String canonicalUnit(String type) {
         return switch (type) {
             case "HEART_RATE" -> "bpm";
+            case "SPO2" -> "%";
             case "STEP_COUNT" -> "count";
+            case "TOTAL_CALORIES_BURNED" -> "kcal";
+            case "DISTANCE" -> "m";
             default -> "h";
         };
     }
@@ -351,5 +463,14 @@ public class HealthMetricServiceImpl implements HealthMetricService {
         }
         BigDecimal sum() { return sum.setScale(2, RoundingMode.HALF_UP); }
         BigDecimal average() { return count == 0 ? null : sum.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP); }
+    }
+
+    private static final class DailyBenchmarkValues {
+        private BigDecimal sessionSleep = BigDecimal.ZERO;
+        private BigDecimal pointSleep = BigDecimal.ZERO;
+        private BigDecimal steps = BigDecimal.ZERO;
+        private boolean hasSessionSleep;
+        private boolean hasPointSleep;
+        private boolean hasSteps;
     }
 }

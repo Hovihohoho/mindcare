@@ -3,6 +3,7 @@ package com.mindcare.emotionservice.selfcare.service;
 import com.mindcare.emotionservice.selfcare.dto.*;
 import com.mindcare.emotionservice.selfcare.entity.*;
 import com.mindcare.emotionservice.selfcare.repository.*;
+import com.mindcare.emotionservice.healthmetric.service.HealthBenchmarkService;
 import com.mindcare.emotionservice.shared.exception.InvalidRequestException;
 import com.mindcare.emotionservice.shared.exception.ResourceNotFoundException;
 import java.time.DayOfWeek;
@@ -20,6 +21,8 @@ public class SelfCarePlanServiceImpl implements SelfCarePlanService {
     private final SelfCarePlanRepository planRepository;
     private final SelfCareActivityRepository activityRepository;
     private final SelfCareCompletionRepository completionRepository;
+    private final SelfCarePlanTemplateRegistry templateRegistry;
+    private final HealthBenchmarkService healthBenchmarkService;
 
     @Override
     @Transactional(readOnly = true)
@@ -31,15 +34,42 @@ public class SelfCarePlanServiceImpl implements SelfCarePlanService {
     @Transactional
     public SelfCarePlanResponse upsert(UUID userId, UpsertSelfCarePlanRequest request, LocalDate today) {
         ensureUniqueCodes(request.activities());
+        return saveTemplate(userId, templateRegistry.match(request), today);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SelfCarePlanTemplateResponse> templates() {
+        return templateRegistry.all();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SelfCarePlanRecommendationResponse> recommendations(UUID userId) {
+        return healthBenchmarkService.evaluate(userId).stream()
+                .filter(item -> item.alertTriggered() && item.recommendedPlanTemplateCode() != null)
+                .map(item -> new SelfCarePlanRecommendationResponse(item.recommendedPlanTemplateCode(), item.reasonCode(),
+                        item.message(), item.observedValue(), item.unit(), item.policyKey(), item.policyVersion(), item.sourceUrl()))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public SelfCarePlanResponse applyTemplate(UUID userId, String templateCode, LocalDate today) {
+        return saveTemplate(userId, templateRegistry.require(templateCode), today);
+    }
+
+    private SelfCarePlanResponse saveTemplate(UUID userId, SelfCarePlanTemplateResponse template, LocalDate today) {
         SelfCarePlanEntity plan = planRepository.findByUserId(userId)
-                .orElseGet(() -> new SelfCarePlanEntity(userId, request.goal()));
+                .orElseGet(() -> new SelfCarePlanEntity(userId, template.goal()));
         List<SelfCareActivityEntity> activities = new ArrayList<>();
-        for (int index = 0; index < request.activities().size(); index++) {
-            var item = request.activities().get(index);
+        for (int index = 0; index < template.activities().size(); index++) {
+            var item = template.activities().get(index);
             activities.add(new SelfCareActivityEntity(
                     item.activityCode(), item.title().trim(), item.targetPerWeek(), index));
         }
-        plan.replace(request.goal(), activities);
+        plan.replace(template.goal(), activities);
+        plan.applyTemplate(template.templateCode(), template.templateVersion(), template.sourceUrl());
         return response(planRepository.saveAndFlush(plan), userId, today);
     }
 
@@ -87,7 +117,7 @@ public class SelfCarePlanServiceImpl implements SelfCarePlanService {
                 new SelfCarePlanResponse.ActivityResponse(item.getId(), item.getActivityCode(), item.getTitle(),
                         item.getTargetPerWeek(), counts.getOrDefault(item.getId(), 0L).intValue(),
                         completedToday.contains(item.getId()))).toList();
-        return new SelfCarePlanResponse(plan.getId(), plan.getGoal(), weekStart,
+        return new SelfCarePlanResponse(plan.getId(), plan.getGoal(), plan.getTemplateCode(), plan.getTemplateVersion(), plan.getSourceUrl(), weekStart,
                 activities.stream().mapToInt(SelfCarePlanResponse.ActivityResponse::completedThisWeek).sum(),
                 activities.stream().mapToInt(SelfCarePlanResponse.ActivityResponse::targetPerWeek).sum(),
                 activities, plan.getUpdatedAt());

@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.UUID;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,6 +29,22 @@ public class SelfCarePlanController {
     SelfCarePlanResponse upsert(@AuthenticationPrincipal AuthenticatedUser user,
                                 @Valid @RequestBody UpsertSelfCarePlanRequest request) {
         return service.upsert(user.userId(), request, LocalDate.now(clock));
+    }
+
+    @GetMapping("/templates")
+    List<SelfCarePlanTemplateResponse> templates() {
+        return service.templates();
+    }
+
+    @GetMapping("/recommendations")
+    List<SelfCarePlanRecommendationResponse> recommendations(@AuthenticationPrincipal AuthenticatedUser user) {
+        return service.recommendations(user.userId());
+    }
+
+    @PostMapping("/templates/{templateCode}:apply")
+    SelfCarePlanResponse applyTemplate(@AuthenticationPrincipal AuthenticatedUser user,
+                                       @PathVariable String templateCode) {
+        return service.applyTemplate(user.userId(), templateCode, LocalDate.now(clock));
     }
 
     @PostMapping(path = "/activities/{activityId}/completions", consumes = MediaType.APPLICATION_JSON_VALUE)

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, BedDouble, Footprints, HeartPulse, Info, RefreshCw, Timer, Trash2 } from "lucide-react";
+import { Activity, AlertTriangle, BedDouble, ExternalLink, Footprints, HeartPulse, Info, RefreshCw, Timer, Trash2 } from "lucide-react";
 import { Button, Card, Loading, PageHeader, cn } from "@/shared";
 import { healthApi } from "../api/health.api";
 import { HealthTrendChart } from "../components/HealthTrendChart";
@@ -9,13 +9,14 @@ import type { HealthMetricRecord, HealthMetricType, HealthTrendPoint } from "../
 const metricDefinitions = [
   { type: "STEP_COUNT", label: "Bước chân", shortLabel: "Bước", icon: Footprints, unit: "bước" },
   { type: "HEART_RATE", label: "Nhịp tim trung bình", shortLabel: "Nhịp tim", icon: HeartPulse, unit: "bpm" },
+  { type: "SPO2", label: "Độ bão hòa oxy", shortLabel: "SpO₂", icon: HeartPulse, unit: "%" },
   { type: "SLEEP_SESSION", label: "Thời gian ngủ", shortLabel: "Giấc ngủ", icon: BedDouble, unit: "giờ" },
   { type: "EXERCISE_SESSION", label: "Thời gian vận động", shortLabel: "Vận động", icon: Activity, unit: "phút" },
 ] as const;
 
 function metricValue(type: HealthMetricType, points: HealthTrendPoint[]) {
   if (points.length === 0) return null;
-  if (type === "HEART_RATE") {
+  if (type === "HEART_RATE" || type === "SPO2") {
     const count = points.reduce((sum, point) => sum + point.count, 0);
     return count === 0 ? null : points.reduce((sum, point) => sum + point.value * point.count, 0) / count;
   }
@@ -25,7 +26,7 @@ function metricValue(type: HealthMetricType, points: HealthTrendPoint[]) {
 
 function formatMetricValue(type: HealthMetricType, value: number) {
   if (type === "STEP_COUNT") return Math.round(value).toLocaleString("vi-VN");
-  if (type === "HEART_RATE" || type === "EXERCISE_SESSION") return Math.round(value).toLocaleString("vi-VN");
+  if (type === "HEART_RATE" || type === "SPO2" || type === "EXERCISE_SESSION") return Math.round(value).toLocaleString("vi-VN");
   return value.toLocaleString("vi-VN", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 }
 
@@ -65,6 +66,12 @@ export function HealthDataPage() {
     staleTime: 5 * 60_000,
   });
   const sourceSummary = useQuery({ queryKey: ["health-source-summary"], queryFn: healthApi.sourceSummary });
+  const benchmarkEvaluations = useQuery({
+    queryKey: ["health-benchmark-evaluations"],
+    queryFn: async () => { await healthApi.analyzeAlerts(); return healthApi.benchmarkEvaluations(); },
+    staleTime: 5 * 60_000,
+  });
+  const activeWarnings = benchmarkEvaluations.data?.filter((item) => item.status === "BELOW_BENCHMARK" || item.status === "RECHECK_RECOMMENDED") ?? [];
   const deleteSourceData = useMutation({
     mutationFn: healthApi.deleteHealthConnectData,
     onSuccess: async () => {
@@ -113,6 +120,12 @@ export function HealthDataPage() {
         <Info className="mt-0.5 size-5 shrink-0" />
         <p>Trang web chỉ hiển thị dữ liệu đã đồng bộ. Cấp quyền, chỉnh quyền và “Đồng bộ ngay” được thực hiện trong ứng dụng MindCare trên Android.</p>
       </div>
+
+      {!!activeWarnings.length && <section className="space-y-3" aria-label="Cảnh báo theo benchmark">
+        {activeWarnings.map((warning) => <Card className="border-amber-200 bg-amber-50 p-5" key={warning.policyKey}>
+          <div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-700" /><div><h2 className="font-bold text-amber-950">Cần lưu ý: {warning.metricType}</h2><p className="mt-1 text-sm leading-6 text-amber-900">{warning.message}</p><a className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-800 underline" href={warning.sourceUrl} rel="noreferrer" target="_blank">{warning.sourceTitle} · policy {warning.policyVersion}<ExternalLink className="size-3" /></a></div></div>
+        </Card>)}
+      </section>}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Tổng quan sức khỏe">
         {metricDefinitions.map((metric, index) => {

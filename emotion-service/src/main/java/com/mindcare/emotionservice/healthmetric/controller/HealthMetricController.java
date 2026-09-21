@@ -5,9 +5,13 @@ import com.mindcare.emotionservice.healthmetric.dto.HealthMetricBatchResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthMetricTrendPointResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthSourceSummaryResponse;
+import com.mindcare.emotionservice.healthmetric.dto.HealthBenchmarkEvaluation;
+import com.mindcare.emotionservice.healthmetric.dto.DailyHealthEvaluationResponse;
+import com.mindcare.emotionservice.healthmetric.service.HealthBenchmarkService;
 import com.mindcare.emotionservice.healthmetric.service.HealthMetricService;
 import com.mindcare.emotionservice.shared.dto.CursorPageResponse;
 import com.mindcare.emotionservice.shared.security.AuthenticatedUser;
+import com.mindcare.emotionservice.shared.exception.InvalidRequestException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -23,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.DateTimeException;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -31,8 +37,12 @@ import java.util.List;
 @RequestMapping(path = "/api/v1/health-metrics", produces = MediaType.APPLICATION_JSON_VALUE)
 public class HealthMetricController {
     private final HealthMetricService service;
+    private final HealthBenchmarkService benchmarkService;
 
-    public HealthMetricController(HealthMetricService service) { this.service = service; }
+    public HealthMetricController(HealthMetricService service, HealthBenchmarkService benchmarkService) {
+        this.service = service;
+        this.benchmarkService = benchmarkService;
+    }
 
     @PostMapping("/sync")
     public HealthMetricBatchResponse synchronize(
@@ -62,6 +72,26 @@ public class HealthMetricController {
             @RequestParam(defaultValue = "DAY") String bucket,
             @RequestParam(defaultValue = "Asia/Ho_Chi_Minh") String timezone) {
         return service.getMetricTrends(user.userId(), metricType, from, to, bucket, ZoneId.of(timezone));
+    }
+
+    @GetMapping("/benchmark-evaluations")
+    public List<HealthBenchmarkEvaluation> benchmarkEvaluations(
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return benchmarkService.evaluate(user.userId());
+    }
+
+    @GetMapping("/daily-evaluation")
+    public DailyHealthEvaluationResponse dailyEvaluation(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(defaultValue = "Asia/Ho_Chi_Minh") String timezone
+    ) {
+        try {
+            return benchmarkService.evaluateDay(user.userId(), date, ZoneId.of(timezone));
+        } catch (DateTimeException exception) {
+            throw new InvalidRequestException("INVALID_TIMEZONE", "timezone must be a valid IANA zone");
+        }
     }
 
     @GetMapping("/sources/{sourceType}")

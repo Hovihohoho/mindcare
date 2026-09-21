@@ -21,6 +21,9 @@ public class SelfCarePlanEntity {
     @Id @GeneratedValue(strategy = GenerationType.UUID) private UUID id;
     @Column(name = "user_id", nullable = false, updatable = false) private UUID userId;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 40) private SelfCareGoal goal;
+    @Column(name = "template_code", length = 60) private String templateCode;
+    @Column(name = "template_version", length = 30) private String templateVersion;
+    @Column(name = "source_url", length = 500) private String sourceUrl;
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     private List<SelfCareActivityEntity> activities = new ArrayList<>();
@@ -32,5 +35,10 @@ public class SelfCarePlanEntity {
         this.goal = goal;
         activities.clear();
         values.forEach(value -> { value.attachTo(this); activities.add(value); });
+    }
+    public void applyTemplate(String templateCode, String templateVersion, String sourceUrl) {
+        this.templateCode = templateCode;
+        this.templateVersion = templateVersion;
+        this.sourceUrl = sourceUrl;
     }
 }

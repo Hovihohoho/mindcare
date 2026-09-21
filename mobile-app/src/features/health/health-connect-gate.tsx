@@ -32,7 +32,8 @@ export function HealthConnectGate() {
       return;
     }
     const hasDataPermission = snapshot.permissions.steps || snapshot.permissions.sleep
-      || snapshot.permissions.heartRate || snapshot.permissions.exercise;
+      || snapshot.permissions.heartRate || snapshot.permissions.restingHeartRate
+      || snapshot.permissions.oxygenSaturation || snapshot.permissions.exercise;
     await updateHealthBackgroundRegistration(hasDataPermission && snapshot.permissions.background).catch(() => undefined);
     if (syncWhenDue && hasDataPermission) {
       await syncHealthIfDue(session.user.id, session.accessToken).catch(() => undefined);

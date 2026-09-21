@@ -9,6 +9,9 @@ import java.util.UUID;
 public record SelfCarePlanResponse(
         UUID id,
         SelfCareGoal goal,
+        String templateCode,
+        String templateVersion,
+        String sourceUrl,
         LocalDate weekStartedOn,
         int completedThisWeek,
         int targetThisWeek,

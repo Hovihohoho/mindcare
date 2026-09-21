@@ -120,7 +120,6 @@ class HealthMetricServiceImplTest {
         when(consentRepository.findByUserIdAndSourceType(userId, "HEALTH_CONNECT"))
                 .thenReturn(Optional.of(consent));
         when(consentRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(repository.findActiveRange(userId, "HEALTH_CONNECT")).thenReturn(new Object[] { null, null });
         when(repository.countActiveByMetricType(userId, "HEALTH_CONNECT")).thenReturn(List.of());
 
         var response = service.revokeAndDeleteSourceData(userId, "HEALTH_CONNECT");
@@ -128,6 +127,31 @@ class HealthMetricServiceImplTest {
         assertFalse(response.syncEnabled());
         verify(syncRequestRepository).deleteByUserIdAndSourceType(userId, "HEALTH_CONNECT");
         verify(repository).deleteByUserIdAndSourceType(userId, "HEALTH_CONNECT");
+    }
+
+    @Test
+    void sourceSummaryReturnsRecordRangeWithoutUntypedTimestampCasts() {
+        UUID userId = UUID.randomUUID();
+        OffsetDateTime oldestAt = OffsetDateTime.parse("2026-07-20T08:00:00Z");
+        OffsetDateTime newestAt = OffsetDateTime.parse("2026-07-22T08:00:00Z");
+        HealthMetricEntity oldest = mock(HealthMetricEntity.class);
+        HealthMetricEntity newest = mock(HealthMetricEntity.class);
+        when(oldest.getRecordedAt()).thenReturn(oldestAt);
+        when(newest.getRecordedAt()).thenReturn(newestAt);
+        when(repository.findFirstByUserIdAndSourceTypeAndDeletedAtIsNullOrderByRecordedAtAsc(userId, "HEALTH_CONNECT"))
+                .thenReturn(Optional.of(oldest));
+        when(repository.findFirstByUserIdAndSourceTypeAndDeletedAtIsNullOrderByRecordedAtDesc(userId, "HEALTH_CONNECT"))
+                .thenReturn(Optional.of(newest));
+        when(repository.countActiveByMetricType(userId, "HEALTH_CONNECT"))
+                .thenReturn(List.<Object[]>of(new Object[] { "STEP_COUNT", 2L }));
+        when(repository.countByUserIdAndSourceTypeAndDeletedAtIsNull(userId, "HEALTH_CONNECT")).thenReturn(2L);
+
+        var response = service.getSourceSummary(userId, "HEALTH_CONNECT");
+
+        assertEquals(oldestAt, response.oldestRecordAt());
+        assertEquals(newestAt, response.newestRecordAt());
+        assertEquals(2L, response.recordCount());
+        assertEquals(Map.of("STEP_COUNT", 2L), response.recordsByMetricType());
     }
 
     @Test
@@ -176,5 +200,36 @@ class HealthMetricServiceImplTest {
         assertEquals(1, response.updatedCount());
         assertEquals(BigDecimal.valueOf(25), existing.getMetricValue());
         assertEquals(newModifiedAt, existing.getSourceLastModifiedAt());
+    }
+
+    @Test
+    void synchronizeCanonicalizesLifeSnapsCaloriesAndDistanceInputs() {
+        UUID userId = UUID.randomUUID();
+        when(syncRequestRepository.findByUserIdAndSourceTypeAndIdempotencyKey(eq(userId), anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        when(repository.findByUserIdAndSourceTypeAndExternalSampleId(eq(userId), anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        HealthMetricEntity savedEnergy = mock(HealthMetricEntity.class);
+        HealthMetricEntity savedDistance = mock(HealthMetricEntity.class);
+        when(savedEnergy.getId()).thenReturn(UUID.randomUUID());
+        when(savedDistance.getId()).thenReturn(UUID.randomUUID());
+        when(repository.saveAllAndFlush(any())).thenReturn(List.of(savedEnergy, savedDistance));
+
+        service.synchronizeMetrics(userId, "sync-wellness-units", new HealthMetricBatchRequest(
+                "HEALTH_CONNECT",
+                List.of(
+                        new HealthMetricItemRequest("energy-1", "TOTAL_CALORIES_BURNED",
+                                BigDecimal.valueOf(8_368), "kJ", OffsetDateTime.parse("2026-07-21T20:00:00Z")),
+                        new HealthMetricItemRequest("distance-1", "DISTANCE",
+                                BigDecimal.valueOf(5.5), "km", OffsetDateTime.parse("2026-07-21T20:00:00Z")))
+        ));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<HealthMetricEntity>> captor = ArgumentCaptor.forClass(List.class);
+        verify(repository).saveAllAndFlush(captor.capture());
+        assertEquals(new BigDecimal("2000.0000"), captor.getValue().get(0).getMetricValue());
+        assertEquals("kcal", captor.getValue().get(0).getUnit());
+        assertEquals(new BigDecimal("5500.0"), captor.getValue().get(1).getMetricValue());
+        assertEquals("m", captor.getValue().get(1).getUnit());
     }
 }

@@ -1,0 +1,6 @@
+import { useRouter } from 'expo-router';
+import { StyleSheet, Text } from 'react-native';
+import { DetailScreen, PageIntro, Row, Surface } from '../src/components/secondary-ui';
+import { palette, space } from '../src/theme/tokens';
+export default function SettingsScreen() { const router = useRouter(); return <DetailScreen title="Cài đặt"><PageIntro eyebrow="TÀI KHOẢN" title="Tùy chỉnh trải nghiệm" /><Surface><Row icon="notifications-outline" title="Nhắc nhở" detail="Thời điểm check-in và giờ đi ngủ" onPress={() => router.push('/reminders')} /><Row icon="watch-outline" title="Nguồn dữ liệu sức khỏe" detail="Health Connect" onPress={() => router.push('/health-connect')} /><Row icon="shield-checkmark-outline" title="Quyền riêng tư" detail="Dữ liệu và quyền truy cập" onPress={() => router.push('/data-rights')} last /></Surface><Text style={styles.label}>ỨNG DỤNG</Text><Surface><Row icon="language-outline" title="Ngôn ngữ" detail="Tiếng Việt" /><Row icon="help-circle-outline" title="Trợ giúp và phản hồi" detail="Câu hỏi thường gặp" last /></Surface></DetailScreen>; }
+const styles = StyleSheet.create({ label: { color: palette.primary, fontSize: 12, fontWeight: '800', letterSpacing: .8, marginBottom: space.sm, marginTop: space.lg } });

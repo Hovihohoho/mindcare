@@ -27,6 +27,13 @@ The service trusts `X-User-Id` and `X-User-Role` only when it is reachable throu
 the API Gateway. Do not expose port `8084` publicly; the Gateway removes
 client-supplied identity headers and replaces them with verified JWT claims.
 
+The separately trained offline PMData model is documented in
+`docs/STRESS-MODEL.md`.
+
+The three offline LifeSnaps next-day wearable forecasts are documented in
+`docs/WELLNESS-MODEL.md`. Enable them with `WELLNESS_MODEL_ENABLED=true`; the
+root `run-all.ps1` resolves and verifies all ONNX and metadata paths.
+
 Example chat body:
 
 ```json

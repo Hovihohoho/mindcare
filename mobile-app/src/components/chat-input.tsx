@@ -28,9 +28,9 @@ export function ChatInput({ value, disabled = false, onChangeText, onSend }: Pro
 }
 
 const styles = StyleSheet.create({
-  composer: { alignItems: 'flex-end', backgroundColor: colors.surface, borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.page, paddingVertical: spacing.sm },
-  input: { backgroundColor: colors.canvas, borderColor: colors.line, borderRadius: radius.input, borderWidth: 1, color: colors.ink, flex: 1, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 22, maxHeight: 112, minHeight: 48, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
-  send: { alignItems: 'center', backgroundColor: colors.brand, borderRadius: radius.input, height: 48, justifyContent: 'center', width: 48 },
+  composer: { alignItems: 'flex-end', backgroundColor: colors.brandSoft, borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.page, paddingVertical: spacing.sm },
+  input: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.sm, borderWidth: 1, color: colors.ink, flex: 1, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 22, maxHeight: 112, minHeight: 48, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
+  send: { alignItems: 'center', backgroundColor: colors.brand, borderRadius: radius.sm, height: 48, justifyContent: 'center', width: 48 },
   pressed: { opacity: 0.82, transform: [{ translateY: 1 }] },
   disabled: { opacity: 0.4 },
 });

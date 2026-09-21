@@ -1,4 +1,4 @@
-export type HealthMetricType = "STEP_COUNT" | "HEART_RATE" | "SLEEP_SESSION" | "EXERCISE_SESSION";
+export type HealthMetricType = "STEP_COUNT" | "HEART_RATE" | "SPO2" | "SLEEP_SESSION" | "EXERCISE_SESSION";
 
 export interface HealthMetricRecord {
   id: string;

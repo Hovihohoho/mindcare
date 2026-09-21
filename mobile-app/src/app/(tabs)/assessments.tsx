@@ -1,1 +1,1 @@
-export { default } from '@/screens/assessments-screen';
+export { default } from '@/features/care-plan/care-plan-screen';
