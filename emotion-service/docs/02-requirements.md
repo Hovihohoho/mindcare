@@ -19,7 +19,7 @@
 | ES-FR-006 | UC 3.1 | Must | Lấy và nộp bài assessment | Câu hỏi đúng thứ tự; mọi câu trả lời thuộc đúng bài/phiên bản; chấm điểm deterministic | Implemented: published list/detail/submit |
 | ES-FR-007 | UC 3.2 | Must | Xem kết quả assessment | Lưu tổng điểm, phân loại, chi tiết truy vết và khuyến nghị an toàn; user xem lịch sử của mình | Implemented: submit response, owned history and detail |
 | ES-FR-008 | UC 3.3 | Should | Phân tích dữ liệu tổng hợp | Kết hợp cửa sổ cảm xúc 7 ngày, assessment gần nhất và health metrics 3-7 ngày; rule/version và lý do được lưu | Planned |
-| ES-FR-009 | UC 3.4 | Should | Tạo cảnh báo chủ động | Khi rule vượt ngưỡng, tạo alert idempotent và phát notification intent; không gửi FCM trong service | Planned |
+| ES-FR-009 | UC 3.4 | Should | Tạo cảnh báo chủ động | Khi rule vượt ngưỡng, tạo alert idempotent và phát notification intent; không gửi FCM trong service | Implemented cho health benchmark sau sync; composite risk/outbox còn planned |
 | ES-FR-010 | UC 5.6 | Should | Expert đọc bản tóm tắt được chia sẻ | Chỉ expert có quan hệ tư vấn và consent hợp lệ được đọc đúng phạm vi/thời hạn | Planned; cần contract Booking/Auth |
 | ES-FR-011 | UC 6.2 | Must | Admin quản lý bộ assessment | CRUD/version/publish/archive; response scale do server sinh theo code; không làm thay đổi hồi tố kết quả cũ | Partial: Admin list/detail/create/update draft/create-next-version/publish/archive implemented; hard-delete is intentionally not exposed |
 | ES-FR-012 | UC 3.5 | Could | Cung cấp tín hiệu để gợi ý chuyên gia | Phát mức rủi ro/nhóm nhu cầu tối thiểu; AI/Booking chịu trách nhiệm chọn và hiển thị chuyên gia | Planned |

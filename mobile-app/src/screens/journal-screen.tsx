@@ -1,7 +1,7 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Native Content Flow · design-system: design.md · designed-as-app */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ActionButton } from '@/components/buttons';
 import { AppScreen } from '@/components/app-screen';
@@ -17,6 +17,9 @@ import { colors, fonts, radius, spacing, type } from '@/theme/tokens';
 
 export default function JournalScreen() {
   const router = useRouter();
+  const { checkIn } = useLocalSearchParams<{ checkIn?: string }>();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const openedFromCheckIn = checkIn === 'true';
   const { entries, trends, loading, refreshing, error, reload, token } = useEmotionJournal();
   const [emotion, setEmotion] = useState<EmotionLevel>();
   const [note, setNote] = useState('');
@@ -24,14 +27,19 @@ export default function JournalScreen() {
   const [saveError, setSaveError] = useState('');
   const [saved, setSaved] = useState(false);
   const checkInsThisWeek = useMemo(() => trends.reduce((total, point) => total + point.count, 0), [trends]);
+  useEffect(() => {
+    if (!openedFromCheckIn) return;
+    const task = requestAnimationFrame(() => scrollViewRef.current?.scrollTo({ animated: true, y: 0 }));
+    return () => cancelAnimationFrame(task);
+  }, [openedFromCheckIn]);
   const save = async () => {
     if (!token || !emotion || saving) return;
     setSaving(true); setSaveError(''); setSaved(false);
-    try { await emotionService.create(token, { emotionType: emotion, content: note.trim() }); setEmotion(undefined); setNote(''); setSaved(true); await reload(true); }
+    try { await emotionService.create(token, { emotionType: emotion, content: note.trim(), source: openedFromCheckIn ? 'MORNING_WELLBEING_PROMPT' : 'USER_DIRECT' }); if (openedFromCheckIn) router.setParams({ checkIn: '' }); setEmotion(undefined); setNote(''); setSaved(true); await reload(true); }
     catch (caught) { setSaveError(caught instanceof Error ? caught.message : 'Không thể lưu nhật ký. Vui lòng thử lại.'); }
     finally { setSaving(false); }
   };
-  return <AppScreen><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => void reload(true)} refreshing={refreshing} tintColor={colors.brand} />} showsVerticalScrollIndicator={false}>
+  return <AppScreen><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" ref={scrollViewRef} refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => void reload(true)} refreshing={refreshing} tintColor={colors.brand} />} showsVerticalScrollIndicator={false}>
     <View style={styles.header}><View><Text style={styles.date}>{new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()).toLocaleUpperCase('vi-VN')}</Text><Text accessibilityRole="header" style={styles.title}>Hôm nay</Text></View><Pressable accessibilityLabel="Dữ liệu sức khỏe" accessibilityRole="button" onPress={() => router.push('/(tabs)/health-connect')} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}><Ionicons color={colors.ink} name="fitness-outline" size={21} /></Pressable></View>
     <View style={styles.statusLine}><View style={styles.statusDot} /><View style={styles.statusCopy}><Text style={styles.statusTitle}>{loading ? 'Đang cập nhật nhật ký của bạn' : 'Nhật ký cảm xúc đã sẵn sàng'}</Text><Text style={styles.statusText}>{error ? 'Kéo xuống để thử tải lại dữ liệu.' : 'Ghi một check-in ngắn để theo dõi thay đổi theo thời gian.'}</Text></View></View>
     <SectionHeader title="Bạn đang cảm thấy thế nào?" />

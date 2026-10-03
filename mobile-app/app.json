@@ -47,7 +47,13 @@
         }
       ],
       "expo-secure-store",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "stress-insights",
+          "color": "#147D73"
+        }
+      ],
       "react-native-health-connect",
       [
         "expo-build-properties",

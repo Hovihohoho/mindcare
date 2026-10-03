@@ -26,6 +26,7 @@ class GeminiClientTest {
 
     @Test void providerFailureUsesConfiguredFallback() throws Exception {
         var client = client("fallback");
+        ReflectionTestUtils.setField(client, "maxAttempts", 1);
         var calls = new AtomicInteger();
         server.createContext("/models/primary:generateContent", exchange -> {
             calls.incrementAndGet();
@@ -41,6 +42,28 @@ class GeminiClientTest {
             exchange.close();
         });
         assertThat(client.generate("system", "prompt")).isEqualTo("Hello");
+        assertThat(calls).hasValue(2);
+    }
+
+    @Test void transientProviderFailureRetriesSameModel() throws Exception {
+        var client = client("primary");
+        ReflectionTestUtils.setField(client, "retryDelayMs", 0L);
+        var calls = new AtomicInteger();
+        server.createContext("/models/primary:generateContent", exchange -> {
+            if (calls.incrementAndGet() == 1) {
+                exchange.sendResponseHeaders(503, -1);
+                exchange.close();
+                return;
+            }
+            byte[] body = "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Recovered\"}]}}]}"
+                    .getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+
+        assertThat(client.generate("system", "prompt")).isEqualTo("Recovered");
         assertThat(calls).hasValue(2);
     }
 

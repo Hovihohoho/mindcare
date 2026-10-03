@@ -4,6 +4,7 @@ import com.mindcare.auth_service.dto.ApiResponse;
 import com.mindcare.auth_service.dto.NotificationDtos;
 import com.mindcare.auth_service.entity.Notification;
 import com.mindcare.auth_service.notification.NotificationSocketHub;
+import com.mindcare.auth_service.notification.ExpoPushSender;
 import com.mindcare.auth_service.repository.NotificationRepository;
 import com.mindcare.auth_service.repository.UserRepository;
 import com.mindcare.auth_service.service.AccountService;
@@ -33,6 +34,7 @@ public class NotificationController {
     private final AccountService accountService;
     private final AuditService auditService;
     private final NotificationSocketHub notificationSocketHub;
+    private final ExpoPushSender pushSender;
 
     @GetMapping("/api/auth/notifications")
     public ApiResponse<List<LegacyResponse>> legacyList(Authentication auth) {
@@ -126,6 +128,8 @@ public class NotificationController {
 
     private void publish(Notification notification) {
         notificationSocketHub.publish(notification.getUserId(), NotificationDtos.Item.from(notification));
+        pushSender.send(notification.getUserId(), notification.getTitle(), notification.getMessage(),
+                notification.getActionUrl(), notification.getType());
     }
 
     public record LegacyBroadcast(@NotBlank @Size(max = 160) String title,

@@ -31,6 +31,21 @@ mean absolute error is 0.7054, and predictions within one point are 0.8970.
 Scores 1 and 5 are rare and were not reliably recognized. This is an estimate
 of a subjective sports-wellness score, not a clinical diagnosis.
 
+To compare the current temporal alignment (Model A) with morning sleep assigned
+to the preceding activity day (Model B), run:
+
+```powershell
+cd ml-training
+.\.venv\Scripts\python.exe .\src\compare_pmdata_temporal_alignment.py
+```
+
+The comparison uses the same 1,680 survey samples and the same
+leave-one-participant-out protocol. Model B uses steps, heart rate, and resting
+heart rate from D-1, plus main sleep ending on D only when its `endTime` is not
+later than the stress survey. It is exported as `stress-classifier-v4.onnx`
+without replacing the active v3 model. Detailed results are written to
+`reports/pmdata-temporal-comparison.json`.
+
 Scientific basis: the PMData paper defines fatigue, sleep quality, soreness,
 stress, and mood on a 1-5 scale; 3 is normal, 1-2 are below normal, and 4-5 are
 above normal: https://doi.org/10.1145/3339825.3394926

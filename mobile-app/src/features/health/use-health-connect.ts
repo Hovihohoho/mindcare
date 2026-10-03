@@ -3,6 +3,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { useAuth } from '@/features/auth/auth-context';
+import { ensureStressNotificationPermission, hasStressNotificationPermission } from '@/features/stress/stress-notification';
+import { stressStorage } from '@/features/stress/stress.storage';
+import type { DatedStressPrediction } from '@/features/stress/stress.types';
 import { EMPTY_HEALTH_PERMISSIONS } from './health.constants';
 import { HealthConnectError, healthConnectService } from './health-connect.service';
 import { updateHealthBackgroundRegistration } from './health-background.task';
@@ -28,9 +31,11 @@ export function useHealthConnect() {
   const { session } = useAuth();
   const [snapshot, setSnapshot] = useState(INITIAL_SNAPSHOT);
   const [loading, setLoading] = useState(true);
-  const [action, setAction] = useState<'background' | 'connect' | 'delete' | 'sync' | null>(null);
+  const [action, setAction] = useState<'background' | 'connect' | 'delete' | 'notifications' | 'sync' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<HealthSyncResult | null>(null);
+  const [stressPrediction, setStressPrediction] = useState<DatedStressPrediction | null>(null);
+  const [stressNotificationsEnabled, setStressNotificationsEnabled] = useState(false);
   const [statistics, setStatistics] = useState<Record<string, number>>({});
   const [trends, setTrends] = useState<Partial<Record<HealthMetricSyncItem['metricType'], HealthTrendPoint[]>>>({});
 
@@ -58,7 +63,14 @@ export function useHealthConnect() {
     if (!session) return;
     setError(null);
     try {
-      setSnapshot(await healthConnectService.getSnapshot(session.user.id));
+      const [nextSnapshot, latestPrediction, notificationsEnabled] = await Promise.all([
+        healthConnectService.getSnapshot(session.user.id),
+        stressStorage.getLatest(session.user.id),
+        hasStressNotificationPermission().catch(() => false),
+      ]);
+      setSnapshot(nextSnapshot);
+      setStressPrediction(latestPrediction);
+      setStressNotificationsEnabled(notificationsEnabled);
       await loadStatistics();
     } catch (nextError) {
       setError(messageFor(nextError));
@@ -82,7 +94,10 @@ export function useHealthConnect() {
         await healthApi.enableSource(session.accessToken);
         const result = await syncHealthIfDue(session.user.id, session.accessToken, { force: true });
         setSyncResult(result);
-        if (result) setSnapshot((current) => ({ ...current, lastSyncTime: result.syncedAt }));
+        if (result) {
+          setSnapshot((current) => ({ ...current, lastSyncTime: result.syncedAt }));
+          if (result.stressPrediction) setStressPrediction(result.stressPrediction);
+        }
         await loadStatistics();
       }
     } catch (nextError) {
@@ -100,13 +115,36 @@ export function useHealthConnect() {
       const permissions = await healthConnectService.requestBackgroundPermission();
       setSnapshot((current) => ({ ...current, permissions }));
       await updateHealthBackgroundRegistration(permissions.background);
+      if (permissions.background) {
+        if (!session) return;
+        const notificationsEnabled = await ensureStressNotificationPermission(session.accessToken);
+        setStressNotificationsEnabled(notificationsEnabled);
+        if (!notificationsEnabled) {
+          setError('Đồng bộ nền đã bật nhưng thông báo đang bị tắt trong cài đặt thiết bị.');
+        }
+      }
     } catch (nextError) {
       setError(messageFor(nextError));
       await refresh();
     } finally {
       setAction(null);
     }
-  }, [refresh]);
+  }, [refresh, session]);
+
+  const enableStressNotifications = useCallback(async () => {
+    setAction('notifications');
+    setError(null);
+    try {
+      if (!session) return;
+      const enabled = await ensureStressNotificationPermission(session.accessToken);
+      setStressNotificationsEnabled(enabled);
+      if (!enabled) setError('Thông báo đang bị tắt. Hãy cấp quyền trong cài đặt thiết bị.');
+    } catch (nextError) {
+      setError(messageFor(nextError));
+    } finally {
+      setAction(null);
+    }
+  }, [session]);
 
   const sync = useCallback(async () => {
     if (!session) return;
@@ -117,6 +155,7 @@ export function useHealthConnect() {
       const result = await syncHealthIfDue(session.user.id, session.accessToken, { force: true });
       if (!result) return;
       setSyncResult(result);
+      if (result.stressPrediction) setStressPrediction(result.stressPrediction);
       setSnapshot((current) => ({ ...current, lastSyncTime: result.syncedAt }));
       await refresh();
     } catch (nextError) {
@@ -135,7 +174,9 @@ export function useHealthConnect() {
       await healthApi.deleteSourceData(session.accessToken);
       await updateHealthBackgroundRegistration(false);
       await healthSyncStorage.clearLastSyncTime(session.user.id);
+      await stressStorage.clear(session.user.id);
       setSyncResult(null);
+      setStressPrediction(null);
       setStatistics({});
       setTrends({});
       setSnapshot((current) => ({ ...current, lastSyncTime: null }));
@@ -162,6 +203,7 @@ export function useHealthConnect() {
     enableBackground,
     connectionStatus,
     deleteStoredData,
+    enableStressNotifications,
     error,
     loading,
     managePermissions: healthConnectService.openHealthConnectSettings,
@@ -169,6 +211,8 @@ export function useHealthConnect() {
     refresh,
     snapshot,
     statistics,
+    stressPrediction,
+    stressNotificationsEnabled,
     sync,
     syncResult,
     trends,

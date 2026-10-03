@@ -58,7 +58,27 @@ class HealthBenchmarkServiceImplTest {
 
         assertThat(evaluations).filteredOn(item -> item.alertTriggered())
                 .extracting(item -> item.reasonCode())
-                .contains("RESTING_HEART_RATE_OUTSIDE_60_100_REPEATED", "SPO2_BELOW_95_REPEATED");
+                .contains("RESTING_HEART_RATE_ABOVE_100_REPEATED", "SPO2_BELOW_95_REPEATED");
+    }
+
+    @Test
+    void warnsOnlyAfterRepeatedLowRestingHeartRateWithLatestStillLow() {
+        UUID userId = UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-28T08:00:00Z");
+        when(metrics.getBenchmarkSnapshot(userId, 7)).thenReturn(new HealthBenchmarkSnapshot(
+                List.of(),
+                List.of(new HealthBenchmarkSnapshot.Observation(now.minusHours(1), BigDecimal.valueOf(55)),
+                        new HealthBenchmarkSnapshot.Observation(now, BigDecimal.valueOf(58))),
+                List.of()));
+
+        var heartRate = service.evaluate(userId).stream()
+                .filter(item -> "HEART_RATE".equals(item.metricType()))
+                .findFirst().orElseThrow();
+
+        assertThat(heartRate.policyKey()).isEqualTo("AHA_RESTING_HEART_RATE_V2");
+        assertThat(heartRate.policyVersion()).isEqualTo("2.0");
+        assertThat(heartRate.reasonCode()).isEqualTo("RESTING_HEART_RATE_BELOW_60_REPEATED");
+        assertThat(heartRate.alertTriggered()).isTrue();
     }
 
     @Test

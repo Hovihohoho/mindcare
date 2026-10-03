@@ -6,11 +6,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class ReminderPreferenceTest {
-    @Test void isDueOnlyInsideFiveMinuteWindow() {
+    @Test void catchesUpAfterTemporarySchedulerDowntime() {
         var value = ReminderPreference.create(UUID.randomUUID(), "DAILY_CHECK_IN");
         value.update(true, LocalTime.of(20, 0), "Asia/Ho_Chi_Minh");
         assertThat(value.isDue(ZonedDateTime.of(2026, 8, 26, 20, 2, 0, 0, ZoneId.of("Asia/Ho_Chi_Minh")).toInstant())).isTrue();
-        assertThat(value.isDue(ZonedDateTime.of(2026, 8, 26, 20, 5, 0, 0, ZoneId.of("Asia/Ho_Chi_Minh")).toInstant())).isFalse();
+        assertThat(value.isDue(ZonedDateTime.of(2026, 8, 26, 22, 30, 0, 0, ZoneId.of("Asia/Ho_Chi_Minh")).toInstant())).isTrue();
+        assertThat(value.isDue(ZonedDateTime.of(2026, 8, 26, 23, 1, 0, 0, ZoneId.of("Asia/Ho_Chi_Minh")).toInstant())).isFalse();
     }
     @Test void supportsReminderWindowAcrossMidnight() {
         var value = ReminderPreference.create(UUID.randomUUID(), "SELF_CARE");

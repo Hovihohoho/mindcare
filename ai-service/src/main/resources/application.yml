@@ -29,6 +29,8 @@ gemini:
   embedding-dimensions: 768
   connect-timeout-seconds: ${GEMINI_CONNECT_TIMEOUT_SECONDS:3}
   read-timeout-seconds: ${GEMINI_READ_TIMEOUT_SECONDS:15}
+  max-attempts: ${GEMINI_MAX_ATTEMPTS:2}
+  retry-delay-ms: ${GEMINI_RETRY_DELAY_MS:250}
 
 rag:
   default-top-k: 5

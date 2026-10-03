@@ -1,5 +1,5 @@
 import { apiRequest } from '@/services/api/api.client';
-import type { CursorPage, EmotionJournal, EmotionLevel, EmotionTrendPoint } from '@/features/emotion/emotion.types';
+import type { CursorPage, EmotionJournal, EmotionLevel, EmotionTrendPoint, JournalEntrySource } from '@/features/emotion/emotion.types';
 
 function query(params: Record<string, string | number | undefined>) {
   const search = new URLSearchParams();
@@ -10,7 +10,7 @@ function query(params: Record<string, string | number | undefined>) {
 }
 
 export const emotionService = {
-  create(token: string, payload: { emotionType: EmotionLevel; content: string }) {
+  create(token: string, payload: { emotionType: EmotionLevel; content: string; source?: JournalEntrySource }) {
     return apiRequest<EmotionJournal>('/api/v1/emotion-journals', { method: 'POST', body: payload, token, responseType: 'raw' });
   },
 

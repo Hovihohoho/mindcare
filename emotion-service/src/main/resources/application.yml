@@ -3,6 +3,7 @@ server:
 
 app:
   internal-secret: ${INTERNAL_SERVICE_SECRET:local-internal-secret}
+  auth-service-url: ${AUTH_SERVICE_URL:http://localhost:8081}
 
 spring:
   application:

@@ -408,6 +408,11 @@ export const healthConnectService = {
       throw new HealthConnectError('NO_PERMISSIONS', 'MindCare chưa có quyền đọc dữ liệu Health Connect.');
     }
 
+    // Server-side consent is independent from Android's Health Connect
+    // permission. Re-enable it here because deleting synced data revokes the
+    // server consent, and a later Android permission grant does not restore it.
+    await healthApi.enableSource(token);
+
     const endTime = new Date().toISOString();
     const startTime = new Date(Date.now() - INITIAL_SYNC_DAYS * 86_400_000).toISOString();
     debug('read range', { startTime, endTime });
@@ -449,8 +454,6 @@ export const healthConnectService = {
       duplicateCount += response.duplicateCount;
       updatedCount += response.updatedCount;
     }
-    const alerts = await healthApi.analyzeHealthAlerts(token);
-
     await healthSyncStorage.setLastSyncTime(userId, endTime);
     const result = {
       acceptedCount,
@@ -459,7 +462,7 @@ export const healthConnectService = {
       invalidSkippedCount,
       readCounts,
       syncedAt: endTime,
-      alerts,
+      alerts: [],
     };
     debug('sync result', result);
     return result;

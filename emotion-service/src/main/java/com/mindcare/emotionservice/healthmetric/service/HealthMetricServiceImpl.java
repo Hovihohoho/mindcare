@@ -11,6 +11,7 @@ import com.mindcare.emotionservice.healthmetric.dto.HealthSourceSummaryResponse;
 import com.mindcare.emotionservice.healthmetric.dto.HealthBenchmarkSnapshot;
 import com.mindcare.emotionservice.healthmetric.entity.HealthMetricEntity;
 import com.mindcare.emotionservice.healthmetric.entity.HealthMetricSyncRequestEntity;
+import com.mindcare.emotionservice.healthmetric.event.HealthMetricsSynchronizedEvent;
 import com.mindcare.emotionservice.healthmetric.mapper.HealthMetricMapper;
 import com.mindcare.emotionservice.healthmetric.repository.HealthMetricRepository;
 import com.mindcare.emotionservice.healthmetric.repository.HealthMetricSyncRequestRepository;
@@ -23,6 +24,7 @@ import com.mindcare.emotionservice.shared.util.RequestHasher;
 import com.mindcare.emotionservice.shared.util.ServiceValidator;
 import com.mindcare.emotionservice.shared.util.TrendBucket;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,10 +60,12 @@ public class HealthMetricServiceImpl implements HealthMetricService {
     private final CursorCodec cursorCodec;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     public HealthMetricServiceImpl(HealthMetricRepository repository, HealthMetricSyncRequestRepository syncRequestRepository,
                                    HealthSourceConsentRepository consentRepository, HealthMetricMapper mapper,
-                                   CursorCodec cursorCodec, ObjectMapper objectMapper, Clock clock) {
+                                   CursorCodec cursorCodec, ObjectMapper objectMapper, Clock clock,
+                                   ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
         this.syncRequestRepository = syncRequestRepository;
         this.consentRepository = consentRepository;
@@ -69,6 +73,7 @@ public class HealthMetricServiceImpl implements HealthMetricService {
         this.cursorCodec = cursorCodec;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -124,6 +129,9 @@ public class HealthMetricServiceImpl implements HealthMetricService {
         HealthMetricBatchResponse response = new HealthMetricBatchResponse(accepted, updated, duplicates,
                 saved.stream().map(HealthMetricEntity::getId).toList());
         syncRequestRepository.save(new HealthMetricSyncRequestEntity(userId, sourceType, key, requestHash, objectMapper.valueToTree(response)));
+        if (accepted + updated > 0) {
+            eventPublisher.publishEvent(new HealthMetricsSynchronizedEvent(userId, accepted + updated));
+        }
         return response;
     }
 

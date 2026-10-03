@@ -26,6 +26,8 @@ public class GeminiClient {
     private final ObjectMapper objectMapper;
     @Value("${gemini.connect-timeout-seconds:3}") private int connectTimeoutSeconds = 3;
     @Value("${gemini.read-timeout-seconds:15}") private int readTimeoutSeconds = 15;
+    @Value("${gemini.max-attempts:2}") private int maxAttempts = 2;
+    @Value("${gemini.retry-delay-ms:250}") private long retryDelayMs = 250;
 
     public List<Double> embed(String text, String taskType) {
         ensureConfigured();
@@ -45,7 +47,7 @@ public class GeminiClient {
     public String generate(String systemInstruction, String prompt) {
         ensureConfigured();
         try {
-            return generateWithModel(properties.chatModel(), systemInstruction, prompt);
+            return generateWithRetry(properties.chatModel(), systemInstruction, prompt);
         } catch (IllegalStateException primaryFailure) {
             if (!StringUtils.hasText(properties.fallbackChatModel())
                     || properties.fallbackChatModel().equals(properties.chatModel())) {
@@ -53,7 +55,39 @@ public class GeminiClient {
             }
             log.warn("Gemini model {} failed; retrying with {}", properties.chatModel(),
                     properties.fallbackChatModel());
-            return generateWithModel(properties.fallbackChatModel(), systemInstruction, prompt);
+            return generateWithRetry(properties.fallbackChatModel(), systemInstruction, prompt);
+        }
+    }
+
+    private String generateWithRetry(String model, String systemInstruction, String prompt) {
+        int attempts = Math.max(1, maxAttempts);
+        for (int attempt = 1; attempt <= attempts; attempt++) {
+            try {
+                return generateWithModel(model, systemInstruction, prompt);
+            } catch (IllegalStateException failure) {
+                if (attempt >= attempts || !isTransient(failure)) throw failure;
+                log.warn("Gemini transient failure for model {}; retrying attempt {}/{}",
+                        model, attempt + 1, attempts);
+                waitBeforeRetry(attempt);
+            }
+        }
+        throw new IllegalStateException("AI provider retry exhausted");
+    }
+
+    private boolean isTransient(IllegalStateException failure) {
+        if (failure.getCause() instanceof RestClientResponseException response) {
+            int status = response.getStatusCode().value();
+            return status == 429 || status >= 500;
+        }
+        return failure.getCause() instanceof RestClientException;
+    }
+
+    private void waitBeforeRetry(int attempt) {
+        try {
+            Thread.sleep(Math.max(0, retryDelayMs) * attempt);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("AI provider retry interrupted", interrupted);
         }
     }
 
