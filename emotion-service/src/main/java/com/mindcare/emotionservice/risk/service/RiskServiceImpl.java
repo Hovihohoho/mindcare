@@ -89,6 +89,14 @@ public class RiskServiceImpl implements RiskService {
             return Optional.empty();
         }
         AssessmentResultResponse result = results.items().get(0);
+        return analyzeAssessmentResult(userId, result);
+    }
+
+    @Override
+    @Transactional
+    public Optional<RiskAlertResponse> analyzeAssessmentResult(UUID userId, AssessmentResultResponse result) {
+        ServiceValidator.requireUserId(userId);
+        OffsetDateTime now = OffsetDateTime.now(clock);
         AlertDecision decision = decisionFor(result.riskSignals());
         if (decision == null) {
             return Optional.empty();

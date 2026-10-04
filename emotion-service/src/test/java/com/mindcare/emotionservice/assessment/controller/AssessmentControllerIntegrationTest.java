@@ -72,7 +72,7 @@ class AssessmentControllerIntegrationTest {
         ));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
@@ -93,7 +93,7 @@ class AssessmentControllerIntegrationTest {
         when(assessmentService.getPublishedAssessments()).thenReturn(List.of());
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -123,7 +123,7 @@ class AssessmentControllerIntegrationTest {
                 ));
 
         mockMvc.perform(get(ENDPOINT + "/PHQ-9")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(assessmentId.toString()))
@@ -145,7 +145,7 @@ class AssessmentControllerIntegrationTest {
                 .thenThrow(new ResourceNotFoundException("Published assessment"));
 
         mockMvc.perform(get(ENDPOINT + "/WHO-5")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
@@ -154,7 +154,7 @@ class AssessmentControllerIntegrationTest {
     @Test
     void invalidAssessmentCodeReturnsMalformedRequestBeforeServiceCall() throws Exception {
         mockMvc.perform(get(ENDPOINT + "/CUSTOM")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
@@ -165,7 +165,7 @@ class AssessmentControllerIntegrationTest {
     @Test
     void nonUserRoleCannotReadPublishedAssessmentDetail() throws Exception {
         mockMvc.perform(get(ENDPOINT + "/PHQ-9")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
@@ -186,7 +186,7 @@ class AssessmentControllerIntegrationTest {
     @Test
     void nonUserRoleCannotListPublishedAssessments() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
@@ -218,7 +218,7 @@ class AssessmentControllerIntegrationTest {
         )).thenReturn(result);
 
         mockMvc.perform(post(ENDPOINT + "/PHQ-9/submissions")
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .header(USER_ROLE_HEADER, "ROLE_USER")
                         .header("Idempotency-Key", "submission-001")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -262,7 +262,7 @@ class AssessmentControllerIntegrationTest {
     @Test
     void submissionRequiresIdempotencyKey() throws Exception {
         mockMvc.perform(post(ENDPOINT + "/PHQ-9/submissions")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validSubmissionBody()))
@@ -275,7 +275,7 @@ class AssessmentControllerIntegrationTest {
     @Test
     void submissionRejectsInvalidNestedAnswerBeforeServiceCall() throws Exception {
         mockMvc.perform(post(ENDPOINT + "/PHQ-9/submissions")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER")
                         .header("Idempotency-Key", "submission-invalid")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -305,7 +305,7 @@ class AssessmentControllerIntegrationTest {
         ));
 
         mockMvc.perform(post(ENDPOINT + "/PHQ-9/submissions")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER")
                         .header("Idempotency-Key", "submission-stale")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -317,7 +317,7 @@ class AssessmentControllerIntegrationTest {
     @Test
     void nonUserRoleCannotSubmitAssessment() throws Exception {
         mockMvc.perform(post(ENDPOINT + "/PHQ-9/submissions")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .header("Idempotency-Key", "submission-admin")
                         .contentType(MediaType.APPLICATION_JSON)

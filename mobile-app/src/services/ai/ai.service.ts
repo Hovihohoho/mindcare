@@ -1,4 +1,5 @@
 import { apiRequest } from '@/services/api/api.client';
+import { createRequestId } from '@/services/api/retry-submission';
 
 export type ChatSource = { id: string; title: string; sourceUrl: string; similarity: number };
 export type ChatSafetyDirective = {
@@ -13,14 +14,10 @@ export type ConversationDetail = ConversationSummary & {
   messages: { id: string; role: 'user' | 'assistant'; content: string; sources: ChatSource[]; safetyLevel: ChatSafetyDirective['level']; createdAt: string }[];
 };
 
-function newRequestId() {
-  return globalThis.crypto?.randomUUID?.() ?? `ai-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 export const aiService = {
-  ask(token: string, question: string, conversationId?: string) {
+  ask(token: string, question: string, conversationId?: string, requestId = createRequestId()) {
     return apiRequest<AiAnswer>('/api/ai/chat', {
-      body: { question, topK: 5, conversationId, requestId: newRequestId() },
+      body: { question, topK: 5, conversationId, requestId },
       method: 'POST',
       timeout: 120_000,
       token,

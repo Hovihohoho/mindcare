@@ -66,7 +66,7 @@ class EmotionJournalControllerIntegrationTest {
                 .thenReturn(response);
 
         mockMvc.perform(post(ENDPOINT)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .header(RequestContext.CORRELATION_ID_HEADER, "journal-create-test")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -120,7 +120,7 @@ class EmotionJournalControllerIntegrationTest {
     @Test
     void createJournalWithoutEmotionTypeReturnsFieldValidationError() throws Exception {
         mockMvc.perform(post(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -139,7 +139,7 @@ class EmotionJournalControllerIntegrationTest {
     @Test
     void createJournalWithUnknownEmotionTypeReturnsMalformedRequest() throws Exception {
         mockMvc.perform(post(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -165,7 +165,7 @@ class EmotionJournalControllerIntegrationTest {
                 """.formatted(content);
 
         mockMvc.perform(post(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -192,7 +192,7 @@ class EmotionJournalControllerIntegrationTest {
         when(emotionJournalService.getJournal(userId, journalId)).thenReturn(response);
 
         mockMvc.perform(get(ENDPOINT + "/{journalId}", journalId)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .header(RequestContext.CORRELATION_ID_HEADER, "journal-detail-test"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
@@ -222,7 +222,7 @@ class EmotionJournalControllerIntegrationTest {
     @Test
     void getJournalWithMalformedIdReturnsMalformedRequest() throws Exception {
         mockMvc.perform(get(ENDPOINT + "/not-a-uuid")
-                        .header(USER_ID_HEADER, UUID.randomUUID()))
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID()))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
@@ -238,7 +238,7 @@ class EmotionJournalControllerIntegrationTest {
                 .thenThrow(new ResourceNotFoundException("Emotion journal"));
 
         mockMvc.perform(get(ENDPOINT + "/{journalId}", journalId)
-                        .header(USER_ID_HEADER, userId))
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
@@ -275,7 +275,7 @@ class EmotionJournalControllerIntegrationTest {
         )).thenReturn(page);
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .param("from", from.toString())
                         .param("to", to.toString())
                         .param("cursor", "current-cursor")
@@ -306,7 +306,7 @@ class EmotionJournalControllerIntegrationTest {
                 .thenReturn(new CursorPageResponse<>(List.of(), null, false));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .param("from", from.toString())
                         .param("to", to.toString()))
                 .andExpect(status().isOk())
@@ -320,7 +320,7 @@ class EmotionJournalControllerIntegrationTest {
     @Test
     void getJournalHistoryRejectsLimitAboveMaximumAtHttpBoundary() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .param("from", "2026-10-01T00:00:00+07:00")
                         .param("to", "2026-11-01T00:00:00+07:00")
                         .param("limit", "101"))
@@ -336,7 +336,7 @@ class EmotionJournalControllerIntegrationTest {
     @Test
     void getJournalHistoryRejectsMalformedTimestamp() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .param("from", "01-10-2026")
                         .param("to", "2026-11-01T00:00:00+07:00"))
                 .andExpect(status().isBadRequest())
@@ -358,7 +358,7 @@ class EmotionJournalControllerIntegrationTest {
                 ));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .param("from", from.toString())
                         .param("to", to.toString()))
                 .andExpect(status().isBadRequest())
@@ -374,7 +374,7 @@ class EmotionJournalControllerIntegrationTest {
         UUID journalId = UUID.randomUUID();
 
         mockMvc.perform(delete(ENDPOINT + "/{journalId}", journalId)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .header(RequestContext.CORRELATION_ID_HEADER, "journal-delete-test"))
                 .andExpect(status().isNoContent())
                 .andExpect(header().string(
@@ -395,7 +395,7 @@ class EmotionJournalControllerIntegrationTest {
                 .deleteJournal(userId, journalId);
 
         mockMvc.perform(delete(ENDPOINT + "/{journalId}", journalId)
-                        .header(USER_ID_HEADER, userId))
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("JOURNAL_DELETION_WINDOW_EXPIRED"));
@@ -412,7 +412,7 @@ class EmotionJournalControllerIntegrationTest {
                 .deleteJournal(userId, journalId);
 
         mockMvc.perform(delete(ENDPOINT + "/{journalId}", journalId)
-                        .header(USER_ID_HEADER, userId))
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
@@ -433,7 +433,7 @@ class EmotionJournalControllerIntegrationTest {
     @Test
     void deleteJournalWithMalformedIdReturnsMalformedRequest() throws Exception {
         mockMvc.perform(delete(ENDPOINT + "/not-a-uuid")
-                        .header(USER_ID_HEADER, UUID.randomUUID()))
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID()))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));

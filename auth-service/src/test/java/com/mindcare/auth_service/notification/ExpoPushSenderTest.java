@@ -15,6 +15,7 @@ import org.mockito.Mockito;
 import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,6 +66,23 @@ class ExpoPushSenderTest {
 
         assertThat(device.isEnabled()).isFalse();
         verify(repository).save(device);
+    }
+
+    @Test
+    void rejectedTicketPropagatesFailureForDurableRetry() throws Exception {
+        startServer("""
+                {"data":{"status":"error","details":{"error":"MessageRateExceeded"}}}
+                """);
+        PushDeviceRepository repository = Mockito.mock(PushDeviceRepository.class);
+        ExpoPushReceiptRepository receipts = Mockito.mock(ExpoPushReceiptRepository.class);
+        PushDevice device = PushDevice.create(UUID.randomUUID(), "installation", "ExponentPushToken[test]", "ANDROID");
+        when(repository.findByUserIdAndEnabledTrue(device.getUserId())).thenReturn(List.of(device));
+        var sender = new ExpoPushSender(repository, receipts, RestClient.builder(), true, endpoint());
+
+        assertThatThrownBy(() -> sender.send(device.getUserId(), "Title", "Body", "/emotion", "DAILY_CHECK_IN"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(device.isEnabled()).isTrue();
+        verify(receipts, never()).save(Mockito.any());
     }
 
     private AtomicReference<String> startServer(String response) throws Exception {

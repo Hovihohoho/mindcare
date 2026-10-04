@@ -17,6 +17,7 @@ import java.time.Duration;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @Component
 @RequiredArgsConstructor
@@ -31,15 +32,26 @@ public class GeminiClient {
 
     public List<Double> embed(String text, String taskType) {
         ensureConfigured();
-        Map<String, Object> body = Map.of(
+        Map<String, Object> body = new HashMap<>(Map.of(
                 "content", Map.of("parts", List.of(Map.of("text", text))),
-                "task_type", taskType,
-                "output_dimensionality", properties.embeddingDimensions());
+                "output_dimensionality", properties.embeddingDimensions()));
+        // Embedding 2 does not accept task_type. Preserve raw text for existing indexes.
+        if (!properties.embeddingModel().startsWith("gemini-embedding-2")) {
+            body.put("task_type", taskType);
+        }
         JsonNode response = post("/models/" + properties.embeddingModel() + ":embedContent", body);
         JsonNode values = response.path("embedding").path("values");
         if (!values.isArray() || values.size() != properties.embeddingDimensions()) {
             throw new IllegalStateException("Gemini trả về vector embedding không hợp lệ");
         }
+        double norm = 0;
+        for (JsonNode value : values) {
+            if (!value.isNumber() || !Double.isFinite(value.asDouble())) {
+                throw new IllegalStateException("Invalid embedding value");
+            }
+            norm += value.asDouble() * value.asDouble();
+        }
+        if (!Double.isFinite(norm) || norm == 0) throw new IllegalStateException("Invalid embedding norm");
         return objectMapper.convertValue(values,
                 objectMapper.getTypeFactory().constructCollectionType(List.class, Double.class));
     }
@@ -48,6 +60,8 @@ public class GeminiClient {
         ensureConfigured();
         try {
             return generateWithRetry(properties.chatModel(), systemInstruction, prompt);
+        } catch (GenerationRejectedException rejected) {
+            throw rejected;
         } catch (IllegalStateException primaryFailure) {
             if (!StringUtils.hasText(properties.fallbackChatModel())
                     || properties.fallbackChatModel().equals(properties.chatModel())) {
@@ -101,7 +115,20 @@ public class GeminiClient {
         log.info("ai_provider_usage model={} prompt_tokens={} output_tokens={} total_tokens={}", model,
                 usage.path("promptTokenCount").asInt(0), usage.path("candidatesTokenCount").asInt(0),
                 usage.path("totalTokenCount").asInt(0));
-        String text = response.path("candidates").path(0).path("content").path("parts").path(0).path("text").asText();
+        JsonNode candidate = response.path("candidates").path(0);
+        String finishReason = candidate.path("finishReason").asText("");
+        if (!response.path("promptFeedback").path("blockReason").asText("").isEmpty()
+                || (!finishReason.isEmpty() && !finishReason.equals("STOP") && !finishReason.equals("MAX_TOKENS"))) {
+            throw new GenerationRejectedException();
+        }
+        if (finishReason.equals("MAX_TOKENS")) throw new IllegalStateException("Incomplete Gemini response");
+        StringBuilder answer = new StringBuilder();
+        for (JsonNode part : candidate.path("content").path("parts")) {
+            if (!part.path("thought").asBoolean(false) && part.path("text").isString()) {
+                answer.append(part.path("text").asText());
+            }
+        }
+        String text = answer.toString();
         if (!StringUtils.hasText(text)) throw new IllegalStateException("Gemini không trả về nội dung");
         return text;
     }
@@ -136,5 +163,9 @@ public class GeminiClient {
         if (!StringUtils.hasText(properties.apiKey())) {
             throw new IllegalStateException("Chưa cấu hình GEMINI_API_KEY");
         }
+    }
+
+    private static final class GenerationRejectedException extends IllegalStateException {
+        private GenerationRejectedException() { super("Gemini declined generation"); }
     }
 }

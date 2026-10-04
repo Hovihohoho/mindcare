@@ -51,7 +51,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
                 """,
                 String.class
         );
-        assertThat(currentVersion).isEqualTo("13");
+        assertThat(currentVersion).isEqualTo("15");
         assertThat(flyway.info().pending()).isEmpty();
 
         List<String> tables = jdbcTemplate.queryForList(
@@ -100,7 +100,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
         );
 
         assertThat(uuidDefaults).isZero();
-        assertThat(auditDefaults).isEqualTo(2);
+        assertThat(auditDefaults).isZero();
         assertThat(invalidTimeColumns).isZero();
     }
 
@@ -233,7 +233,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
                 """);
              var result = statement.executeQuery()) {
             assertThat(result.next()).isTrue();
-        assertThat(result.getString("version")).isEqualTo("14");
+            assertThat(result.getString("version")).isEqualTo("15");
         }
     }
 }

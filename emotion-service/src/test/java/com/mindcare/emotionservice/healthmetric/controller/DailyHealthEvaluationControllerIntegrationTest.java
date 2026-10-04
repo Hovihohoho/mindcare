@@ -54,7 +54,7 @@ class DailyHealthEvaluationControllerIntegrationTest {
                 "Not a clinical diagnosis", List.of(signal)));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header("X-User-Id", userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header("X-User-Id", userId)
                         .header("X-User-Role", "ROLE_USER")
                         .param("date", date.toString())
                         .param("timezone", timezone.getId()))
@@ -81,7 +81,7 @@ class DailyHealthEvaluationControllerIntegrationTest {
         UUID userId = UUID.randomUUID();
 
         mockMvc.perform(get(ENDPOINT)
-                        .header("X-User-Id", userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header("X-User-Id", userId)
                         .header("X-User-Role", "ROLE_USER")
                         .param("timezone", "Mars/Olympus"))
                 .andExpect(status().isBadRequest())

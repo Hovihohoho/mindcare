@@ -151,7 +151,7 @@ if (-not $SkipAi) {
     Require-EnvironmentValue "GEMINI_API_KEY"
 
     if ([string]::IsNullOrWhiteSpace($env:STRESS_MODEL_ENABLED)) {
-        $env:STRESS_MODEL_ENABLED = "true"
+        $env:STRESS_MODEL_ENABLED = "false"
     }
     if ($env:STRESS_MODEL_ENABLED -notin @("true", "false")) {
         throw "STRESS_MODEL_ENABLED must be true or false."
@@ -177,7 +177,7 @@ if (-not $SkipAi) {
     }
 
     if ([string]::IsNullOrWhiteSpace($env:WELLNESS_MODEL_ENABLED)) {
-        $env:WELLNESS_MODEL_ENABLED = "true"
+        $env:WELLNESS_MODEL_ENABLED = "false"
     }
     if ($env:WELLNESS_MODEL_ENABLED -notin @("true", "false")) {
         throw "WELLNESS_MODEL_ENABLED must be true or false."

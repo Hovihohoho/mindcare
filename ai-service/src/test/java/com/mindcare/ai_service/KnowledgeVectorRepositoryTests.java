@@ -44,5 +44,13 @@ class KnowledgeVectorRepositoryTests {
         assertThat(results).isNotEmpty();
         assertThat(results.get(0).id()).isEqualTo(id);
         assertThat(results.get(0).similarity()).isGreaterThan(0.99);
+        assertThat(vectorRepository.searchLexical("Test content", 3, false))
+                .anyMatch(result -> result.id().equals(id) && result.similarity() == 0.0);
+
+        jdbcTemplate.update("UPDATE ai_schema.knowledge_documents SET review_status='DRAFT' WHERE id=?", id);
+        assertThat(vectorRepository.searchLexical("Test content", 3, false))
+                .noneMatch(result -> result.id().equals(id));
+        assertThat(vectorRepository.search("Test content", vector, 3, 0.5, false))
+                .noneMatch(result -> result.id().equals(id));
     }
 }

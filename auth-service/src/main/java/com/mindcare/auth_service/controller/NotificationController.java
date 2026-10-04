@@ -3,8 +3,6 @@ package com.mindcare.auth_service.controller;
 import com.mindcare.auth_service.dto.ApiResponse;
 import com.mindcare.auth_service.dto.NotificationDtos;
 import com.mindcare.auth_service.entity.Notification;
-import com.mindcare.auth_service.notification.NotificationSocketHub;
-import com.mindcare.auth_service.notification.ExpoPushSender;
 import com.mindcare.auth_service.repository.NotificationRepository;
 import com.mindcare.auth_service.repository.UserRepository;
 import com.mindcare.auth_service.service.AccountService;
@@ -33,8 +31,7 @@ public class NotificationController {
     private final CurrentUserService currentUser;
     private final AccountService accountService;
     private final AuditService auditService;
-    private final NotificationSocketHub notificationSocketHub;
-    private final ExpoPushSender pushSender;
+    private final com.mindcare.auth_service.notification.NotificationDeliveryService notificationDelivery;
 
     @GetMapping("/api/auth/notifications")
     public ApiResponse<List<LegacyResponse>> legacyList(Authentication auth) {
@@ -112,8 +109,9 @@ public class NotificationController {
         if (!expectedSecret.equals(suppliedSecret)) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         if (!userRepository.existsById(request.userId())) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         if (!repository.existsBySourceEventIdAndUserId(request.eventId(), request.userId())) {
-            publish(repository.save(Notification.create(request.userId(), request.eventId(), request.type(),
-                    request.title(), request.message(), request.actionUrl())));
+            notificationDelivery.enqueue(repository.save(Notification.create(
+                    request.userId(), request.eventId(), request.type(), request.title(),
+                    request.message(), request.actionUrl())), true);
         }
         return ApiResponse.success("Đã tiếp nhận thông báo", null);
     }
@@ -127,9 +125,7 @@ public class NotificationController {
     }
 
     private void publish(Notification notification) {
-        notificationSocketHub.publish(notification.getUserId(), NotificationDtos.Item.from(notification));
-        pushSender.send(notification.getUserId(), notification.getTitle(), notification.getMessage(),
-                notification.getActionUrl(), notification.getType());
+        notificationDelivery.enqueue(notification, true);
     }
 
     public record LegacyBroadcast(@NotBlank @Size(max = 160) String title,

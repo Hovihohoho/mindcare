@@ -1,6 +1,9 @@
 server:
   port: 8084
 
+app:
+  internal-secret: ${INTERNAL_SERVICE_SECRET:local-internal-secret}
+
 sleep:
   inference-url: ${SLEEP_INFERENCE_URL:http://127.0.0.1:8085}
 

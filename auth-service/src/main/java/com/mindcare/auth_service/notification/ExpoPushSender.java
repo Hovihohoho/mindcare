@@ -37,8 +37,13 @@ public class ExpoPushSender {
         this.expoUrl = expoUrl;
     }
 
+    public void send(UUID userId, String title, String body, String actionUrl) {
+        send(userId, title, body, actionUrl, null);
+    }
+
     public void send(UUID userId, String title, String body, String actionUrl, String notificationType) {
         if (!enabled) return;
+        RuntimeException failure = null;
         for (var device : devices.findByUserIdAndEnabledTrue(userId)) {
             try {
                 Map<String, Object> payload = new LinkedHashMap<>();
@@ -62,15 +67,17 @@ public class ExpoPushSender {
             } catch (RuntimeException exception) {
                 log.warn("expo_push_failed deviceId={} userId={} error={}",
                         device.getId(), userId, exception.getClass().getSimpleName());
+                failure = exception;
             }
         }
+        if (failure != null) throw failure;
     }
 
     private void handleTicket(com.mindcare.auth_service.entity.PushDevice device, JsonNode response) {
         JsonNode ticket = response == null ? null : response.path("data");
         if (ticket == null || ticket.isMissingNode()) {
             log.warn("expo_push_invalid_ticket deviceId={}", device.getId());
-            return;
+            throw new IllegalStateException("Push provider returned an invalid ticket");
         }
         if ("ok".equals(ticket.path("status").asText())) {
             String ticketId = ticket.path("id").asText();
@@ -84,7 +91,9 @@ public class ExpoPushSender {
         if ("DeviceNotRegistered".equals(error)) {
             device.disable();
             devices.save(device);
+            return;
         }
+        throw new IllegalStateException("Push provider did not accept delivery");
     }
 
     private String lockScreenBody(String notificationType, String body) {

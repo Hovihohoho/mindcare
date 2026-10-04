@@ -11,6 +11,8 @@ import java.util.UUID;
 public interface RiskService {
 
     Optional<RiskAlertResponse> analyzeRisk(UUID userId);
+    Optional<RiskAlertResponse> analyzeAssessmentResult(UUID userId,
+            com.mindcare.emotionservice.assessment.dto.AssessmentResultResponse result);
     List<RiskAlertResponse> analyzeHealthBenchmarks(UUID userId);
 
     RiskAlertResponse getAlert(UUID userId, UUID alertId);

@@ -81,7 +81,8 @@ class AssessmentServiceImplTest {
                 new AssessmentScoringPolicyRegistry(),
                 new CursorCodec(),
                 new ObjectMapper(),
-                Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC)
+                Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC),
+                org.mockito.Mockito.mock(org.springframework.context.ApplicationEventPublisher.class)
         );
     }
 

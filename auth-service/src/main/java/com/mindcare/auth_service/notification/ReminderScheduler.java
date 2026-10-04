@@ -1,10 +1,8 @@
 package com.mindcare.auth_service.notification;
 
-import com.mindcare.auth_service.dto.NotificationDtos;
 import com.mindcare.auth_service.entity.Notification;
 import com.mindcare.auth_service.repository.NotificationRepository;
 import com.mindcare.auth_service.repository.ReminderPreferenceRepository;
-import jakarta.transaction.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -16,37 +14,32 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class ReminderScheduler {
-    private final ReminderPreferenceRepository reminders;
-    private final NotificationRepository notifications;
-    private final NotificationSocketHub socketHub;
-    private final ExpoPushSender pushSender;
-    private final ReminderCompletionClient completionClient;
-
+    private final ReminderPreferenceRepository reminders; private final NotificationRepository notifications;
+    private final NotificationDeliveryService delivery; private final ReminderCompletionClient completionClient;
+    private final org.springframework.transaction.support.TransactionTemplate transactions;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Scheduled(cron = "0 * * * * *")
-    @Transactional
     public void sendDueReminders() {
         Instant now = Instant.now();
         for (var reminder : reminders.findByEnabledTrue()) {
             if (!reminder.isDue(now)) continue;
-
-            boolean checkIn = reminder.getReminderType().equals("DAILY_CHECK_IN");
-            var status = completionClient.status(reminder.getUserId(), reminder.getTimezone());
-            boolean completed = status != null
-                    && (checkIn ? status.checkedInToday() : status.selfCareCompletedToday());
-            if (completed) {
-                reminder.markSent(now.atZone(ZoneId.of(reminder.getTimezone())).toLocalDate());
-                continue;
-            }
-
-            boolean wellbeingPrompt = checkIn && status != null && status.morningCheckInRecommended();
-            Notification item = notifications.save(Notification.create(
-                    reminder.getUserId(), UUIDForReminder.of(reminder, now),
-                    wellbeingPrompt ? "MORNING_WELLBEING_PROMPT" : reminder.getReminderType(),
+            ReminderCompletionClient.Status status;
+            try { status = completionClient.status(reminder.getUserId(), reminder.getTimezone()); }
+            catch (RuntimeException unavailable) { continue; }
+            transactions.executeWithoutResult(transaction -> {
+            Boolean locked = jdbc.queryForObject("SELECT pg_try_advisory_xact_lock(hashtextextended(?, 0))", Boolean.class, "reminder:" + reminder.getId());
+            if (!Boolean.TRUE.equals(locked)) return;
+            var current = reminders.findById(reminder.getId()).orElse(null);
+            if (current == null || !current.isDue(now)) return;
+            current.markSent(now.atZone(ZoneId.of(current.getTimezone())).toLocalDate());
+            boolean checkIn = current.getReminderType().equals("DAILY_CHECK_IN");
+            if (checkIn ? status.checkedInToday() : status.selfCareCompletedToday()) return;
+            boolean wellbeingPrompt = checkIn && status.morningCheckInRecommended();
+            Notification item = notifications.save(Notification.create(current.getUserId(), UUIDForReminder.of(current, now), wellbeingPrompt ? "MORNING_WELLBEING_PROMPT" : current.getReminderType(),
                     title(checkIn, wellbeingPrompt), message(checkIn, wellbeingPrompt),
                     checkIn ? "/emotion" : "/care-plan"));
-            reminder.markSent(now.atZone(ZoneId.of(reminder.getTimezone())).toLocalDate());
-            socketHub.publish(item.getUserId(), NotificationDtos.Item.from(item));
-            pushSender.send(item.getUserId(), item.getTitle(), item.getMessage(), item.getActionUrl(), item.getType());
+            delivery.enqueue(item, true);
+            });
         }
     }
 

@@ -32,6 +32,14 @@ public class VerifiedIdentityGlobalFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getPath().value();
+        // Internal endpoints must never be exposed through the public gateway.
+        if (exchange.getRequest().getPath().elements().stream()
+                .filter(org.springframework.http.server.PathContainer.PathSegment.class::isInstance)
+                .map(org.springframework.http.server.PathContainer.PathSegment.class::cast)
+                .anyMatch(segment -> segment.valueToMatch().equalsIgnoreCase("internal"))) {
+            exchange.getResponse().setStatusCode(HttpStatus.NOT_FOUND);
+            return exchange.getResponse().setComplete();
+        }
         boolean websocketRequest = path.startsWith("/ws/");
         String websocketToken = websocketRequest
                 ? exchange.getRequest().getQueryParams().getFirst("access_token")
@@ -41,6 +49,7 @@ public class VerifiedIdentityGlobalFilter implements GlobalFilter, Ordered {
                     request.headers(headers -> {
                         headers.remove(USER_ID_HEADER);
                         headers.remove(USER_ROLE_HEADER);
+                        headers.remove("X-Internal-Secret");
                         if (websocketToken != null && !websocketToken.isBlank()) {
                             headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + websocketToken);
                         }
@@ -70,8 +79,18 @@ public class VerifiedIdentityGlobalFilter implements GlobalFilter, Ordered {
                 .header(HttpHeaders.AUTHORIZATION, authorization)
                 .retrieve()
                 .bodyToMono(AuthEnvelope.class)
+                .switchIfEmpty(Mono.error(new IdentityUnavailableException()))
+                .timeout(java.time.Duration.ofSeconds(5))
+                .onErrorResume(WebClientResponseException.Unauthorized.class,
+                        ignored -> Mono.error(new InvalidIdentityException()))
+                .onErrorResume(WebClientResponseException.Forbidden.class,
+                        ignored -> Mono.error(new InvalidIdentityException()))
+                .onErrorResume(error -> !(error instanceof InvalidIdentityException),
+                        ignored -> Mono.error(new IdentityUnavailableException()))
                 .flatMap(envelope -> {
-                    if (!envelope.success() || envelope.data() == null) {
+                    if (!envelope.success() || envelope.data() == null
+                            || envelope.data().id() == null || envelope.data().role() == null
+                            || envelope.data().role().isBlank()) {
                         return unauthorized(sanitizedExchange);
                     }
                     AuthUser user = envelope.data();
@@ -83,11 +102,9 @@ public class VerifiedIdentityGlobalFilter implements GlobalFilter, Ordered {
                             .build();
                     return chain.filter(verifiedExchange);
                 })
-                .onErrorResume(WebClientResponseException.Unauthorized.class,
+                .onErrorResume(InvalidIdentityException.class,
                         ignored -> unauthorized(sanitizedExchange))
-                .onErrorResume(WebClientResponseException.Forbidden.class,
-                        ignored -> unauthorized(sanitizedExchange))
-                .onErrorResume(WebClientResponseException.class,
+                .onErrorResume(IdentityUnavailableException.class,
                         ignored -> serviceUnavailable(sanitizedExchange));
     }
 
@@ -111,4 +128,6 @@ public class VerifiedIdentityGlobalFilter implements GlobalFilter, Ordered {
 
     private record AuthUser(UUID id, String role) {
     }
+    private static class InvalidIdentityException extends RuntimeException {}
+    private static class IdentityUnavailableException extends RuntimeException {}
 }

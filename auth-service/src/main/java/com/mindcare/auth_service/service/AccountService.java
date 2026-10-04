@@ -47,6 +47,7 @@ public class AccountService {
     private final PasswordPolicy passwordPolicy;
     private final NotificationRepository notificationRepository;
     private final BookmarkRepository bookmarkRepository;
+    private final AccountDeletionService accountDeletionService;
     private final SecureRandom random = new SecureRandom();
 
     @Value("${app.frontend-url}") private String frontendUrl;
@@ -119,15 +120,12 @@ public class AccountService {
     }
 
     @Transactional
-    public String permanentlyDelete(String email, String currentPassword) {
+    public void permanentlyDelete(String email, String currentPassword) {
         User user = current(email);
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             throw new RuntimeException("Mật khẩu hiện tại không đúng");
         }
-        String avatarUrl = user.getAvatarUrl();
-        userRepository.delete(user);
-        userRepository.flush();
-        return avatarUrl;
+        accountDeletionService.request(user);
     }
 
     public void deleteAvatarFile(String avatarUrl) {

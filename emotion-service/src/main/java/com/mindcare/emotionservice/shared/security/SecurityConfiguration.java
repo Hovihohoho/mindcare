@@ -2,6 +2,7 @@ package com.mindcare.emotionservice.shared.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mindcare.emotionservice.shared.web.CorrelationIdFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -35,11 +36,12 @@ public class SecurityConfiguration {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             GatewayAuthenticationEntryPoint authenticationEntryPoint,
-            GatewayAccessDeniedHandler accessDeniedHandler
+            GatewayAccessDeniedHandler accessDeniedHandler,
+            @Value("${app.internal-secret:}") String internalSecret
     ) throws Exception {
         CorrelationIdFilter correlationIdFilter = new CorrelationIdFilter();
         GatewayUserAuthenticationFilter gatewayUserAuthenticationFilter =
-                new GatewayUserAuthenticationFilter(authenticationEntryPoint);
+                new GatewayUserAuthenticationFilter(authenticationEntryPoint, internalSecret);
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)

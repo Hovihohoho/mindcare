@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
@@ -10,6 +10,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import { ApiClientError } from '@/services/api/api.client';
 import { assessmentService, type AssessmentDetail, type AssessmentResult } from '@/services/assessment/assessment.service';
 import { colors, fonts, radius, shadows, spacing, type } from '@/theme/tokens';
+import { createRetrySubmission } from '@/services/api/retry-submission';
 
 export default function AssessmentProcessScreen() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function AssessmentProcessScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const pending = useRef(createRetrySubmission<{ code: string; version: number; answers: { questionId: string; optionId: string }[] }>());
 
   const load = useCallback(async () => {
     if (!session?.accessToken || !code) return;
@@ -31,7 +33,7 @@ export default function AssessmentProcessScreen() {
     try {
       setAssessment(await assessmentService.detail(session.accessToken, code));
     } catch (caught) {
-      if (caught instanceof ApiClientError && [401, 403].includes(caught.status ?? 0)) void logout().catch(() => undefined);
+      if (caught instanceof ApiClientError && caught.status === 403) void logout().catch(() => undefined);
       setError(caught instanceof Error ? caught.message : 'Không thể tải bài đánh giá.');
     } finally {
       setLoading(false);
@@ -47,7 +49,9 @@ export default function AssessmentProcessScreen() {
     setError('');
     try {
       const payload = assessment.questions.map((item) => ({ questionId: item.id, optionId: answers[item.id] }));
-      setResult(await assessmentService.submit(session.accessToken, assessment.code, assessment.assessmentVersion, payload));
+      const submission = pending.current.begin({ code: assessment.code, version: assessment.assessmentVersion, answers: payload });
+      setResult(await assessmentService.submit(session.accessToken, submission.payload.code, submission.payload.version, submission.payload.answers, submission.requestId));
+      pending.current.clear();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Không thể gửi bài đánh giá.');
     } finally {
@@ -61,31 +65,7 @@ export default function AssessmentProcessScreen() {
     return <AppScreen><DataFeedback actionLabel="Thử lại" description={error || 'Bài đánh giá không tồn tại.'} kind="error" onAction={() => void load()} title="Không thể mở bài đánh giá" /></AppScreen>;
   }
 
-  if (result) {
-    return (
-      <AppScreen>
-        <FlatList
-          contentContainerStyle={styles.resultContent}
-          data={result.recommendations}
-          keyExtractor={(item, itemIndex) => `${itemIndex}-${item}`}
-          ListHeaderComponent={(
-            <View>
-              <BackButton onPress={() => router.back()} />
-              <View style={styles.resultCard}>
-                <View style={styles.resultIcon}><Ionicons color={colors.brandDark} name="checkmark-circle-outline" size={30} /></View>
-                <Text style={styles.resultEyebrow}>Kết quả {result.assessmentCode}</Text>
-                <Text style={styles.score}>{result.totalScore} điểm</Text>
-                <Text style={styles.risk}>{riskLabel(result.riskLevel)}</Text>
-                <Text style={styles.notice}>{result.screeningNotice}</Text>
-              </View>
-              <Text style={styles.recommendationTitle}>Gợi ý dành cho bạn</Text>
-            </View>
-          )}
-          renderItem={({ item }) => <View style={styles.recommendation}><Ionicons color={colors.mintInk} name="leaf-outline" size={19} /><Text style={styles.recommendationText}>{item}</Text></View>}
-        />
-      </AppScreen>
-    );
-  }
+  if (result) return <AssessmentResultView result={result} onBack={() => router.back()} />;
 
   if (!question) return null;
   const selected = answers[question.id];
@@ -121,6 +101,37 @@ export default function AssessmentProcessScreen() {
             <Text style={styles.disclaimer}>Kết quả chỉ có mục đích sàng lọc và không thay thế chẩn đoán y khoa.</Text>
           </View>
         )}
+      />
+    </AppScreen>
+  );
+}
+
+export function AssessmentResultView({ result, onBack }: { result: AssessmentResult; onBack(): void }) {
+  return (
+    <AppScreen>
+      <FlatList
+        contentContainerStyle={styles.resultContent}
+        data={result.recommendations}
+        keyExtractor={(item, itemIndex) => `${itemIndex}-${item}`}
+        ListHeaderComponent={(
+          <View>
+            <BackButton onPress={() => onBack()} />
+            <View style={styles.resultCard}>
+              <View style={styles.resultIcon}><Ionicons color={colors.brandDark} name="checkmark-circle-outline" size={30} /></View>
+              <Text style={styles.resultEyebrow}>Kết quả {result.assessmentCode}</Text>
+              <Text style={styles.score}>{result.totalScore} điểm</Text>
+              <Text style={styles.risk}>{riskLabel(result.riskLevel)}</Text>
+              <Text style={styles.notice}>{result.screeningNotice}</Text>
+              {result.riskSignals?.some((signal) => signal.type === 'SELF_HARM_ITEM') ? (
+                <Text accessibilityRole="alert" style={styles.notice}>
+                  Câu trả lời gần đây cho thấy bạn có thể cần được hỗ trợ an toàn. Nếu bạn đang có ý định tự làm hại mình hoặc không thể giữ an toàn, hãy liên hệ dịch vụ cấp cứu tại địa phương, đến khoa cấp cứu gần nhất và nhờ một người tin cậy ở bên.
+                </Text>
+              ) : null}
+            </View>
+            <Text style={styles.recommendationTitle}>Gợi ý dành cho bạn</Text>
+          </View>
+        )}
+        renderItem={({ item }) => <View style={styles.recommendation}><Ionicons color={colors.mintInk} name="leaf-outline" size={19} /><Text style={styles.recommendationText}>{item}</Text></View>}
       />
     </AppScreen>
   );

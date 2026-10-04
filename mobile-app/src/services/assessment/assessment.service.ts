@@ -1,4 +1,5 @@
 import { apiRequest } from '@/services/api/api.client';
+import { collectCursorPages } from '@/services/api/cursor-pages';
 
 export type AssessmentSummary = {
   id: string;
@@ -37,6 +38,7 @@ export type AssessmentResult = {
   totalScore: number;
   riskLevel: 'NORMAL' | 'MILD' | 'MODERATE' | 'SEVERE' | 'EXTREME';
   screeningNotice: string;
+  riskSignals: { type: string; reasonCode: string; responseValue: number | null; ruleVersion: string }[];
   recommendations: string[];
   createdAt: string;
 };
@@ -57,21 +59,21 @@ export const assessmentService = {
     return apiRequest<AssessmentDetail>(`/api/v1/assessments/${encodeURIComponent(code)}`, { token, responseType: 'raw' });
   },
   history(token: string, from: string, to: string) {
-    const params = query({ from, to, limit: 100 });
-    return apiRequest<CursorPage<AssessmentResult>>(`/api/v1/assessment-results?${params}`, { token, responseType: 'raw' });
+    return collectCursorPages((cursor) => {
+      const params = query({ from, to, limit: 100, ...(cursor ? { cursor } : {}) });
+      return apiRequest<CursorPage<AssessmentResult>>(`/api/v1/assessment-results?${params}`, { token, responseType: 'raw' });
+    });
   },
-  submit(token: string, code: string, assessmentVersion: number, answers: { questionId: string; optionId: string }[]) {
+  result(token: string, id: string) {
+    return apiRequest<AssessmentResult>(`/api/v1/assessment-results/${encodeURIComponent(id)}`, { token, responseType: 'raw' });
+  },
+  submit(token: string, code: string, assessmentVersion: number, answers: { questionId: string; optionId: string }[], idempotencyKey: string) {
     return apiRequest<AssessmentResult>(`/api/v1/assessments/${encodeURIComponent(code)}/submissions`, {
       body: { assessmentVersion, answers },
-      headers: { 'Idempotency-Key': createIdempotencyKey() },
+      headers: { 'Idempotency-Key': idempotencyKey },
       method: 'POST',
       responseType: 'raw',
       token,
     });
   },
 };
-
-function createIdempotencyKey() {
-  const cryptoApi = globalThis.crypto as Crypto | undefined;
-  return cryptoApi?.randomUUID?.() ?? `mobile-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}

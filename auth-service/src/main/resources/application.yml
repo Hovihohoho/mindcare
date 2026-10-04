@@ -13,7 +13,7 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate # Tắt tự động tạo bảng của Hibernate vì đã có Flyway
-    show-sql: true
+    show-sql: false
   flyway:
     schemas: auth_schema
     default-schema: auth_schema
@@ -34,6 +34,7 @@ security:
 
 app:
   internal-secret: ${INTERNAL_SERVICE_SECRET:local-internal-secret}
+  ai-service-url: ${AI_SERVICE_URL:http://localhost:8084}
   emotion-service-url: ${EMOTION_SERVICE_URL:http://localhost:8083}
   push:
     enabled: ${PUSH_NOTIFICATIONS_ENABLED:false}

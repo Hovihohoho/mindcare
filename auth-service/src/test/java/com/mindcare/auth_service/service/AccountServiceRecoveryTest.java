@@ -43,6 +43,7 @@ class AccountServiceRecoveryTest {
     @Mock private PasswordPolicy passwordPolicy;
     @Mock private NotificationRepository notificationRepository;
     @Mock private BookmarkRepository bookmarkRepository;
+    @Mock private AccountDeletionService accountDeletionService;
     @InjectMocks private AccountService service;
 
     private User user;
@@ -72,16 +73,16 @@ class AccountServiceRecoveryTest {
     }
 
     @Test
-    void permanentDeletionReturnsAvatarForPostCommitCleanup() {
+    void permanentDeletionQueuesErasureInsteadOfDeletingOnlyAuth() {
         user.setAvatarUrl("/api/auth/files/avatars/avatar.webp");
         when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("correct", user.getPassword())).thenReturn(true);
 
-        String avatar = service.permanentlyDelete(user.getEmail(), "correct");
+        service.permanentlyDelete(user.getEmail(), "correct");
 
-        assertThat(avatar).isEqualTo(user.getAvatarUrl());
-        verify(userRepository).delete(user);
-        verify(userRepository).flush();
+        verify(accountDeletionService).request(user);
+        verify(userRepository, never()).delete(user);
+        verify(userRepository, never()).flush();
     }
 
     @Test

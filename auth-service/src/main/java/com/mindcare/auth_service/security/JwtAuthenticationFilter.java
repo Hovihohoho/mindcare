@@ -34,11 +34,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String token = header.substring(7);
                 User user = userRepository.findByEmail(jwtUtil.extractEmail(token)).orElse(null);
                 var session = sessionRepository.findById(jwtUtil.extractSessionId(token)).orElse(null);
-                if (user != null && session != null && session.getRevokedAt() == null
+                if (user != null && session != null && session.getUser().getId().equals(user.getId()) && session.getRevokedAt() == null
                         && session.getExpiresAt().isAfter(java.time.OffsetDateTime.now())
                         && Boolean.TRUE.equals(user.getIsActive()) && jwtUtil.isTokenValid(token)) {
-                    session.setLastSeenAt(java.time.OffsetDateTime.now());
-                    sessionRepository.save(session);
+                    var now = java.time.OffsetDateTime.now();
+                    if (session.getLastSeenAt() == null || session.getLastSeenAt().isBefore(now.minusMinutes(5))) {
+                        sessionRepository.touchIfStale(session.getId(), now, now.minusMinutes(5));
+                    }
                     var authority = new SimpleGrantedAuthority(user.getRole().getName());
                     var authentication = new UsernamePasswordAuthenticationToken(
                             user.getEmail(), null, List.of(authority));

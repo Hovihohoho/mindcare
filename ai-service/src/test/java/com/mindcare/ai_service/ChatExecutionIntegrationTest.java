@@ -25,11 +25,27 @@ class ChatExecutionIntegrationTest {
     @Autowired ChatExecutionService execution;
     @Autowired AiConversationService conversations;
     @Autowired JdbcTemplate jdbc;
+    @Autowired com.mindcare.ai_service.service.AccountErasureService erasure;
     @MockitoBean RagChatService rag;
 
     @BeforeEach
     void answer() {
         when(rag.chat(any())).thenReturn(new RagChatResponse("Hello", List.of()));
+    }
+
+    @Test
+    void permanentErasureBlocksOldSocketsAndRemovesCachedResponses() {
+        UUID user = UUID.randomUUID();
+        var request = request(UUID.randomUUID(), "Hello");
+        execution.chat(user, request);
+        erasure.erase(user);
+        erasure.erase(user);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM ai_schema.ai_conversations WHERE user_id=?", Integer.class, user)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM ai_schema.ai_chat_requests WHERE user_id=?", Integer.class, user)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM ai_schema.ai_chat_rate_limits WHERE user_id=?", Integer.class, user)).isZero();
+        assertThatThrownBy(() -> execution.chat(user, request))
+                .isInstanceOf(ChatRequestException.class)
+                .satisfies(error -> assertThat(((ChatRequestException) error).status()).isEqualTo(org.springframework.http.HttpStatus.GONE));
     }
 
     @Test
