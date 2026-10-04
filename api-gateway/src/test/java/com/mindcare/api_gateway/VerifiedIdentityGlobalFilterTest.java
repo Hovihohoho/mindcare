@@ -17,6 +17,26 @@ import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
 
 class VerifiedIdentityGlobalFilterTest {
+    @Test
+    void blocksInternalRoutesIncludingEncodedSegments() {
+        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:1");
+        for (String path : java.util.List.of("/api/auth/internal/notifications", "/api/ai/internal/privacy/123",
+                "/api/auth/%69nternal/notifications", "/api/auth/internal;ignored=x/notifications")) {
+            var exchange = MockServerWebExchange.from(MockServerHttpRequest.method(
+                    org.springframework.http.HttpMethod.POST, java.net.URI.create(path)).build());
+            filter.filter(exchange, ignored -> { throw new AssertionError("Internal route was forwarded"); }).block();
+            assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @Test
+    void unavailableAuthReturns503InsteadOfUnboundedWaitOr500() {
+        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:1");
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/assessments")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer token").build());
+        filter.filter(exchange, ignored -> { throw new AssertionError("Unverified identity was forwarded"); }).block();
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
 
     private HttpServer server;
 
@@ -31,6 +51,7 @@ class VerifiedIdentityGlobalFilterTest {
         var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/assessments")
                 .header("X-User-Id", UUID.randomUUID().toString())
                 .header("X-User-Role", "ROLE_ADMIN")
+                .header("X-Internal-Secret", "client-supplied-secret")
                 .build());
         AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
 
@@ -42,6 +63,34 @@ class VerifiedIdentityGlobalFilterTest {
         assertThat(forwarded.get()).isNotNull();
         assertThat(forwarded.get().getRequest().getHeaders().getFirst("X-User-Id")).isNull();
         assertThat(forwarded.get().getRequest().getHeaders().getFirst("X-User-Role")).isNull();
+        assertThat(forwarded.get().getRequest().getHeaders().getFirst("X-Internal-Secret")).isNull();
+    }
+
+    @Test
+    void rejectsIncompleteIdentityWithoutForwardingOrReturning500() throws Exception {
+        assertInvalidAuthResponse("{\"success\":true,\"data\":{\"role\":\"ROLE_USER\"}}", HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void returns503WhenAuthResponseHasNoBody() throws Exception {
+        assertInvalidAuthResponse("", HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    private void assertInvalidAuthResponse(String payload, HttpStatus expectedStatus) throws Exception {
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/api/auth/me", request -> {
+            byte[] body = payload.getBytes(StandardCharsets.UTF_8);
+            request.getResponseHeaders().set(HttpHeaders.CONTENT_TYPE, "application/json");
+            request.sendResponseHeaders(200, body.length == 0 ? -1 : body.length);
+            if (body.length > 0) request.getResponseBody().write(body);
+            request.close();
+        });
+        server.start();
+        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:" + server.getAddress().getPort());
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/assessments")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer token").build());
+        filter.filter(exchange, ignored -> { throw new AssertionError("Invalid identity was forwarded"); }).block();
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(expectedStatus);
     }
 
     @Test

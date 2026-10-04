@@ -31,7 +31,7 @@ export function useEmotionCalendar(month: Date, selectedDate: Date) {
   const [dayError, setDayError] = useState('');
 
   const handleError = useCallback((caught: unknown, fallback: string) => {
-    if (caught instanceof ApiClientError && [401, 403].includes(caught.status ?? 0)) {
+    if (caught instanceof ApiClientError && caught.status === 403) {
       void logout().catch(() => undefined);
     }
     return caught instanceof Error ? caught.message : fallback;
@@ -55,7 +55,7 @@ export function useEmotionCalendar(month: Date, selectedDate: Date) {
     if (showLoading) setDayLoading(true);
     setDayError('');
     try {
-      const history = await emotionService.history(token, dayDates.from, dayDates.to, 100);
+      const history = await emotionService.historyAll(token, dayDates.from, dayDates.to, 100);
       setEntries(history.items);
     } catch (caught) {
       setDayError(handleError(caught, 'Không thể tải nhật ký của ngày đã chọn.'));

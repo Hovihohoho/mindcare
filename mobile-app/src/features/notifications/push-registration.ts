@@ -15,8 +15,12 @@ export function canUsePushNotifications() {
   return Platform.OS !== 'web' && Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
 }
 
+export function canUseLocalNotifications() {
+  return Platform.OS !== 'web';
+}
+
 export async function loadNotifications() {
-  if (!canUsePushNotifications()) throw new Error('PUSH_REQUIRES_DEVELOPMENT_BUILD');
+  if (!canUseLocalNotifications()) throw new Error('NOTIFICATIONS_UNAVAILABLE');
   notificationsPromise ??= import('expo-notifications')
     .then((Notifications) => {
       Notifications.setNotificationHandler({
@@ -32,8 +36,23 @@ export async function loadNotifications() {
 }
 
 export async function ensurePushRegistered(token: string) {
+  if (!canUsePushNotifications()) throw new Error('PUSH_REQUIRES_DEVELOPMENT_BUILD');
   const Notifications = await loadNotifications();
-  if (Platform.OS === 'android') await Notifications.setNotificationChannelAsync('reminders', { name: 'Nhắc nhở', importance: Notifications.AndroidImportance.DEFAULT });
+  if (Platform.OS === 'android') {
+    await Promise.all([
+      Notifications.setNotificationChannelAsync('reminders', {
+        name: 'Nhắc nhở',
+        importance: Notifications.AndroidImportance.DEFAULT,
+      }),
+      Notifications.setNotificationChannelAsync('stress-insights', {
+        name: 'Cảnh báo sức khỏe',
+        description: 'Cảnh báo PMData mức 4–5 và tín hiệu sức khỏe theo benchmark.',
+        importance: Notifications.AndroidImportance.HIGH,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        vibrationPattern: [0, 250, 150, 250],
+      }),
+    ]);
+  }
   let permission = await Notifications.getPermissionsAsync();
   if (permission.status !== 'granted') permission = await Notifications.requestPermissionsAsync();
   if (permission.status !== 'granted') throw new Error('PUSH_PERMISSION_DENIED');

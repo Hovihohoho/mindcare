@@ -337,19 +337,34 @@ public class HealthBenchmarkServiceImpl implements HealthBenchmarkService {
 
     private HealthBenchmarkEvaluation restingHeartRate(HealthBenchmarkSnapshot snapshot) {
         var values = snapshot.restingHeartRates().stream().map(HealthBenchmarkSnapshot.Observation::value).toList();
-        if (values.size() < 2) return insufficient("AHA_RESTING_HEART_RATE_V1", "HEART_RATE", "bpm", values.size(), AHA_HEART_RATE_URL,
-                "American Heart Association – All About Heart Rate", null);
-        var abnormal = values.stream().filter(value -> value.compareTo(BigDecimal.valueOf(60)) < 0
-                || value.compareTo(BigDecimal.valueOf(100)) > 0).toList();
+        if (values.size() < 2) return heartRateEvaluation("INSUFFICIENT_DATA", "INSUFFICIENT_DATA", null,
+                values.size(), "Cần ít nhất 2 phép đo nhịp tim được đánh dấu là lúc nghỉ.");
+        var low = values.stream().filter(value -> value.compareTo(BigDecimal.valueOf(60)) < 0).toList();
+        var high = values.stream().filter(value -> value.compareTo(BigDecimal.valueOf(100)) > 0).toList();
         BigDecimal latest = values.get(values.size() - 1);
-        if (abnormal.size() >= 2) {
-            return evaluation("AHA_RESTING_HEART_RATE_V1", "HEART_RATE", "RECHECK_RECOMMENDED",
-                    "RESTING_HEART_RATE_OUTSIDE_60_100_REPEATED", latest, "bpm", values.size(),
-                    "Có ít nhất 2 phép đo được đánh dấu là lúc nghỉ nằm ngoài khoảng 60–100 bpm. Hãy đo lại khi bình tĩnh và xem xét triệu chứng; vận động viên, thuốc và bệnh nền có thể làm thay đổi nhịp tim.",
-                    "American Heart Association – All About Heart Rate", AHA_HEART_RATE_URL, null);
+        if (low.size() >= 2 && latest.compareTo(BigDecimal.valueOf(60)) < 0) {
+            return heartRateEvaluation("RECHECK_RECOMMENDED", "RESTING_HEART_RATE_BELOW_60_REPEATED",
+                    latest, values.size(),
+                    "Có ít nhất 2 phép đo nhịp tim lúc nghỉ dưới 60 bpm và phép đo mới nhất vẫn thấp. Hãy đo lại khi bình tĩnh và xem xét triệu chứng; mức dưới 60 không phải lúc nào cũng là vấn đề, đặc biệt ở vận động viên hoặc người dùng một số thuốc."
+                    );
         }
-        return within("AHA_RESTING_HEART_RATE_V1", "HEART_RATE", latest, "bpm", values.size(), AHA_HEART_RATE_URL,
-                "American Heart Association – All About Heart Rate", null);
+        if (high.size() >= 2 && latest.compareTo(BigDecimal.valueOf(100)) > 0) {
+            return heartRateEvaluation("RECHECK_RECOMMENDED", "RESTING_HEART_RATE_ABOVE_100_REPEATED",
+                    latest, values.size(),
+                    "Có ít nhất 2 phép đo nhịp tim lúc nghỉ trên 100 bpm và phép đo mới nhất vẫn cao. Hãy đo lại khi bình tĩnh, xem xét triệu chứng và liên hệ cơ sở y tế nếu lo ngại."
+                    );
+        }
+        return heartRateEvaluation("WITHIN_BENCHMARK", "WITHIN_BENCHMARK", latest, values.size(),
+                "Chưa chạm ngưỡng cảnh báo của policy hiện hành.");
+    }
+
+    private HealthBenchmarkEvaluation heartRateEvaluation(
+            String status, String reason, BigDecimal value, int sampleCount, String message
+    ) {
+        return new HealthBenchmarkEvaluation(
+                "AHA_RESTING_HEART_RATE_V2", "2.0", "HEART_RATE", status, reason,
+                value, "bpm", sampleCount, 7, message,
+                "American Heart Association – All About Heart Rate", AHA_HEART_RATE_URL, null);
     }
 
     private HealthBenchmarkEvaluation oxygenSaturation(HealthBenchmarkSnapshot snapshot) {

@@ -24,6 +24,7 @@ class AiPrivacySecurityTest {
     void authenticatedUsersCanExportAndDeleteOnlyTheirOwnData() throws Exception {
         try (var context = new AnnotationConfigWebApplicationContext()) {
             context.setServletContext(new MockServletContext());
+            org.springframework.test.context.support.TestPropertySourceUtils.addInlinedPropertiesToEnvironment(context, "app.internal-secret=mindcare-test-internal-secret-32-characters");
             context.register(Config.class);
             context.refresh();
             var mvc = MockMvcBuilders.webAppContextSetup(context)
@@ -33,11 +34,11 @@ class AiPrivacySecurityTest {
             when(service.exportAll(user)).thenReturn(List.of());
             mvc.perform(get("/api/ai/privacy/export")).andExpect(status().isUnauthorized());
             mvc.perform(delete("/api/ai/privacy/data")).andExpect(status().isUnauthorized());
-            mvc.perform(get("/api/ai/privacy/export").header("X-User-Id", user.toString()))
+            mvc.perform(get("/api/ai/privacy/export").header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header("X-User-Id", user.toString()))
                     .andExpect(status().isUnauthorized());
-            mvc.perform(get("/api/ai/privacy/export").header("X-User-Id", user.toString())
+            mvc.perform(get("/api/ai/privacy/export").header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header("X-User-Id", user.toString())
                     .header("X-User-Role", "ROLE_USER")).andExpect(status().isOk());
-            mvc.perform(delete("/api/ai/privacy/data").header("X-User-Id", user.toString())
+            mvc.perform(delete("/api/ai/privacy/data").header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header("X-User-Id", user.toString())
                     .header("X-User-Role", "ROLE_USER")).andExpect(status().isOk());
             verify(service).exportAll(user);
             verify(service).deleteAll(user);

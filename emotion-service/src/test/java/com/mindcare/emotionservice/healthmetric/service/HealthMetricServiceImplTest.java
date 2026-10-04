@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -49,6 +50,8 @@ class HealthMetricServiceImplTest {
     private HealthSourceConsentRepository consentRepository;
     @Mock
     private HealthMetricMapper mapper;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private HealthMetricServiceImpl service;
 
@@ -61,7 +64,8 @@ class HealthMetricServiceImplTest {
                 mapper,
                 new CursorCodec(),
                 new ObjectMapper().findAndRegisterModules(),
-                Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC)
+                Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC),
+                eventPublisher
         );
         org.mockito.Mockito.lenient().when(consentRepository.findByUserIdAndSourceType(any(), anyString()))
                 .thenReturn(Optional.empty());
@@ -97,6 +101,7 @@ class HealthMetricServiceImplTest {
         verify(repository).saveAllAndFlush(captor.capture());
         assertEquals(new BigDecimal("2.00"), captor.getValue().get(0).getMetricValue());
         assertEquals("h", captor.getValue().get(0).getUnit());
+        verify(eventPublisher).publishEvent(any(com.mindcare.emotionservice.healthmetric.event.HealthMetricsSynchronizedEvent.class));
     }
 
     @Test

@@ -19,7 +19,7 @@ export function useAuthenticatedList<T>(request: (token: string) => Promise<T[]>
     try {
       setData(await request(token));
     } catch (caught) {
-      if (caught instanceof ApiClientError && [401, 403].includes(caught.status ?? 0)) {
+      if (caught instanceof ApiClientError && caught.status === 403) {
         void logout().catch(() => undefined);
       }
       setError(caught instanceof Error ? caught.message : 'Không thể tải dữ liệu.');

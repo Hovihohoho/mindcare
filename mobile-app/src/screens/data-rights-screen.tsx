@@ -36,11 +36,9 @@ export default function DataRightsScreen() {
     if (!session?.accessToken) return;
     setAction('delete');
     try {
-      await authService.verifyPassword(session.accessToken, password);
-      await privacyService.deleteEmotionData(session.accessToken);
-      await privacyService.deleteAiData(session.accessToken);
       await authService.permanentlyDelete(session.accessToken, password);
       await logout().catch(() => undefined);
+      Alert.alert('Đã tiếp nhận yêu cầu', 'Tài khoản đã khóa. Hệ thống sẽ tiếp tục xóa dữ liệu, kể cả khi bạn đóng ứng dụng.');
       router.replace('/(auth)/login');
     } catch (error) {
       Alert.alert('Chưa thể hoàn tất', error instanceof Error ? error.message : 'Bạn có thể thử lại an toàn.');

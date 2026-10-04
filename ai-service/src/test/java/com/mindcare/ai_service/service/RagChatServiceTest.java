@@ -13,6 +13,71 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class RagChatServiceTest {
+    @Test void consecutiveFollowUpsKeepTopicAndSkipGreetings() {
+        var embeddings = mock(EmbeddingService.class);
+        var gemini = mock(GeminiClient.class);
+        var history = List.of(new RagChatRequest.ConversationMessage("user", "Tôi khó ngủ"),
+                new RagChatRequest.ConversationMessage("assistant", "Unsupported claim"),
+                new RagChatRequest.ConversationMessage("user", "Vậy làm sao?"),
+                new RagChatRequest.ConversationMessage("user", "Cảm ơn"));
+        configuredService(embeddings, gemini).chat(new RagChatRequest("Nói thêm đi", 5, history));
+        verify(embeddings).search("Tôi khó ngủ\nVậy làm sao?\nNói thêm đi", 5, 0.35, false);
+    }
+
+    @Test void childQuestionDoesNotInheritUnrelatedTopic() {
+        var embeddings = mock(EmbeddingService.class);
+        configuredService(embeddings, mock(GeminiClient.class)).chat(new RagChatRequest("Con tôi khó ngủ", 5,
+                List.of(new RagChatRequest.ConversationMessage("user", "Áp lực công việc"))));
+        verify(embeddings).search("Con tôi khó ngủ", 5, 0.35, false);
+    }
+
+    @Test void followUpStopsAtLatestIndependentTopic() {
+        var embeddings = mock(EmbeddingService.class);
+        configuredService(embeddings, mock(GeminiClient.class)).chat(new RagChatRequest("Tell me more", 5,
+                List.of(new RagChatRequest.ConversationMessage("user", "Tôi khó ngủ"),
+                        new RagChatRequest.ConversationMessage("user", "Áp lực công việc"))));
+        verify(embeddings).search("Áp lực công việc\nTell me more", 5, 0.35, false);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "Nhận định [Nguồn 1] nhưng thêm [Nguồn 99",
+            "Nhận định [Nguồn 1] và [nguồn 99]",
+            "Nhận định [Nguồn 1] và [Nguon 99]",
+            "Nhận định [Nguồn 1] và [ Nguồn 99]"
+    })
+    void malformedCitationCannotHideBesideValidCitation(String answer) {
+        var embeddings = mock(EmbeddingService.class);
+        var gemini = mock(GeminiClient.class);
+        when(embeddings.search("Stress", 5, 0.35, false)).thenReturn(List.of(
+                new SimilarityResult(UUID.randomUUID(), UUID.randomUUID(), 0, "Stress", "Support",
+                        "https://www.who.int/", 0.8)));
+        when(gemini.generate(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(answer);
+        var response = configuredService(embeddings, gemini).chat(new RagChatRequest("Stress", 5));
+        assertThat(response.sources()).isEmpty();
+        assertThat(response.answer()).contains("chưa thể");
+        verify(gemini, org.mockito.Mockito.times(2)).generate(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test void followUpRetrievesUsingPreviousUserQuestionWithoutAssistantClaims() {
+        var embeddings = mock(EmbeddingService.class);
+        var gemini = mock(GeminiClient.class);
+        var history = List.of(new RagChatRequest.ConversationMessage("user", "Tôi khó ngủ"),
+                new RagChatRequest.ConversationMessage("assistant", "Unverified diagnosis [Nguồn 99]"));
+        configuredService(embeddings, gemini).chat(new RagChatRequest("Vậy làm sao?", 5, history));
+        verify(embeddings).search("Tôi khó ngủ\nVậy làm sao?", 5, 0.35, false);
+    }
+
+    @Test void independentQuestionDoesNotInheritPreviousTopic() {
+        var embeddings = mock(EmbeddingService.class);
+        var gemini = mock(GeminiClient.class);
+        configuredService(embeddings, gemini).chat(new RagChatRequest("Stress là gì?", 5,
+                List.of(new RagChatRequest.ConversationMessage("user", "Tôi khó ngủ"))));
+        verify(embeddings).search("Stress là gì?", 5, 0.35, false);
+    }
+
     @Test
     void insomniaDoesNotRetrieveSafetyDocumentsOrTriggerCrisisPrompt() {
         EmbeddingService embeddings = mock(EmbeddingService.class);

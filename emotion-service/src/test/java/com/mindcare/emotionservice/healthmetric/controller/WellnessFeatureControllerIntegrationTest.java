@@ -46,7 +46,7 @@ class WellnessFeatureControllerIntegrationTest {
                 WellnessFeatureService.FEATURE_NAMES, features, 1));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header("X-User-Id", userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header("X-User-Id", userId)
                         .header("X-User-Role", "ROLE_USER")
                         .param("date", date.toString())
                         .param("timezone", timezone.getId()))

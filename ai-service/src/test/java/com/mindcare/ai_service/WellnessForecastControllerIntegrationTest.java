@@ -55,7 +55,7 @@ class WellnessForecastControllerIntegrationTest {
                 new WellnessModelRuntime.Prediction(410, 7_200, 68.4, "lifesnaps-v1"));
 
         mockMvc.perform(post("/api/ai/wellness-forecasts")
-                        .header("X-User-Id", UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header("X-User-Id", UUID.randomUUID())
                         .header("X-User-Role", "ROLE_USER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(request)))

@@ -13,7 +13,7 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate # Tắt tự động tạo bảng của Hibernate vì đã có Flyway
-    show-sql: true
+    show-sql: false
   flyway:
     schemas: auth_schema
     default-schema: auth_schema
@@ -34,9 +34,13 @@ security:
 
 app:
   internal-secret: ${INTERNAL_SERVICE_SECRET:local-internal-secret}
+  ai-service-url: ${AI_SERVICE_URL:http://localhost:8084}
   emotion-service-url: ${EMOTION_SERVICE_URL:http://localhost:8083}
   push:
     enabled: ${PUSH_NOTIFICATIONS_ENABLED:false}
+    expo-url: ${EXPO_PUSH_URL:https://exp.host/--/api/v2/push/send}
+    expo-receipts-url: ${EXPO_PUSH_RECEIPTS_URL:https://exp.host/--/api/v2/push/getReceipts}
+    receipt-poll-ms: ${EXPO_PUSH_RECEIPT_POLL_MS:300000}
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   mail-from: ${MAIL_FROM:no-reply@mindcare.local}
   verification-expiration-minutes: 30

@@ -69,7 +69,8 @@ public class EmotionJournalServiceImpl implements EmotionJournalService {
                 normalizeContent(request.content()),
                 request.energyLevel(),
                 request.stressLevel(),
-                request.sleepQuality()
+                request.sleepQuality(),
+                request.source()
         );
         return mapper.toResponse(repository.saveAndFlush(entity));
     }

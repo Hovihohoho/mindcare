@@ -1,12 +1,25 @@
 # Cảnh báo benchmark từ smartwatch
 
-## Policy v1
+## Phân loại mức thông báo
+
+| Nguồn | Điều kiện | Mức hệ thống | Push |
+|---|---|---|---|
+| PMData | Điểm 1–2 | `INFORMATIONAL` | Không |
+| PMData | Điểm 3 | `MONITOR` | Không |
+| PMData | Điểm 4 | `ELEVATED` | Có |
+| PMData | Điểm 5 | `HIGH` | Có |
+| Benchmark giấc ngủ/bước chân | Policy bị kích hoạt | `WELLNESS` | Có, ưu tiên thấp hơn PMData 4–5 |
+| Benchmark nhịp tim nghỉ | Policy bị kích hoạt | `CHECK` | Có, khuyến nghị đo lại và xem xét triệu chứng |
+
+Mọi kết quả PMData được lưu tại `pmdata_stress_predictions`. Điểm 1–3 vẫn có lịch sử nhưng không làm phiền người dùng. Điểm 4–5 không tạo push tức thì: vào giờ `DAILY_CHECK_IN` do người dùng chọn, hệ thống chỉ mời người dùng tự check-in nếu có ba ngày liên tiếp kết thúc ở hôm qua đều ở mức 4–5. Ngày thiếu hoặc cửa sổ có điểm thấp hơn không kích hoạt lời mời theo insight. PMData là ước lượng từ wearable, không phải thang chẩn đoán lâm sàng.
+
+## Các policy hiện hành
 
 | Policy | Điều kiện tạo cảnh báo | Nguồn |
 |---|---|---|
 | `SLEEP_DURATION_CDC_ADULT_V1` | Có dữ liệu ít nhất 4/7 ngày và ít nhất 3 ngày ngủ dưới 7 giờ; chỉ áp dụng ngôn ngữ hỗ trợ cho người lớn 18–60 | https://www.cdc.gov/sleep/about/index.html |
 | `STEP_DEFINED_ACTIVITY_2013_V1` | Có dữ liệu ít nhất 4/7 ngày và trung bình các ngày có dữ liệu dưới 5.000 bước/ngày | https://pubmed.ncbi.nlm.nih.gov/23438219/ |
-| `AHA_RESTING_HEART_RATE_V1` | Ít nhất 2 mẫu có `details.measurementContext=RESTING` nằm ngoài 60–100 bpm | https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse |
+| `AHA_RESTING_HEART_RATE_V2` | Ít nhất 2 mẫu có `details.measurementContext=RESTING` cùng thấp hơn 60 hoặc cùng cao hơn 100 bpm, và mẫu mới nhất vẫn ở cùng phía ngưỡng | https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse |
 | `FDA_SPO2_TYPICAL_RANGE_V1` | Ít nhất 2 mẫu dưới 95% và mẫu mới nhất cũng dưới 95% | https://www.fda.gov/consumers/consumer-updates/pulse-oximeter-basics |
 
 ## Guardrail
@@ -15,13 +28,17 @@
 - Không đánh giá nhịp tim hoạt động như nhịp tim lúc nghỉ.
 - SpO₂ và nhịp tim cần phép đo lặp lại; thông báo yêu cầu xem xét triệu chứng và đo lại, không chẩn đoán.
 - Đồng hồ/thiết bị wellness có giới hạn độ chính xác. SpO₂ 95–100% chỉ là khoảng điển hình FDA nêu cho đa số người khỏe mạnh, không phải ngưỡng cấp cứu tự động.
-- Mobile gọi `/api/v1/risk-alerts/analyze-health` sau mỗi lần đồng bộ; cooldown là 7 ngày cho ngủ/bước chân và 24 giờ cho nhịp tim/SpO₂.
+- Sau khi một batch health metric có thay đổi được commit, backend tự chạy các policy và tạo notification intent; mobile không phải gọi API phân tích. Cooldown là 7 ngày cho ngủ/bước chân và 24 giờ cho nhịp tim/SpO₂.
 - Alert lưu policy key/version/source, observed value/unit và plan template được đề xuất để audit.
 
 ## API
 
 - `GET /api/v1/health-metrics/benchmark-evaluations`: trả kết quả của cả bốn policy, kể cả đủ chuẩn và thiếu dữ liệu.
 - `POST /api/v1/risk-alerts/analyze-health`: lưu các cảnh báo mới sau khi áp dụng cooldown.
+
+Endpoint POST vẫn được giữ cho kiểm thử/vận hành thủ công. Luồng production thông thường được kích hoạt tự động bởi sự kiện nội bộ sau commit của `POST /api/v1/health-metrics/sync`. Alert mới được gửi sang notification capability bằng internal REST có `eventId = alertId`; notification capability chống trùng, lưu vào trung tâm thông báo, phát WebSocket và gửi Expo push nếu push được bật.
+
+PMData được lưu qua `POST /api/v1/health-metrics/stress-predictions`; có thể đọc bản ghi gần nhất bằng `GET /api/v1/health-metrics/stress-predictions/latest`. Khi cửa sổ ba ngày đủ điều kiện, backend dùng reminder hiện có để gửi một lời hỏi thăm trung tính dẫn đến `/emotion`; nội dung không chứa điểm dự báo hay kết luận người dùng đang căng thẳng. Mobile không tự tạo local notification cho kết quả PMData, nhờ đó không có thông báo trùng.
 
 ## Đánh giá ngày vừa qua: `daily-wellness-v2.0`
 

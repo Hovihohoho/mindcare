@@ -23,6 +23,13 @@ export class ApiClientError extends Error {
   }
 }
 
+const unauthorizedListeners = new Set<(token: string) => void>();
+
+export function onUnauthorized(listener: (token: string) => void) {
+  unauthorizedListeners.add(listener);
+  return () => { unauthorizedListeners.delete(listener); };
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), options.timeout ?? 12_000);
@@ -39,6 +46,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: controller.signal,
     });
+    if (response.status === 401 && options.token) {
+      unauthorizedListeners.forEach((listener) => listener(options.token!));
+    }
     const payload = await response.json().catch(() => null) as ApiEnvelope<T> | T | { message?: string; detail?: string } | null;
 
     if (options.responseType === 'raw') {

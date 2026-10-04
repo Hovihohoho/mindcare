@@ -147,13 +147,13 @@ public class AuthController {
     }
 
     @DeleteMapping("/me/permanent")
+    @ResponseStatus(org.springframework.http.HttpStatus.ACCEPTED)
     public ApiResponse<Void> permanentlyDelete(
             Authentication authentication,
             @Valid @RequestBody AccountRequests.ConfirmPassword request) {
-        String avatarUrl = accountService.permanentlyDelete(
+        accountService.permanentlyDelete(
                 authentication.getName(), request.currentPassword());
-        accountService.deleteAvatarFile(avatarUrl);
-        return ApiResponse.success("Tài khoản đã được xóa vĩnh viễn", null);
+        return ApiResponse.success("Đã tiếp nhận yêu cầu xóa. Tài khoản đã khóa; hệ thống sẽ hoàn tất việc xóa dữ liệu.", null);
     }
 
 }

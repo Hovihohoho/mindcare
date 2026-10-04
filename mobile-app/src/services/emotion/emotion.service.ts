@@ -1,5 +1,6 @@
 import { apiRequest } from '@/services/api/api.client';
-import type { CursorPage, EmotionJournal, EmotionLevel, EmotionTrendPoint } from '@/features/emotion/emotion.types';
+import type { CursorPage, EmotionJournal, EmotionLevel, EmotionTrendPoint, JournalEntrySource } from '@/features/emotion/emotion.types';
+import { collectCursorPages } from '@/services/api/cursor-pages';
 
 function query(params: Record<string, string | number | undefined>) {
   const search = new URLSearchParams();
@@ -10,7 +11,10 @@ function query(params: Record<string, string | number | undefined>) {
 }
 
 export const emotionService = {
-  create(token: string, payload: { emotionType: EmotionLevel; content: string }) {
+  detail(token: string, id: string) {
+    return apiRequest<EmotionJournal>(`/api/v1/emotion-journals/${encodeURIComponent(id)}`, { token, responseType: 'raw' });
+  },
+  create(token: string, payload: { emotionType: EmotionLevel; content: string; source?: JournalEntrySource }) {
     return apiRequest<EmotionJournal>('/api/v1/emotion-journals', { method: 'POST', body: payload, token, responseType: 'raw' });
   },
 
@@ -22,5 +26,8 @@ export const emotionService = {
   trends(token: string, from: string, to: string) {
     const params = query({ from, to, bucket: 'DAY', timezone: 'Asia/Ho_Chi_Minh' });
     return apiRequest<EmotionTrendPoint[]>(`/api/v1/emotion-trends?${params}`, { token, responseType: 'raw' });
+  },
+  historyAll(token: string, from: string, to: string, limit = 100) {
+    return collectCursorPages((cursor) => emotionService.history(token, from, to, limit, cursor));
   },
 };

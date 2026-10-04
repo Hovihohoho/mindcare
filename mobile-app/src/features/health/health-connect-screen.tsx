@@ -59,6 +59,17 @@ function numberOrDash(value?: number) {
   return value === undefined ? '—' : Math.round(value).toLocaleString('vi-VN');
 }
 
+function stressLevelCopy(level: 'BELOW_NORMAL' | 'NORMAL' | 'ABOVE_NORMAL') {
+  if (level === 'ABOVE_NORMAL') return 'Cao hơn mức bình thường của thang PMData';
+  if (level === 'BELOW_NORMAL') return 'Thấp hơn mức bình thường của thang PMData';
+  return 'Mức bình thường của thang PMData';
+}
+
+function formatEvaluationDate(value: string) {
+  const [year, month, day] = value.split('-');
+  return `${day}/${month}/${year}`;
+}
+
 export default function HealthConnectScreen() {
   const health = useHealthConnect();
   const status = statusCopy[health.connectionStatus];
@@ -163,6 +174,24 @@ export default function HealthConnectScreen() {
 
           {connected ? (
             <>
+              {health.stressPrediction ? (
+                <View style={[styles.section, styles.stressSection]}>
+                  <View style={styles.stressHeading}>
+                    <View style={styles.stressIcon}>
+                      <Ionicons color={colors.brandDark} name="pulse-outline" size={22} />
+                    </View>
+                    <View style={styles.stressHeadingBody}>
+                      <Text style={styles.stressEyebrow}>Ước lượng từ PMData</Text>
+                      <Text style={styles.stressTitle}>Điểm stress {health.stressPrediction.stressScore}/5</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.stressLevel}>{stressLevelCopy(health.stressPrediction.relativeLevel)}</Text>
+                  <Text style={styles.stressMeta}>
+                    Dữ liệu ngày {formatEvaluationDate(health.stressPrediction.featureDate)} · Độ tin cậy {Math.round(health.stressPrediction.confidence * 100)}%
+                  </Text>
+                  <Text style={styles.stressNotice}>Kết quả chỉ hỗ trợ tự theo dõi và không phải chẩn đoán y khoa.</Text>
+                </View>
+              ) : null}
               <View style={styles.section}>
                 <SectionHeader title="Hôm nay" />
                 <View style={styles.metricsGrid}>
@@ -212,6 +241,7 @@ export default function HealthConnectScreen() {
                 <Text style={styles.resultText}>{health.syncResult.acceptedCount} mới · {health.syncResult.updatedCount} cập nhật · {health.syncResult.duplicateCount} không đổi</Text>
                 {health.syncResult.invalidSkippedCount > 0 ? <Text style={styles.resultText}>{health.syncResult.invalidSkippedCount} bản ghi không hợp lệ đã được bỏ qua.</Text> : null}
                 {health.syncResult.alerts.map((alert) => <Text key={alert.id} style={styles.resultText}>⚠ {alert.triggerReason}</Text>)}
+                {health.syncResult.stressPredictionError ? <Text style={styles.resultText}>⚠ {health.syncResult.stressPredictionError}</Text> : null}
               </View>
             </View>
           ) : null}
@@ -221,7 +251,7 @@ export default function HealthConnectScreen() {
               <SectionHeader title="Quản lý dữ liệu" description="Bạn có thể thay đổi hoặc thu hồi quyền bất cứ lúc nào." />
               <View style={styles.managementList}>
                 <ListItem
-                  description={grantedPermissions + '/4 loại dữ liệu được phép đọc'}
+                  description={grantedPermissions + '/6 loại dữ liệu được phép đọc'}
                   groupStart
                   icon="shield-checkmark-outline"
                   onPress={confirmDataPermission}
@@ -238,6 +268,12 @@ export default function HealthConnectScreen() {
                   icon="cloud-upload-outline"
                   onPress={health.snapshot.permissions.background ? () => void health.managePermissions() : confirmBackgroundPermission}
                   title="Đồng bộ nền"
+                />
+                <ListItem
+                  description={health.stressNotificationsEnabled ? 'Đang bật' : 'Chạm để cho phép hiển thị trên màn hình khóa'}
+                  icon="notifications-outline"
+                  onPress={() => void health.enableStressNotifications()}
+                  title={health.action === 'notifications' ? 'Đang xin quyền…' : 'Thông báo kết quả PMData'}
                 />
                 <ListItem
                   description="Xóa vĩnh viễn dữ liệu Health Connect đang lưu trên MindCare"
@@ -279,6 +315,15 @@ const styles = StyleSheet.create({
   lastSync: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginTop: 2 },
   syncButton: { minWidth: 104 },
   section: { gap: spacing.md, paddingVertical: spacing.xl },
+  stressSection: { backgroundColor: colors.brandSoft, borderColor: colors.lineStrong, borderRadius: radius.card, borderWidth: 1, marginTop: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  stressHeading: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  stressHeadingBody: { flex: 1, minWidth: 0 },
+  stressIcon: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.pill, height: 42, justifyContent: 'center', width: 42 },
+  stressEyebrow: { color: colors.brandDark, fontFamily: fonts.medium, fontSize: type.caption },
+  stressTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: type.section, marginTop: 2 },
+  stressLevel: { color: colors.ink, fontFamily: fonts.medium, fontSize: type.body, lineHeight: 22 },
+  stressMeta: { color: colors.inkSoft, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18 },
+  stressNotice: { color: colors.muted, fontFamily: fonts.regular, fontSize: 11, lineHeight: 16 },
   ruledSection: { borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth },
   metricName: { color: colors.ink, fontFamily: fonts.medium, fontSize: type.label },
   metricsGrid: { backgroundColor: colors.surfaceMuted, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, flexDirection: 'row', flexWrap: 'wrap', overflow: 'hidden' },

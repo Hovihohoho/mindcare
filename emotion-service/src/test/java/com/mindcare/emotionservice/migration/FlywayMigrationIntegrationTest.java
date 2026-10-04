@@ -22,6 +22,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
             "emotion_journals",
             "health_metrics",
             "health_metric_sync_requests",
+            "pmdata_stress_predictions",
             "assessments",
             "questions",
             "answer_options",
@@ -50,7 +51,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
                 """,
                 String.class
         );
-        assertThat(currentVersion).isEqualTo("11");
+        assertThat(currentVersion).isEqualTo("15");
         assertThat(flyway.info().pending()).isEmpty();
 
         List<String> tables = jdbcTemplate.queryForList(
@@ -232,7 +233,7 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
                 """);
              var result = statement.executeQuery()) {
             assertThat(result.next()).isTrue();
-            assertThat(result.getString("version")).isEqualTo("11");
+            assertThat(result.getString("version")).isEqualTo("15");
         }
     }
 }

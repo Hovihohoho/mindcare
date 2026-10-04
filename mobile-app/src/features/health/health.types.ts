@@ -1,3 +1,5 @@
+import type { DatedStressPrediction } from '@/features/stress/stress.types';
+
 export type HealthDataType = 'steps' | 'sleep' | 'heartRate' | 'restingHeartRate' | 'oxygenSaturation' | 'exercise';
 
 export type HealthConnectAvailability =
@@ -92,6 +94,8 @@ export type HealthSyncResult = {
   readCounts: Record<HealthDataType, number>;
   syncedAt: string;
   alerts: HealthBenchmarkAlert[];
+  stressPrediction?: DatedStressPrediction | null;
+  stressPredictionError?: string;
 };
 
 export type HealthBenchmarkAlert = {

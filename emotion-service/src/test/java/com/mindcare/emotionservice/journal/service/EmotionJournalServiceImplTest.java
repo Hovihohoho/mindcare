@@ -5,6 +5,7 @@ import com.mindcare.emotionservice.journal.dto.EmotionJournalResponse;
 import com.mindcare.emotionservice.journal.dto.EmotionTrendPointResponse;
 import com.mindcare.emotionservice.journal.entity.EmotionJournalEntity;
 import com.mindcare.emotionservice.journal.entity.EmotionType;
+import com.mindcare.emotionservice.journal.entity.JournalEntrySource;
 import com.mindcare.emotionservice.journal.exception.JournalDeletionWindowExpiredException;
 import com.mindcare.emotionservice.journal.mapper.EmotionJournalMapper;
 import com.mindcare.emotionservice.journal.repository.EmotionJournalRepository;
@@ -101,6 +102,21 @@ class EmotionJournalServiceImplTest {
         assertEquals(4, captor.getValue().getEnergyLevel());
         assertEquals(2, captor.getValue().getStressLevel());
         assertEquals(5, captor.getValue().getSleepQuality());
+    }
+
+    @Test
+    void createJournalTracksMorningPromptConversionWithoutNotificationContent() {
+        when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(mapper.toResponse(any())).thenReturn(new EmotionJournalResponse(
+                null, EmotionType.NEUTRAL, null, null, null));
+
+        service.createJournal(UUID.randomUUID(), new CreateEmotionJournalRequest(
+                EmotionType.NEUTRAL, "check-in", null, null, null,
+                JournalEntrySource.MORNING_WELLBEING_PROMPT));
+
+        ArgumentCaptor<EmotionJournalEntity> captor = ArgumentCaptor.forClass(EmotionJournalEntity.class);
+        verify(repository).saveAndFlush(captor.capture());
+        assertEquals(JournalEntrySource.MORNING_WELLBEING_PROMPT, captor.getValue().getSource());
     }
 
     @Test

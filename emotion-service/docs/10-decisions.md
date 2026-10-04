@@ -208,6 +208,17 @@ Không chuyển `Provisional` thành `Accepted` nếu chưa có phê duyệt th�
 - Hệ quả: response trả riêng hai cờ `generalThresholdTriggered` và `personalDeviationTriggered`, nguồn URL, số ngày baseline, độ lệch tuyệt đối/phần trăm và luôn ghi `clinicalDiagnosis=false`.
 - Migration: không có; đánh giá được tính từ health metrics hiện có và không persist.
 
+## DEC-022 - Tự động đánh giá health benchmark sau khi đồng bộ
+
+- Trạng thái: **Accepted**
+- Ngày ghi nhận: 2026-09-23
+- Người duyệt: chủ dự án, qua chỉ thị trực tiếp triển khai cảnh báo tự động ở backend.
+- Quyết định: batch health metric có ít nhất một bản ghi mới hoặc cập nhật sẽ phát application event trong transaction; listener chỉ chạy sau commit, gọi bộ rule benchmark cố định và tạo alert theo cooldown hiện hành. Retry idempotency không có thay đổi không kích hoạt đánh giá lại.
+- Quyết định: alert mới tạo notification intent qua internal REST tới notification capability với `alertId` làm `eventId`. Notification capability sở hữu inbox, WebSocket và Expo push; Emotion Service không gọi Expo/FCM trực tiếp.
+- Quyết định: đây là rule deterministic, không gọi RAG/LLM. Nội dung luôn là hỗ trợ tự theo dõi, có policy/version/source và không phải chẩn đoán.
+- Giới hạn: internal REST hiện là cơ chế local/MVP; transactional outbox và retry bền vững vẫn là production hardening tiếp theo.
+- Migration: không có; tái sử dụng alert log và unique notification event hiện có.
+
 ## Quyết định mở cần ưu tiên
 
 | ID | Câu hỏi | Người/nhóm cần tham gia | Chặn |

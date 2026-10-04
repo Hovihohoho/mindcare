@@ -3,6 +3,10 @@ server:
 
 app:
   internal-secret: ${INTERNAL_SERVICE_SECRET:local-internal-secret}
+  auth-service-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+  risk-notifications:
+    enabled: ${RISK_NOTIFICATIONS_ENABLED:true}
+    poll-ms: ${RISK_NOTIFICATIONS_POLL_MS:5000}
 
 spring:
   application:
@@ -18,7 +22,7 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true

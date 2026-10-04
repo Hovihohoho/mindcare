@@ -33,13 +33,13 @@ export function useEmotionJournal(days = 7, limit = 30, includeTrends = true) {
       // and would not appear after pull-to-refresh.
       const dates = range(days);
       const [history, trendData] = await Promise.all([
-        emotionService.history(token, dates.from, dates.to, limit),
+        emotionService.historyAll(token, dates.from, dates.to, limit),
         includeTrends ? emotionService.trends(token, dates.from, dates.to) : Promise.resolve([]),
       ]);
       setEntries(history.items);
       setTrends(trendData);
     } catch (caught) {
-      if (caught instanceof ApiClientError && [401, 403].includes(caught.status ?? 0)) {
+      if (caught instanceof ApiClientError && caught.status === 403) {
         void logout().catch(() => undefined);
       }
       setError(caught instanceof Error ? caught.message : 'Không thể tải dữ liệu cảm xúc.');

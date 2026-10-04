@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
@@ -12,6 +12,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import { aiService, type ChatSafetyDirective, type ChatSource, type ConversationSummary } from '@/services/ai/ai.service';
 import { ApiClientError } from '@/services/api/api.client';
 import { colors, fonts, radius, spacing, type } from '@/theme/tokens';
+import { createRetrySubmission } from '@/services/api/retry-submission';
 
 type ChatMessage = { id: string; role: 'assistant' | 'user'; text: string; createdAt: string; sources?: ChatSource[]; safety?: ChatSafetyDirective };
 
@@ -35,23 +36,49 @@ export default function AiSupportScreen() {
   const [conversationId, setConversationId] = useState<string>();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const pending = useRef(createRetrySubmission<{ question: string; conversationId?: string }>());
+  const sendInFlight = useRef(false);
   const filtered = useMemo(() => messages.filter((item) => item.text.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))), [messages, query]);
 
-  const refreshHistory = () => {
+  const refreshHistory = useCallback(async () => {
     if (!session?.accessToken) return;
-    void aiService.listConversations(session.accessToken).then(setConversations).catch(() => undefined);
-  };
-  useEffect(refreshHistory, [session?.accessToken]);
+    setHistoryLoading(true);
+    setHistoryError('');
+    try { setConversations(await aiService.listConversations(session.accessToken)); }
+    catch (error) { setHistoryError(error instanceof Error ? error.message : 'Không thể tải lịch sử hội thoại.'); }
+    finally { setHistoryLoading(false); }
+  }, [session?.accessToken]);
+  useEffect(() => { void refreshHistory(); }, [refreshHistory]);
 
   const openConversation = async (id: string) => {
-    if (!session?.accessToken) return;
-    const conversation = await aiService.getConversation(session.accessToken, id);
-    setConversationId(id);
-    setMessages(conversation.messages.map((message) => ({ id: message.id, role: message.role, text: message.content, sources: message.sources, safety: safetyFromLevel(message.safetyLevel), createdAt: formatTime(new Date(message.createdAt)) })));
-    setHistoryOpen(false);
+    if (!session?.accessToken || sending || sendInFlight.current) return;
+    setHistoryError('');
+    try {
+      const conversation = await aiService.getConversation(session.accessToken, id);
+      setConversationId(id);
+      setMessages(conversation.messages.map((message) => ({ id: message.id, role: message.role, text: message.content, sources: message.sources, safety: safetyFromLevel(message.safetyLevel), createdAt: formatTime(new Date(message.createdAt)) })));
+      setHistoryOpen(false);
+      setSendError('');
+      pending.current.clear();
+    } catch (error) { setHistoryError(error instanceof Error ? error.message : 'Không thể mở hội thoại.'); }
+  };
+
+  const deleteConversation = async (id: string) => {
+    if (!session?.accessToken || sending || sendInFlight.current) return;
+    setHistoryError('');
+    try {
+      await aiService.deleteConversation(session.accessToken, id);
+      if (id === conversationId) startNewConversation();
+      await refreshHistory();
+    } catch (error) { setHistoryError(error instanceof Error ? error.message : 'Không thể xóa hội thoại.'); }
   };
 
   const startNewConversation = () => {
+    if (sending || sendInFlight.current) return;
+    pending.current.clear();
+    setSendError('');
     setConversationId(undefined);
     setMessages([welcome]);
     setHistoryOpen(false);
@@ -61,7 +88,11 @@ export default function AiSupportScreen() {
 
   const send = async (retryQuestion?: string) => {
     const question = (retryQuestion ?? draft).trim();
-    if (!question || !session?.accessToken || sending) return;
+    if (!question || !session?.accessToken || sending || sendInFlight.current) return;
+    if (!retryQuestion) pending.current.clear();
+    const submission = retryQuestion ? pending.current.retry() : pending.current.begin({ question, conversationId });
+    if (!submission) return;
+    sendInFlight.current = true;
     if (!retryQuestion) {
       setMessages((current) => [...current, { id: makeId('user'), role: 'user', text: question, createdAt: formatTime(new Date()) }]);
       setDraft('');
@@ -70,15 +101,17 @@ export default function AiSupportScreen() {
     setSending(true);
     setSendError('');
     try {
-      const response = await aiService.ask(session.accessToken, question, conversationId);
+      const response = await aiService.ask(session.accessToken, submission.payload.question, submission.payload.conversationId, submission.requestId);
       setMessages((current) => [...current, { id: makeId('assistant'), role: 'assistant', text: response.answer, sources: response.sources, safety: response.safety, createdAt: formatTime(new Date()) }]);
       setConversationId(response.conversationId);
-      refreshHistory();
+      pending.current.clear();
+      void refreshHistory();
       requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
     } catch (caught) {
-      if (caught instanceof ApiClientError && [401, 403].includes(caught.status ?? 0)) void logout().catch(() => undefined);
+      if (caught instanceof ApiClientError && caught.status === 403) void logout().catch(() => undefined);
       setSendError(caught instanceof Error ? caught.message : 'Không thể nhận phản hồi từ AI.');
     } finally {
+      sendInFlight.current = false;
       setSending(false);
     }
   };
@@ -96,7 +129,7 @@ export default function AiSupportScreen() {
       />
       {menuOpen ? (
         <View style={styles.menu}>
-          <MenuItem icon="time-outline" label="Lịch sử hội thoại" onPress={() => { setMenuOpen(false); setHistoryOpen(true); refreshHistory(); }} />
+          <MenuItem icon="time-outline" label="Lịch sử hội thoại" onPress={() => { setMenuOpen(false); setHistoryOpen(true); void refreshHistory(); }} />
           <MenuItem icon="search-outline" label="Tìm kiếm" onPress={() => { setSearchOpen(true); setMenuOpen(false); }} />
           <MenuItem icon="add-outline" label="Cuộc trò chuyện mới" onPress={() => { setMenuOpen(false); startNewConversation(); }} />
           <MenuItem icon="information-circle-outline" label="Thông tin & giới hạn của AI" onPress={() => { setMenuOpen(false); Alert.alert('Về AI hỗ trợ', 'Hội thoại được lưu vào tài khoản và bạn có thể xóa trong lịch sử. AI không thay thế dịch vụ khẩn cấp. Nếu bạn đang gặp nguy hiểm, hãy liên hệ dịch vụ khẩn cấp tại nơi bạn sống.'); }} />
@@ -105,10 +138,11 @@ export default function AiSupportScreen() {
       {historyOpen ? (
         <View style={styles.historyPanel}>
           <View style={styles.historyHeader}><Text style={styles.historyTitle}>Lịch sử hội thoại</Text><Pressable accessibilityRole="button" onPress={() => setHistoryOpen(false)}><Ionicons color={colors.ink} name="close" size={24} /></Pressable></View>
-          {conversations.length === 0 ? <Text style={styles.historyEmpty}>Chưa có cuộc trò chuyện đã lưu.</Text> : conversations.map((conversation) => (
+          {historyError ? <DataFeedback kind="error" title="Chưa tải được hội thoại" description={historyError} actionLabel="Thử lại" onAction={() => void refreshHistory()} /> : null}
+          {historyLoading ? <Text style={styles.historyEmpty}>Đang tải hội thoại…</Text> : !historyError && conversations.length === 0 ? <Text style={styles.historyEmpty}>Chưa có cuộc trò chuyện đã lưu.</Text> : conversations.map((conversation) => (
             <View key={conversation.id} style={styles.historyRow}>
               <Pressable accessibilityRole="button" onPress={() => void openConversation(conversation.id)} style={styles.historyOpen}><Text numberOfLines={1} style={styles.historyLabel}>{conversation.title}</Text></Pressable>
-              <Pressable accessibilityLabel="Xóa cuộc trò chuyện" accessibilityRole="button" onPress={() => Alert.alert('Xóa cuộc trò chuyện?', 'Thao tác này không thể hoàn tác.', [{ text: 'Hủy', style: 'cancel' }, { text: 'Xóa', style: 'destructive', onPress: () => { if (!session?.accessToken) return; void aiService.deleteConversation(session.accessToken, conversation.id).then(() => { if (conversation.id === conversationId) startNewConversation(); refreshHistory(); }); } }])} style={styles.historyDelete}><Ionicons color={colors.danger} name="trash-outline" size={20} /></Pressable>
+              <Pressable accessibilityLabel="Xóa cuộc trò chuyện" accessibilityRole="button" onPress={() => Alert.alert('Xóa cuộc trò chuyện?', 'Thao tác này không thể hoàn tác.', [{ text: 'Hủy', style: 'cancel' }, { text: 'Xóa', style: 'destructive', onPress: () => { void deleteConversation(conversation.id); } }])} style={styles.historyDelete}><Ionicons color={colors.danger} name="trash-outline" size={20} /></Pressable>
             </View>
           ))}
         </View>

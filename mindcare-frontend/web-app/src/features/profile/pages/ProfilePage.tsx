@@ -45,12 +45,10 @@ export function ProfilePage() {
     mutationFn: async () => {
       const password = window.prompt("Nhập mật khẩu hiện tại để xác nhận xóa vĩnh viễn tài khoản");
       if (!password) throw new Error("CANCELLED");
-      await authApi.verifyPassword(password);
-      await privacyApi.deleteEmotionData();
-      await privacyApi.deleteAiData();
       await authApi.permanentlyDelete(password);
     },
     onSuccess: () => {
+      window.alert("Đã tiếp nhận yêu cầu. Tài khoản đã khóa; hệ thống sẽ tiếp tục xóa dữ liệu.");
       tokenStorage.clear();
       window.location.assign("/login");
     },

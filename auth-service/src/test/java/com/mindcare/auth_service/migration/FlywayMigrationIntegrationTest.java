@@ -24,10 +24,10 @@ class FlywayMigrationIntegrationTest extends AbstractPostgreSqlIntegrationTest {
                         + "WHERE table_schema = 'auth_schema' AND table_type = 'BASE TABLE'",
                 String.class);
 
-        assertThat(version).isEqualTo("10");
+        assertThat(version).isEqualTo("13");
         assertThat(tables).contains(
                 "users", "user_sessions", "notifications", "bookmarks",
-                "reminder_preferences", "push_devices");
+                "reminder_preferences", "push_devices", "expo_push_receipts", "account_deletion_jobs", "notification_delivery_jobs");
     }
 
     @Test

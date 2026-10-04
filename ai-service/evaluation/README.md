@@ -15,6 +15,12 @@ From the repository root:
 python -m unittest discover -s ai-service/evaluation -p test_evaluation.py
 ```
 
+On Windows, the same deterministic gate can be run with one command:
+
+```powershell
+.\ai-service\evaluation\run-offline.ps1
+```
+
 The safety suite tests deterministic routing only; passing it does not establish
 retrieval recall, response accuracy, clinical validity or production readiness.
 

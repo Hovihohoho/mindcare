@@ -70,7 +70,7 @@ class EmotionTrendControllerIntegrationTest {
         ));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .param("from", from.toString())
                         .param("to", to.toString())
                         .param("bucket", "DAY")
@@ -109,7 +109,7 @@ class EmotionTrendControllerIntegrationTest {
     @Test
     void getEmotionTrendsRejectsMalformedTimestamp() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .param("from", "20-07-2026")
                         .param("to", "2026-07-27T00:00:00Z")
                         .param("bucket", "DAY")
@@ -123,7 +123,7 @@ class EmotionTrendControllerIntegrationTest {
     @Test
     void getEmotionTrendsRejectsInvalidTimezone() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .param("from", "2026-07-20T00:00:00Z")
                         .param("to", "2026-07-27T00:00:00Z")
                         .param("bucket", "DAY")
@@ -152,7 +152,7 @@ class EmotionTrendControllerIntegrationTest {
         ));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .param("from", from.toString())
                         .param("to", to.toString())
                         .param("bucket", "YEAR")

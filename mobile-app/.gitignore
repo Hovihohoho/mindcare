@@ -30,7 +30,11 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# Required by EAS and Gradle to bootstrap Android builds.
+!android/gradle/wrapper/gradle-wrapper.jar
+
 # local env files
+.env
 .env*.local
 
 # typescript
@@ -38,6 +42,6 @@ yarn-error.*
 
 example
 
-# generated native folders
-/ios
-/android
+# Native folders are committed because this app includes custom native Android
+# configuration (including Health Connect). EAS needs the Gradle wrapper JAR
+# from android/gradle/wrapper to run a build.

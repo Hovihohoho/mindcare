@@ -9,6 +9,9 @@ public class NotificationHttpConfig {
 
     @Bean
     RestClient.Builder restClientBuilder() {
-        return RestClient.builder();
+        var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(10000);
+        return RestClient.builder().requestFactory(factory);
     }
 }

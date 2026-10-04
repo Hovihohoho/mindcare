@@ -21,6 +21,7 @@ public class UserDataRepository {
         Map<String, List<Map<String, Object>>> result = new LinkedHashMap<>();
         result.put("emotionJournals", query("SELECT * FROM emotion_schema.emotion_journals WHERE user_id = :userId ORDER BY created_at", parameters));
         result.put("healthMetrics", query("SELECT * FROM emotion_schema.health_metrics WHERE user_id = :userId ORDER BY recorded_at", parameters));
+        result.put("pmdataStressPredictions", query("SELECT * FROM emotion_schema.pmdata_stress_predictions WHERE user_id = :userId ORDER BY feature_date", parameters));
         result.put("healthSourceConsents", query("SELECT * FROM emotion_schema.health_source_consents WHERE user_id = :userId ORDER BY created_at", parameters));
         result.put("assessmentResults", query("SELECT * FROM emotion_schema.assessment_results WHERE user_id = :userId ORDER BY created_at", parameters));
         result.put("riskAlerts", query("SELECT * FROM emotion_schema.psychological_alert_logs WHERE user_id = :userId ORDER BY created_at", parameters));
@@ -39,6 +40,7 @@ public class UserDataRepository {
         counts.put("riskAlerts", update("DELETE FROM emotion_schema.psychological_alert_logs WHERE user_id = :userId", parameters));
         counts.put("assessmentResults", update("DELETE FROM emotion_schema.assessment_results WHERE user_id = :userId", parameters));
         counts.put("healthSyncRequests", update("DELETE FROM emotion_schema.health_metric_sync_requests WHERE user_id = :userId", parameters));
+        counts.put("pmdataStressPredictions", update("DELETE FROM emotion_schema.pmdata_stress_predictions WHERE user_id = :userId", parameters));
         counts.put("healthMetrics", update("DELETE FROM emotion_schema.health_metrics WHERE user_id = :userId", parameters));
         counts.put("healthSourceConsents", update("DELETE FROM emotion_schema.health_source_consents WHERE user_id = :userId", parameters));
         counts.put("emotionJournals", update("DELETE FROM emotion_schema.emotion_journals WHERE user_id = :userId", parameters));

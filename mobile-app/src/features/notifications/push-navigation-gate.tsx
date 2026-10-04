@@ -1,19 +1,29 @@
 import type { NotificationResponse } from 'expo-notifications';
 import { type Href, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { canUsePushNotifications, loadNotifications } from './push-registration';
+import { canUseLocalNotifications, loadNotifications } from './push-registration';
 
 export function PushNavigationGate() {
   const router = useRouter();
   useEffect(() => {
-    if (!canUsePushNotifications()) return;
+    if (!canUseLocalNotifications()) return;
 
     let active = true;
     let subscription: { remove(): void } | undefined;
     const open = (response: NotificationResponse | null) => {
       const url = response?.notification.request.content.data?.url;
-      const mobileUrl = url === '/emotion' ? '/(tabs)/journal' : url === '/care-plan' ? '/(tabs)/progress' : url;
-      if (typeof mobileUrl === 'string' && mobileUrl.startsWith('/')) router.push(mobileUrl as Href);
+      if (url === '/emotion') {
+        router.navigate({ pathname: '/(tabs)/journal', params: { checkIn: 'true' } });
+        return;
+      }
+      const mobileUrl = url === '/emotion'
+        ? '/(tabs)/journal'
+        : url === '/care-plan'
+          ? '/(tabs)/progress'
+          : url === '/health-connect'
+            ? '/(tabs)/health-connect'
+            : url;
+      if (typeof mobileUrl === 'string' && mobileUrl.startsWith('/')) router.navigate(mobileUrl as Href);
     };
 
     void loadNotifications()

@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "reminder_preferences", schema = "auth_schema", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "reminder_type"}))
 @NoArgsConstructor
 public class ReminderPreference {
+    private static final long MAX_CATCH_UP_MINUTES = 180;
     @Id private UUID id;
     @Column(name = "user_id", nullable = false, updatable = false) private UUID userId;
     @Column(name = "reminder_type", nullable = false, length = 40, updatable = false) private String reminderType;
@@ -35,7 +36,7 @@ public class ReminderPreference {
         var scheduled = local.toLocalDate().atTime(localTime).atZone(local.getZone());
         long elapsedMinutes = Duration.between(scheduled, local).toMinutes();
         return enabled && !local.toLocalDate().equals(lastSentLocalDate)
-                && elapsedMinutes >= 0 && elapsedMinutes < 5;
+                && elapsedMinutes >= 0 && elapsedMinutes <= MAX_CATCH_UP_MINUTES;
     }
     public void markSent(LocalDate date) { this.lastSentLocalDate = date; this.updatedAt = OffsetDateTime.now(); }
 }

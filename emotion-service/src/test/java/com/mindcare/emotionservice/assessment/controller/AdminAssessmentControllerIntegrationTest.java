@@ -75,7 +75,7 @@ class AdminAssessmentControllerIntegrationTest {
         when(assessmentService.createAssessment(any())).thenReturn(response);
 
         mockMvc.perform(post(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -109,7 +109,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void createAssessmentRejectsInvalidNestedCatalogBeforeServiceCall() throws Exception {
         mockMvc.perform(post(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -134,7 +134,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void createAssessmentRejectsUnsupportedCodeBeforeServiceCall() throws Exception {
         mockMvc.perform(post(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -153,7 +153,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void createAssessmentRejectsManuallySuppliedAnswerOptions() throws Exception {
         mockMvc.perform(post(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -187,7 +187,7 @@ class AdminAssessmentControllerIntegrationTest {
         ));
 
         mockMvc.perform(post(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validDraftJson()))
@@ -198,7 +198,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void userRoleCannotCreateAssessmentDraft() throws Exception {
         mockMvc.perform(post(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validDraftJson()))
@@ -233,7 +233,7 @@ class AdminAssessmentControllerIntegrationTest {
         when(assessmentService.updateAssessment(eq(assessmentId), any())).thenReturn(response);
 
         mockMvc.perform(put(ENDPOINT + "/{assessmentId}", assessmentId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -263,7 +263,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void updateAssessmentRejectsInvalidNestedCatalogBeforeServiceCall() throws Exception {
         mockMvc.perform(put(ENDPOINT + "/{assessmentId}", UUID.randomUUID())
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -289,7 +289,7 @@ class AdminAssessmentControllerIntegrationTest {
                 ));
 
         mockMvc.perform(put(ENDPOINT + "/{assessmentId}", assessmentId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validDraftJson()))
@@ -300,7 +300,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void userRoleCannotUpdateAssessmentDraft() throws Exception {
         mockMvc.perform(put(ENDPOINT + "/{assessmentId}", UUID.randomUUID())
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validDraftJson()))
@@ -328,7 +328,7 @@ class AdminAssessmentControllerIntegrationTest {
         when(assessmentService.createNextAssessmentVersion(sourceId)).thenReturn(response);
 
         mockMvc.perform(post(ENDPOINT + "/{assessmentId}:create-next-version", sourceId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isCreated())
                 .andExpect(header().string(
@@ -352,7 +352,7 @@ class AdminAssessmentControllerIntegrationTest {
                 ));
 
         mockMvc.perform(post(ENDPOINT + "/{assessmentId}:create-next-version", sourceId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("ASSESSMENT_DRAFT_VERSION_EXISTS"));
@@ -361,7 +361,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void userRoleCannotCreateNextAssessmentVersion() throws Exception {
         mockMvc.perform(post(ENDPOINT + "/{assessmentId}:create-next-version", UUID.randomUUID())
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
@@ -376,7 +376,7 @@ class AdminAssessmentControllerIntegrationTest {
                 .thenReturn(lifecycleResponse(assessmentId, "PUBLISHED"));
 
         mockMvc.perform(post(ENDPOINT + "/{assessmentId}:publish", assessmentId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(assessmentId.toString()))
@@ -396,7 +396,7 @@ class AdminAssessmentControllerIntegrationTest {
                 ));
 
         mockMvc.perform(post(ENDPOINT + "/{assessmentId}:publish", assessmentId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("ASSESSMENT_INCOMPLETE"));
@@ -409,7 +409,7 @@ class AdminAssessmentControllerIntegrationTest {
                 .thenReturn(lifecycleResponse(assessmentId, "ARCHIVED"));
 
         mockMvc.perform(post(ENDPOINT + "/{assessmentId}:archive", assessmentId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(assessmentId.toString()))
@@ -428,7 +428,7 @@ class AdminAssessmentControllerIntegrationTest {
                 ));
 
         mockMvc.perform(post(ENDPOINT + "/{assessmentId}:archive", assessmentId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("INVALID_STATE_TRANSITION"));
@@ -439,13 +439,13 @@ class AdminAssessmentControllerIntegrationTest {
         UUID assessmentId = UUID.randomUUID();
 
         mockMvc.perform(post(ENDPOINT + "/{assessmentId}:publish", assessmentId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
 
         mockMvc.perform(post(ENDPOINT + "/{assessmentId}:archive", assessmentId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
@@ -477,7 +477,7 @@ class AdminAssessmentControllerIntegrationTest {
         when(assessmentService.getAssessmentForAdmin(assessmentId)).thenReturn(response);
 
         mockMvc.perform(get(ENDPOINT + "/{assessmentId}", assessmentId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(assessmentId.toString()))
@@ -498,7 +498,7 @@ class AdminAssessmentControllerIntegrationTest {
                 .thenThrow(new ResourceNotFoundException("Assessment"));
 
         mockMvc.perform(get(ENDPOINT + "/{assessmentId}", assessmentId)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
@@ -507,7 +507,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void userRoleCannotGetAdminAssessmentDetail() throws Exception {
         mockMvc.perform(get(ENDPOINT + "/{assessmentId}", UUID.randomUUID())
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
@@ -533,7 +533,7 @@ class AdminAssessmentControllerIntegrationTest {
                 .thenReturn(new CursorPageResponse<>(List.of(assessment), "next-cursor", true));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .param("status", "DRAFT")
                         .param("cursor", "opaque-cursor")
@@ -553,7 +553,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void userRoleCannotAccessAdminAssessments() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -565,7 +565,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void missingVerifiedRoleCannotAccessAdminAssessments() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID()))
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID()))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
 
@@ -575,7 +575,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void unsupportedVerifiedRoleIsRejectedAsUnauthorized() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ADMIN"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
@@ -596,7 +596,7 @@ class AdminAssessmentControllerIntegrationTest {
     @Test
     void invalidLimitReturnsValidationErrorBeforeServiceCall() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .param("limit", "101"))
                 .andExpect(status().isBadRequest())

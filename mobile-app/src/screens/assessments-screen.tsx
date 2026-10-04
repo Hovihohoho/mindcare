@@ -6,6 +6,7 @@ import { DataFeedback, SkeletonList } from '@/components/data-states';
 import { useAuthenticatedList } from '@/hooks/use-authenticated-list';
 import { assessmentService, type AssessmentSummary } from '@/services/assessment/assessment.service';
 import { colors, fonts, radius, spacing, type } from '@/theme/tokens';
+import { ActionButton } from '@/components/buttons';
 
 type AssessmentItem = AssessmentSummary & { completed: boolean; questionCount: number };
 
@@ -29,6 +30,7 @@ export default function AssessmentsScreen() {
 
   return (
     <AppScreen>
+      <ActionButton label="Xem lịch sử kết quả" tone="secondary" onPress={() => router.push('/assessment-history')} />
       {loading ? <SkeletonList rows={3} /> : error ? (
         <DataFeedback actionLabel="Thử lại" description={error} kind="error" onAction={() => void reload()} title="Thư viện chưa được tải" />
       ) : data.length === 0 ? (

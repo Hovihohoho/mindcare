@@ -1,9 +1,11 @@
 export type EmotionLevel = 'VERY_HAPPY' | 'HAPPY' | 'NEUTRAL' | 'SAD' | 'STRESSED';
+export type JournalEntrySource = 'USER_DIRECT' | 'MORNING_WELLBEING_PROMPT';
 
 export type EmotionJournal = {
   id: string;
   emotionType: EmotionLevel;
   content: string | null;
+  source: JournalEntrySource;
   createdAt: string;
   updatedAt: string;
 };

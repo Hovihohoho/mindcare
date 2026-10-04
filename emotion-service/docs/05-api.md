@@ -456,6 +456,9 @@ Health benchmark additions:
 
 - `GET /api/v1/health-metrics/benchmark-evaluations`: đánh giá deterministic cho ngủ, bước chân, nhịp tim lúc nghỉ và SpO₂.
 - `POST /api/v1/risk-alerts/analyze-health`: persist cảnh báo health benchmark mới theo cooldown và trả danh sách alert vừa tạo.
+- Luồng mặc định không yêu cầu mobile gọi endpoint phân tích: sau khi `POST /api/v1/health-metrics/sync` commit một batch có thay đổi, backend tự chạy cùng policy và phát notification intent cho mỗi alert mới. Endpoint `analyze-health` được giữ để kiểm thử/vận hành thủ công.
+- `POST /api/v1/health-metrics/stress-predictions`: lưu mọi kết quả PMData; backend phân loại điểm 1–2 là `INFORMATIONAL`, điểm 3 là `MONITOR`, điểm 4 là `ELEVATED`, điểm 5 là `HIGH`. Không gửi push ngay khi lưu. Khi reminder `DAILY_CHECK_IN` đến giờ người dùng chọn, notification capability chỉ dùng lời mời check-in nếu có đủ ba ngày liên tiếp kết thúc ở hôm qua đều ở mức 4–5.
+- `GET /api/v1/health-metrics/stress-predictions/latest`: trả kết quả PMData đã lưu gần nhất của người dùng hiện tại.
 - `GET /api/v1/self-care-plan/templates` và `GET /api/v1/self-care-plan/recommendations`: catalog cố định và đề xuất plan.
 - `POST /api/v1/self-care-plan/templates/{templateCode}:apply`: áp dụng một template nguyên vẹn.
 
