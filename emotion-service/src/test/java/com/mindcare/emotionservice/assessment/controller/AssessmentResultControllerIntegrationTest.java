@@ -74,7 +74,7 @@ class AssessmentResultControllerIntegrationTest {
         ));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .header(USER_ROLE_HEADER, "ROLE_USER")
                         .param("from", from.toString())
                         .param("to", to.toString())
@@ -108,7 +108,7 @@ class AssessmentResultControllerIntegrationTest {
                 .thenReturn(new CursorPageResponse<>(List.of(), null, false));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .header(USER_ROLE_HEADER, "ROLE_USER")
                         .param("from", from.toString())
                         .param("to", to.toString()))
@@ -123,7 +123,7 @@ class AssessmentResultControllerIntegrationTest {
     @Test
     void assessmentHistoryRejectsLimitAboveMaximumAtHttpBoundary() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER")
                         .param("from", "2026-07-01T00:00:00Z")
                         .param("to", "2026-08-01T00:00:00Z")
@@ -146,7 +146,7 @@ class AssessmentResultControllerIntegrationTest {
                 ));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .header(USER_ROLE_HEADER, "ROLE_USER")
                         .param("from", from.toString())
                         .param("to", to.toString()))
@@ -168,7 +168,7 @@ class AssessmentResultControllerIntegrationTest {
         when(assessmentService.getAssessmentResult(userId, resultId)).thenReturn(response);
 
         mockMvc.perform(get(ENDPOINT + "/{resultId}", resultId)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
@@ -192,7 +192,7 @@ class AssessmentResultControllerIntegrationTest {
                 .thenThrow(new ResourceNotFoundException("Assessment result"));
 
         mockMvc.perform(get(ENDPOINT + "/{resultId}", resultId)
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
@@ -202,7 +202,7 @@ class AssessmentResultControllerIntegrationTest {
     @Test
     void malformedResultIdReturnsMalformedRequestBeforeServiceCall() throws Exception {
         mockMvc.perform(get(ENDPOINT + "/not-a-uuid")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_USER"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
@@ -223,7 +223,7 @@ class AssessmentResultControllerIntegrationTest {
     @Test
     void nonUserRoleCannotReadAssessmentResults() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(USER_ROLE_HEADER, "ROLE_ADMIN")
                         .param("from", "2026-07-01T00:00:00Z")
                         .param("to", "2026-08-01T00:00:00Z"))

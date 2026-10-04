@@ -1,0 +1,58 @@
+name: MindCare checks
+on:
+  pull_request:
+  push:
+    branches: [main, master, develop]
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api-gateway, auth-service, emotion-service, ai-service]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Require Docker for persistence integration tests
+        run: docker info
+      - name: Test and package
+        run: mvn -B -ntp -f '${{ matrix.service }}/pom.xml' verify
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-${{ matrix.service }}
+          path: ${{ matrix.service }}/target/surefire-reports/
+  clients:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [mindcare-frontend/web-app, mobile-app, ui_mobile_test]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+        if: matrix.project == 'mindcare-frontend/web-app'
+      - run: npx expo export --platform web
+        if: matrix.project == 'mobile-app'
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'

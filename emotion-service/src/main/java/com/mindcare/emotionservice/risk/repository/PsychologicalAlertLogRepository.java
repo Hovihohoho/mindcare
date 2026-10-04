@@ -13,6 +13,8 @@ import java.util.UUID;
 
 public interface PsychologicalAlertLogRepository extends JpaRepository<PsychologicalAlertLogEntity, UUID> {
 
+    List<PsychologicalAlertLogEntity> findByNotifiedFalseAndDeletedAtIsNullOrderByCreatedAtAsc(Pageable pageable);
+
     Optional<PsychologicalAlertLogEntity> findByIdAndUserIdAndDeletedAtIsNull(UUID id, UUID userId);
 
     Optional<PsychologicalAlertLogEntity> findByIdAndDeletedAtIsNull(UUID id);

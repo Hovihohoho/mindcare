@@ -30,7 +30,7 @@ function Start-MindCareService {
     param([string]$Title, [string]$Command)
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes(
         "`$Host.UI.RawUI.WindowTitle='$Title'; Set-Location '$repoRoot'; $Command"))
-    Start-Process powershell.exe -ArgumentList '-NoExit', '-EncodedCommand', $encoded
+    Start-Process powershell.exe -WindowStyle Hidden -ArgumentList '-NoExit', '-EncodedCommand', $encoded
 }
 
 Write-Host '[1/6] Starting PostgreSQL, pgAdmin and Mailpit...'

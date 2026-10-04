@@ -82,7 +82,7 @@ export default function JournalHistoryScreen() {
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => void refresh()} refreshing={refreshing} tintColor={colors.brand} />}
-        renderItem={({ item }) => <JournalCard item={item} />}
+        renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel="Mở chi tiết nhật ký" onPress={() => router.push({ pathname: '/journal/[id]', params: { id: item.id } })}><JournalCard item={item} /></Pressable>}
         ListHeaderComponent={(
           <View style={styles.listHeader}>
             {calendarLoading ? <EmotionCalendarSkeleton /> : calendarError ? (

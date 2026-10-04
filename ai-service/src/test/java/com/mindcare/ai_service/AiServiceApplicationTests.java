@@ -26,7 +26,7 @@ class AiServiceApplicationTests {
     @Test
     void acceptsIdentityHeadersVerifiedByGateway() throws Exception {
         mockMvc.perform(get("/api/ai/self-care-content")
-                        .header("X-User-Id", "41aa1147-d62c-46f9-ae3f-83fcb76aafa7")
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header("X-User-Id", "41aa1147-d62c-46f9-ae3f-83fcb76aafa7")
                         .header("X-User-Role", "ROLE_USER"))
                 .andExpect(status().isOk());
     }

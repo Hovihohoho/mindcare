@@ -32,7 +32,7 @@ public class NotificationController {
     private final CurrentUserService currentUser;
     private final AccountService accountService;
     private final AuditService auditService;
-    private final NotificationSocketHub notificationSocketHub;
+    private final com.mindcare.auth_service.notification.NotificationDeliveryService notificationDelivery;
 
     @GetMapping("/api/auth/notifications")
     public ApiResponse<List<LegacyResponse>> legacyList(Authentication auth) {
@@ -110,8 +110,9 @@ public class NotificationController {
         if (!expectedSecret.equals(suppliedSecret)) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         if (!userRepository.existsById(request.userId())) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         if (!repository.existsBySourceEventIdAndUserId(request.eventId(), request.userId())) {
-            publish(repository.save(Notification.create(request.userId(), request.eventId(), request.type(),
-                    request.title(), request.message(), request.actionUrl())));
+            notificationDelivery.enqueue(repository.save(Notification.create(
+                    request.userId(), request.eventId(), request.type(), request.title(),
+                    request.message(), request.actionUrl())), true);
         }
         return ApiResponse.success("Đã tiếp nhận thông báo", null);
     }
@@ -125,7 +126,7 @@ public class NotificationController {
     }
 
     private void publish(Notification notification) {
-        notificationSocketHub.publish(notification.getUserId(), NotificationDtos.Item.from(notification));
+        notificationDelivery.enqueue(notification, false);
     }
 
     public record LegacyBroadcast(@NotBlank @Size(max = 160) String title,

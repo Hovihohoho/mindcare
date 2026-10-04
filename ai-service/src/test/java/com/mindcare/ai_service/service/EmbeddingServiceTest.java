@@ -14,6 +14,17 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class EmbeddingServiceTest {
+    @Test void providerFailureUsesLexicalSearchWithSameSafetyScope() {
+        var gemini = mock(GeminiClient.class);
+        var vectors = mock(KnowledgeVectorRepository.class);
+        var documents = mock(KnowledgeDocumentRepository.class);
+        when(gemini.embed("sleep", "RETRIEVAL_QUERY")).thenThrow(new IllegalStateException("offline"));
+        when(vectors.searchLexical("sleep", 5, false)).thenReturn(List.of());
+        var service = new EmbeddingService(gemini, vectors, documents, new DocumentChunker(500, 50));
+        assertThat(service.search("sleep", 5, 0.35, false)).isEmpty();
+        verify(vectors).searchLexical("sleep", 5, false);
+    }
+
     @Test
     void reindexAllPersistsReadyAndFailedStatuses() {
         GeminiClient geminiClient = mock(GeminiClient.class);

@@ -39,6 +39,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Import(SecurityAndErrorHandlingIntegrationTest.TestEndpointConfiguration.class)
 class SecurityAndErrorHandlingIntegrationTest {
+    @Test
+    void rejectsSpoofedIdentityWithoutTrustedHopSecret() throws Exception {
+        mockMvc.perform(get("/test/security/me")
+                        .header("X-User-Id", UUID.randomUUID())
+                        .header("X-User-Role", "ROLE_ADMIN"))
+                .andExpect(status().isUnauthorized());
+    }
 
     private static final String USER_ID_HEADER = "X-User-Id";
     private static final String CORRELATION_ID = "test-correlation-123";
@@ -51,7 +58,7 @@ class SecurityAndErrorHandlingIntegrationTest {
         UUID userId = UUID.randomUUID();
 
         mockMvc.perform(get("/test/security/me")
-                        .header(USER_ID_HEADER, userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, userId)
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID))
                 .andExpect(status().isOk())
                 .andExpect(header().string(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID))
@@ -73,7 +80,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void malformedGatewayIdentityReturnsStableUnauthorizedResponse() throws Exception {
         mockMvc.perform(get("/test/security/me")
-                        .header(USER_ID_HEADER, "not-a-uuid")
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, "not-a-uuid")
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"))
@@ -84,7 +91,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void businessExceptionUsesGlobalErrorContract() throws Exception {
         mockMvc.perform(get("/test/security/not-found")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -97,7 +104,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void invalidRequestBodyReturnsFieldErrorsWithoutInternalDetails() throws Exception {
         mockMvc.perform(post("/test/security/validate")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -114,7 +121,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void unexpectedExceptionDoesNotExposeInternalDetails() throws Exception {
         mockMvc.perform(get("/test/security/unexpected")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
@@ -125,7 +132,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void missingRequiredHeaderReturnsMalformedRequest() throws Exception {
         mockMvc.perform(get("/test/security/required-header")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"))
@@ -135,7 +142,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void unsupportedMethodReturns405AndAllowHeader() throws Exception {
         mockMvc.perform(post("/test/security/me")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(header().string("Allow", "GET"))
@@ -145,7 +152,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void unsupportedContentTypeReturns415() throws Exception {
         mockMvc.perform(post("/test/security/validate")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID)
                         .contentType(MediaType.TEXT_PLAIN)
                         .content("name"))
@@ -156,7 +163,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void unsupportedAcceptTypeReturns406() throws Exception {
         mockMvc.perform(get("/test/security/object")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID)
                         .accept(MediaType.APPLICATION_XML))
                 .andExpect(status().isNotAcceptable())
@@ -166,7 +173,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void missingResourceReturnsStable404() throws Exception {
         mockMvc.perform(get("/test/security/does-not-exist")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
@@ -175,7 +182,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void invalidControllerParameterReturnsValidationFieldError() throws Exception {
         mockMvc.perform(get("/test/security/limit")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID)
                         .queryParam("limit", "0"))
                 .andExpect(status().isBadRequest())
@@ -187,7 +194,7 @@ class SecurityAndErrorHandlingIntegrationTest {
     @Test
     void constraintViolationReturnsValidationError() throws Exception {
         mockMvc.perform(get("/test/security/constraint")
-                        .header(USER_ID_HEADER, UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header(USER_ID_HEADER, UUID.randomUUID())
                         .header(RequestContext.CORRELATION_ID_HEADER, CORRELATION_ID))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))

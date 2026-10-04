@@ -30,8 +30,14 @@ public class EmbeddingService {
 
     public List<KnowledgeVectorRepository.SimilarityResult> search(
             String query, int limit, double threshold, boolean includeSafety) {
-        return vectorRepository.search(query,
-                geminiClient.embed(query, "RETRIEVAL_QUERY"), limit, threshold, includeSafety);
+        List<Double> vector;
+        try {
+            vector = geminiClient.embed(query, "RETRIEVAL_QUERY");
+        } catch (org.springframework.web.client.RestClientException | IllegalStateException unavailable) {
+            // Preserve source governance even when the external embedding provider is down.
+            return vectorRepository.searchLexical(query, limit, includeSafety);
+        }
+        return vectorRepository.search(query, vector, limit, threshold, includeSafety);
     }
 
     @Transactional

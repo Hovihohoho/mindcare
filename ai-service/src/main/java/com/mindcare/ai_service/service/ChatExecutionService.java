@@ -27,6 +27,7 @@ public class ChatExecutionService {
     private final AiConversationService conversations;
     private final ObjectMapper mapper;
     private final Validator validator;
+    private final AccountErasureService erasure;
     @Value("${ai.chat.requests-per-minute:12}") private int requestsPerMinute = 12;
 
     @Transactional
@@ -46,6 +47,7 @@ public class ChatExecutionService {
                         "Một câu hỏi đang được xử lý. Hãy chờ rồi thử lại với cùng mã yêu cầu.");
             }
             UUID requestId = request.requestId() == null ? UUID.randomUUID() : request.requestId();
+            erasure.requireActive(userId);
             String fingerprint = fingerprint(request);
             var existing = jdbc.query(
                     "SELECT fingerprint, response_json FROM ai_schema.ai_chat_requests WHERE user_id=? AND request_id=?",

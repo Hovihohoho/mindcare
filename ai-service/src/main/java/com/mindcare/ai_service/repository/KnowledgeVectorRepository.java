@@ -63,8 +63,13 @@ public class KnowledgeVectorRepository {
                            coalesce(s.similarity, 0) AS similarity,
                            coalesce(1.0 / (60 + s.rank), 0) + coalesce(1.0 / (60 + l.rank), 0) AS score
                     FROM semantic s FULL OUTER JOIN lexical l ON s.chunk_id = l.chunk_id
+                ), diversified AS (
+                    SELECT *, row_number() OVER (PARTITION BY document_id
+                        ORDER BY score DESC, similarity DESC, chunk_index, chunk_id) AS document_rank
+                    FROM fused
                 )
-                SELECT * FROM fused ORDER BY score DESC, similarity DESC LIMIT ?
+                SELECT * FROM diversified WHERE document_rank <= 2
+                ORDER BY score DESC, similarity DESC, document_id, chunk_index, chunk_id LIMIT ?
                 """;
         String vector = toVector(queryEmbedding);
         return jdbcTemplate.query(sql, (rs, rowNum) -> new SimilarityResult(
@@ -73,6 +78,29 @@ public class KnowledgeVectorRepository {
                 rs.getString("source_url"), rs.getDouble("similarity")),
                 includeSafety, vector, vector, vector, threshold, vector, limit * 4,
                 query, query, query, limit * 4, limit);
+    }
+
+    public List<SimilarityResult> searchLexical(String query, int limit, boolean includeSafety) {
+        return jdbcTemplate.query("""
+                WITH matches AS (
+                    SELECT d.id AS document_id, c.id AS chunk_id, c.chunk_index,
+                           d.title, c.content, d.source_url,
+                           ts_rank_cd(c.search_vector, plainto_tsquery('simple', ?)) AS score,
+                           row_number() OVER (PARTITION BY d.id ORDER BY
+                             ts_rank_cd(c.search_vector, plainto_tsquery('simple', ?)) DESC, c.chunk_index) AS document_rank
+                    FROM ai_schema.knowledge_chunks c
+                    JOIN ai_schema.knowledge_documents d ON d.id=c.document_id
+                    WHERE d.is_active=TRUE AND d.review_status='APPROVED'
+                      AND d.source_tier IN ('A','B') AND d.source_url LIKE 'https://%'
+                      AND (d.expires_at IS NULL OR d.expires_at > CURRENT_TIMESTAMP)
+                      AND (? OR d.document_type <> 'SAFETY')
+                      AND c.search_vector @@ plainto_tsquery('simple', ?)
+                )
+                SELECT * FROM matches WHERE document_rank <= 2
+                ORDER BY score DESC, document_id, chunk_index LIMIT ?
+                """, (rs, row) -> new SimilarityResult(rs.getObject("document_id", UUID.class),
+                rs.getObject("chunk_id", UUID.class), rs.getInt("chunk_index"), rs.getString("title"),
+                rs.getString("content"), rs.getString("source_url"), 0.0), query, query, includeSafety, query, limit);
     }
 
     private String toVector(List<Double> values) {

@@ -50,7 +50,7 @@ class StressFeatureControllerIntegrationTest {
                 1));
 
         mockMvc.perform(get(ENDPOINT)
-                        .header("X-User-Id", userId)
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header("X-User-Id", userId)
                         .header("X-User-Role", "ROLE_USER")
                         .param("date", date.toString())
                         .param("timezone", timezone.getId()))
@@ -76,7 +76,7 @@ class StressFeatureControllerIntegrationTest {
     @Test
     void rejectsInvalidTimezone() throws Exception {
         mockMvc.perform(get(ENDPOINT)
-                        .header("X-User-Id", UUID.randomUUID())
+                        .header("X-Internal-Secret", "mindcare-test-internal-secret-32-characters").header("X-User-Id", UUID.randomUUID())
                         .header("X-User-Role", "ROLE_USER")
                         .param("timezone", "Invalid/Timezone"))
                 .andExpect(status().isBadRequest())

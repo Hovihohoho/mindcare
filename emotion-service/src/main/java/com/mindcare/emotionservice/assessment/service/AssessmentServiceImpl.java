@@ -64,6 +64,7 @@ public class AssessmentServiceImpl implements AssessmentService {
     private final CursorCodec cursorCodec;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final org.springframework.context.ApplicationEventPublisher events;
 
     public AssessmentServiceImpl(
             AssessmentRepository assessmentRepository,
@@ -75,7 +76,8 @@ public class AssessmentServiceImpl implements AssessmentService {
             AssessmentScoringPolicyRegistry scoringPolicies,
             CursorCodec cursorCodec,
             ObjectMapper objectMapper,
-            Clock clock
+            Clock clock,
+            org.springframework.context.ApplicationEventPublisher events
     ) {
         this.assessmentRepository = assessmentRepository;
         this.questionRepository = questionRepository;
@@ -88,6 +90,7 @@ public class AssessmentServiceImpl implements AssessmentService {
         this.cursorCodec = cursorCodec;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.events = events;
     }
 
     @Override
@@ -208,7 +211,9 @@ public class AssessmentServiceImpl implements AssessmentService {
                 outcome.benchmarkPolicyVersion(),
                 objectMapper.valueToTree(outcome.riskSignals())
         );
-        return toResultResponse(resultRepository.saveAndFlush(result));
+        AssessmentResultResponse response = toResultResponse(resultRepository.saveAndFlush(result));
+        events.publishEvent(new AssessmentSubmitted(userId, response));
+        return response;
     }
 
     @Override

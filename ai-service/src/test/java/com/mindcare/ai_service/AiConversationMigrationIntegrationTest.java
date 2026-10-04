@@ -29,7 +29,7 @@ class AiConversationMigrationIntegrationTest {
                 """, String.class);
 
         assertThat(tables).isEqualTo(2);
-        assertThat(version).isEqualTo("7");
+        assertThat(version).isEqualTo("8");
         assertThat(jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='ai_schema'
                 AND table_name IN ('ai_chat_requests', 'ai_chat_rate_limits')
