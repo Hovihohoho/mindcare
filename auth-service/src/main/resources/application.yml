@@ -44,3 +44,17 @@ app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   mail-from: ${MAIL_FROM:no-reply@mindcare.local}
   verification-expiration-minutes: 30
+
+# Production must not inherit local credentials. Activate prod or production.
+---
+spring:
+  config:
+    activate:
+      on-profile: "prod | production"
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+app:
+  internal-secret: ${INTERNAL_SERVICE_SECRET}

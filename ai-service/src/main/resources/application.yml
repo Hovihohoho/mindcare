@@ -69,3 +69,17 @@ ai:
       model-version: lifesnaps-resting-hr-v1
   conversation-retention-days: ${AI_CONVERSATION_RETENTION_DAYS:365}
   conversation-retention-cron: ${AI_CONVERSATION_RETENTION_CRON:0 20 3 * * *}
+
+# Production must not inherit local credentials. Activate prod or production.
+---
+spring:
+  config:
+    activate:
+      on-profile: "prod | production"
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+app:
+  internal-secret: ${INTERNAL_SERVICE_SECRET}

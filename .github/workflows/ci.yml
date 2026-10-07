@@ -2,7 +2,7 @@ name: MindCare checks
 on:
   pull_request:
   push:
-    branches: [main, master, develop]
+    branches: [main, master, develop, viet]
 permissions:
   contents: read
 concurrency:
@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '17'
           cache: maven
       - name: Require Docker for persistence integration tests
         run: docker info
@@ -56,3 +56,4 @@ jobs:
         env:
           CI: '1'
           EXPO_NO_TELEMETRY: '1'
+          EXPO_PUBLIC_API_URL: https://api.mindcare.invalid

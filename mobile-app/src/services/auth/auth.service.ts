@@ -1,4 +1,4 @@
-import type { AuthSession, LoginInput, LoginSession, RegisterInput } from '@/features/auth/auth.types';
+import type { AuthSession, AuthUser, LoginInput, LoginSession, RegisterInput, UpdateProfileInput } from '@/features/auth/auth.types';
 import { apiRequest, ApiClientError } from '@/services/api/api.client';
 
 export class AuthServiceError extends Error {
@@ -14,8 +14,12 @@ export type AuthService = {
   verifyEmail(email: string, code: string): Promise<void>;
   resendVerification(email: string): Promise<void>;
   me(accessToken: string): Promise<AuthSession['user']>;
+  updateProfile(accessToken: string, profile: UpdateProfileInput): Promise<AuthUser>;
+  uploadAvatar(accessToken: string, asset: { uri: string; mimeType: string; fileName: string }): Promise<AuthUser>;
+  changePassword(accessToken: string, currentPassword: string, newPassword: string): Promise<void>;
   logout(accessToken?: string): Promise<void>;
   sessions(accessToken: string): Promise<LoginSession[]>;
+  revokeSession(accessToken: string, sessionId: string): Promise<void>;
   exportMyData(accessToken: string): Promise<Record<string, unknown>>;
   verifyPassword(accessToken: string, currentPassword: string): Promise<void>;
   permanentlyDelete(accessToken: string, currentPassword: string): Promise<void>;
@@ -52,6 +56,22 @@ export const authService: AuthService = {
     return authRequest<AuthSession['user']>('/api/auth/me', { token: accessToken });
   },
 
+  async updateProfile(accessToken, profile) {
+    return authRequest<AuthUser>('/api/auth/me', { method: 'PUT', token: accessToken, body: profile });
+  },
+
+  async uploadAvatar(accessToken, asset) {
+    const body = new FormData();
+    body.append('file', { uri: asset.uri, type: asset.mimeType, name: asset.fileName } as unknown as Blob);
+    return authRequest<AuthUser>('/api/auth/me/avatar', { method: 'POST', token: accessToken, body });
+  },
+
+  async changePassword(accessToken, currentPassword, newPassword) {
+    await authRequest<null>('/api/auth/me/password', {
+      method: 'PUT', token: accessToken, body: { currentPassword, newPassword },
+    });
+  },
+
   async logout(accessToken) {
     if (!accessToken) return;
     await authRequest<null>('/api/auth/logout', { method: 'POST', token: accessToken });
@@ -59,6 +79,10 @@ export const authService: AuthService = {
 
   async sessions(accessToken) {
     return authRequest<LoginSession[]>('/api/auth/sessions', { token: accessToken });
+  },
+
+  async revokeSession(accessToken, sessionId) {
+    await authRequest<null>(`/api/auth/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE', token: accessToken });
   },
 
   async exportMyData(accessToken) {
@@ -73,3 +97,16 @@ export const authService: AuthService = {
     await authRequest<null>('/api/auth/me/permanent', { body: { currentPassword }, method: 'DELETE', token: accessToken });
   },
 };
+
+export function currentSessionId(accessToken: string): string | null {
+  try {
+    const payload = accessToken.split('.')[1];
+    if (!payload || typeof globalThis.atob !== 'function') return null;
+    const encoded = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=');
+    const claims = JSON.parse(globalThis.atob(padded)) as { sessionId?: unknown };
+    return typeof claims.sessionId === 'string' ? claims.sessionId : null;
+  } catch {
+    return null;
+  }
+}

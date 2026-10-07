@@ -2,6 +2,7 @@ server:
   port: 8079
 
 mindcare:
+  internal-secret: ${INTERNAL_SERVICE_SECRET:}
   auth-service-uri: ${AUTH_SERVICE_URI:http://localhost:8081}
 
 spring:
@@ -53,3 +54,13 @@ spring:
               uri: ${AUTH_WEBSOCKET_URI:ws://localhost:8081}
               predicates:
                 - Path=/ws/notifications/**
+
+# Production must not inherit local credentials. Activate prod or production.
+---
+spring:
+  config:
+    activate:
+      on-profile: "prod | production"
+
+mindcare:
+  internal-secret: ${INTERNAL_SERVICE_SECRET}

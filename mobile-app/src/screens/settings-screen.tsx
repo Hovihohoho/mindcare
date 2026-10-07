@@ -1,4 +1,6 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
+import { useNotifications } from '@/features/notifications/notification-context';
 import { Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@/components/app-screen';
 import { DataFeedback, SkeletonList } from '@/components/data-states';
@@ -11,12 +13,13 @@ import { useAuth } from '@/features/auth/auth-context';
 
 async function loadSettings(token: string): Promise<SettingItem[]> {
   const [user, sessions] = await Promise.all([authService.me(token), authService.sessions(token)]);
-  const activeSessions = sessions.filter((item) => !item.revoked).length;
+  const activeSessions = sessions.filter((item) => !item.revoked && Date.parse(item.expiresAt) > Date.now()).length;
   return [
     { id: 's8', title: 'Nhắc nhở', description: 'Chọn giờ check-in và tự chăm sóc', icon: 'alarm' },
     { id: 's6', title: 'Google Health Connect', description: 'Quản lý quyền và đồng bộ dữ liệu sức khỏe', icon: 'fitness' },
     { id: 's7', title: 'Quyền dữ liệu', description: 'Tải xuống hoặc xóa dữ liệu MindCare', icon: 'download' },
     { id: 's1', title: 'Hồ sơ cá nhân', description: `${user.fullName} · ${user.email}`, icon: 'person' },
+    { id: 's9', title: 'Đổi mật khẩu', description: 'Cập nhật mật khẩu và đăng xuất các phiên hiện có', icon: 'key' },
     { id: 's2', title: 'Xác thực email', description: user.emailVerified ? 'Email đã được xác thực' : 'Email chưa được xác thực', icon: 'notifications' },
     { id: 's3', title: 'Trạng thái tài khoản', description: user.active ? 'Tài khoản đang hoạt động' : 'Tài khoản đã bị vô hiệu hóa', icon: 'lock' },
     { id: 's4', title: 'Ngôn ngữ', description: 'Tiếng Việt', icon: 'language' },
@@ -26,16 +29,21 @@ async function loadSettings(token: string): Promise<SettingItem[]> {
 
 export default function SettingsScreen() {
   const { logout } = useAuth();
+  const { unreadCount, refresh } = useNotifications();
+  useFocusEffect(useCallback(() => { void refresh().catch(() => undefined); }, [refresh]));
   const { data, loading, refreshing, error, reload } = useAuthenticatedList(loadSettings);
   const sections = [
     { title: 'Tài khoản', data: data.filter((item) => ['s1', 's2', 's3'].includes(item.id)) },
     { title: 'Sức khỏe & dữ liệu', data: data.filter((item) => ['s6', 's7'].includes(item.id)) },
     { title: 'Ứng dụng', data: data.filter((item) => ['s4', 's8'].includes(item.id)) },
-    { title: 'Bảo mật', data: data.filter((item) => item.id === 's5') },
+    { title: 'Bảo mật', data: data.filter((item) => ['s5', 's9'].includes(item.id)) },
   ].filter((section) => section.data.length);
 
   return (
     <AppScreen>
+      <View style={{ paddingHorizontal: spacing.page, paddingBottom: spacing.sm }}>
+        <ListItem title="Thông báo" description="Mở hộp thư thông báo" icon="notifications-outline" groupStart groupEnd onPress={() => router.push('/notifications')} trailing={unreadCount !== null && unreadCount > 0 ? <Text accessibilityLabel={`${unreadCount} thông báo chưa đọc`} style={{ color: colors.brandDark, fontFamily: fonts.bold }}>{unreadCount > 99 ? '99+' : unreadCount}</Text> : undefined} />
+      </View>
       {loading ? <SkeletonList rows={3} /> : error ? (
         <DataFeedback actionLabel="Thử lại" description={error} kind="error" onAction={() => void reload()} title="Cài đặt chưa được tải" />
       ) : data.length === 0 ? (
@@ -55,7 +63,7 @@ export default function SettingsScreen() {
               groupEnd={index === section.data.length - 1}
               groupStart={index === 0}
               icon={iconMap[item.icon]}
-              onPress={item.id === 's6' ? () => router.push('/(tabs)/health-connect') : item.id === 's7' ? () => router.push('/(tabs)/data-rights') : item.id === 's8' ? () => router.push('/(tabs)/reminders') : undefined}
+              onPress={item.id === 's1' ? () => router.push('/profile') : item.id === 's5' ? () => router.push('/sessions') : item.id === 's9' ? () => router.push('/change-password') : item.id === 's6' ? () => router.push('/(tabs)/health-connect') : item.id === 's7' ? () => router.push('/(tabs)/data-rights') : item.id === 's8' ? () => router.push('/(tabs)/reminders') : undefined}
               showDivider={index !== section.data.length - 1}
               title={item.title}
             />
@@ -72,7 +80,7 @@ export default function SettingsScreen() {
 }
 
 const iconMap = {
-  person: 'person-outline', notifications: 'mail-outline', lock: 'checkmark-circle-outline', language: 'language-outline', shield: 'shield-checkmark-outline', fitness: 'fitness-outline', download: 'download-outline', alarm: 'alarm-outline',
+  person: 'person-outline', notifications: 'mail-outline', lock: 'checkmark-circle-outline', language: 'language-outline', shield: 'shield-checkmark-outline', fitness: 'fitness-outline', download: 'download-outline', alarm: 'alarm-outline', key: 'key-outline',
 } as const;
 
 const styles = StyleSheet.create({

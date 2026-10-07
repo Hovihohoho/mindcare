@@ -18,8 +18,19 @@ import org.springframework.web.server.ServerWebExchange;
 
 class VerifiedIdentityGlobalFilterTest {
     @Test
+    void missingOrBlankServerSecretNeverForwardsAuthenticatedRequests() {
+        for (String secret : new String[] {null, "", " "}) {
+            var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:1", secret);
+            var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/assessments")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer token")
+                    .header("X-Internal-Secret", "spoofed-client-secret").build());
+            filter.filter(exchange, ignored -> { throw new AssertionError("Missing hop proof was forwarded"); }).block();
+            assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        }
+    }
+    @Test
     void blocksInternalRoutesIncludingEncodedSegments() {
-        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:1");
+        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:1", "test-hop-secret");
         for (String path : java.util.List.of("/api/auth/internal/notifications", "/api/ai/internal/privacy/123",
                 "/api/auth/%69nternal/notifications", "/api/auth/internal;ignored=x/notifications")) {
             var exchange = MockServerWebExchange.from(MockServerHttpRequest.method(
@@ -31,7 +42,7 @@ class VerifiedIdentityGlobalFilterTest {
 
     @Test
     void unavailableAuthReturns503InsteadOfUnboundedWaitOr500() {
-        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:1");
+        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:1", "test-hop-secret");
         var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/assessments")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer token").build());
         filter.filter(exchange, ignored -> { throw new AssertionError("Unverified identity was forwarded"); }).block();
@@ -47,7 +58,7 @@ class VerifiedIdentityGlobalFilterTest {
 
     @Test
     void removesSpoofedIdentityHeadersFromAnonymousRequest() {
-        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:1");
+        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:1", "test-hop-secret");
         var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/assessments")
                 .header("X-User-Id", UUID.randomUUID().toString())
                 .header("X-User-Role", "ROLE_ADMIN")
@@ -86,7 +97,7 @@ class VerifiedIdentityGlobalFilterTest {
             request.close();
         });
         server.start();
-        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:" + server.getAddress().getPort());
+        var filter = new VerifiedIdentityGlobalFilter("http://127.0.0.1:" + server.getAddress().getPort(), "test-hop-secret");
         var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/assessments")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer token").build());
         filter.filter(exchange, ignored -> { throw new AssertionError("Invalid identity was forwarded"); }).block();
@@ -109,10 +120,12 @@ class VerifiedIdentityGlobalFilterTest {
         });
         server.start();
         var filter = new VerifiedIdentityGlobalFilter(
-                "http://127.0.0.1:" + server.getAddress().getPort());
+                "http://127.0.0.1:" + server.getAddress().getPort(), "test-hop-secret");
         var exchange = MockServerWebExchange.from(MockServerHttpRequest
                 .get("/ws/notifications?access_token=socket-token&client=web")
                 .header("X-User-Role", "ROLE_ADMIN")
+                .header("X-Internal-Secret", "spoofed-client-secret")
+                .header("X-Internal-Secret", "spoofed-client-secret")
                 .build());
         AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
 
@@ -122,6 +135,8 @@ class VerifiedIdentityGlobalFilterTest {
         }).block();
 
         assertThat(authorization.get()).isEqualTo("Bearer socket-token");
+        assertThat(forwarded.get().getRequest().getHeaders().getFirst("X-Internal-Secret"))
+                .isEqualTo("test-hop-secret");
         assertThat(forwarded.get().getRequest().getURI().getQuery()).isEqualTo("client=web");
         assertThat(forwarded.get().getRequest().getHeaders().getFirst("X-User-Id"))
                 .isEqualTo(userId.toString());
@@ -138,7 +153,7 @@ class VerifiedIdentityGlobalFilterTest {
         });
         server.start();
         var filter = new VerifiedIdentityGlobalFilter(
-                "http://127.0.0.1:" + server.getAddress().getPort());
+                "http://127.0.0.1:" + server.getAddress().getPort(), "test-hop-secret");
         var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/assessments")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer revoked-token")
                 .build());

@@ -41,3 +41,17 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
 mindcare:
   seed-assessments: ${SEED_ASSESSMENTS:false}
+
+# Production must not inherit local credentials. Activate prod or production.
+---
+spring:
+  config:
+    activate:
+      on-profile: "prod | production"
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+app:
+  internal-secret: ${INTERNAL_SERVICE_SECRET}

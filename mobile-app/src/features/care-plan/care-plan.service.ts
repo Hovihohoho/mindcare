@@ -3,7 +3,8 @@ import { apiRequest } from '@/services/api/api.client';
 export type CareGoal = 'REDUCE_STRESS' | 'IMPROVE_SLEEP' | 'MANAGE_ANXIETY' | 'BUILD_BALANCE';
 export type CareActivity = { id: string; activityCode: string; title: string; targetPerWeek: number; completedThisWeek: number; completedToday: boolean };
 export type CarePlan = { id: string; goal: CareGoal; templateCode: string | null; templateVersion: string | null; sourceUrl: string | null; weekStartedOn: string; completedThisWeek: number; targetThisWeek: number; activities: CareActivity[]; updatedAt: string };
-export type CarePlanTemplate = { templateCode: string; templateVersion: string; goal: CareGoal; title: string; description: string; activities: { activityCode: string; title: string; targetPerWeek: number }[]; sourceTitle: string; sourceUrl: string; implementationSourceUrl: string; limitation: string };
+export type CarePlanTemplate = { templateCode: string; templateVersion: string; goal: CareGoal; title: string; description: string; activities: CarePlanTemplateActivity[]; sourceTitle: string; sourceUrl: string; implementationSourceUrl: string; limitation: string };
+export type CarePlanTemplateActivity = { activityCode: string; title: string; targetPerWeek: number; evidenceSourceTitle: string; evidenceSourceUrl: string; evidenceSection: string; evidenceNote: string };
 export type CarePlanRecommendation = { templateCode: string; message: string; benchmarkSourceUrl: string };
 
 export const carePlanService = {

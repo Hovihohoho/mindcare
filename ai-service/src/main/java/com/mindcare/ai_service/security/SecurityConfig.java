@@ -2,6 +2,7 @@ package com.mindcare.ai_service.security;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Instant;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -14,9 +15,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http,
+            @Value("${app.internal-secret:}") String internalSecret) throws Exception {
         GatewayAuthenticationFilter gatewayAuthenticationFilter =
-                new GatewayAuthenticationFilter();
+                new GatewayAuthenticationFilter(internalSecret);
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})

@@ -30,4 +30,9 @@ function developmentApiUrl() {
   return metroHost ? `http://${metroHost}:8079` : 'http://localhost:8079';
 }
 
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL?.trim() || developmentApiUrl()).replace(/\/$/, '');
+const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+if (!__DEV__ && !configuredApiUrl) {
+  throw new Error('Configuration error: EXPO_PUBLIC_API_URL is required for production/release builds.');
+}
+
+export const API_URL = (configuredApiUrl || developmentApiUrl()).replace(/\/$/, '');

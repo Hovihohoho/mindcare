@@ -16,5 +16,13 @@ public record SelfCarePlanTemplateResponse(
         String implementationSourceUrl,
         String limitation
 ) {
-    public record ActivityTemplateResponse(String activityCode, String title, int targetPerWeek) {}
+    public record ActivityTemplateResponse(
+            String activityCode,
+            String title,
+            int targetPerWeek,
+            String evidenceSourceTitle,
+            String evidenceSourceUrl,
+            String evidenceSection,
+            String evidenceNote
+    ) {}
 }

@@ -24,6 +24,8 @@ export type LoginSession = {
   revoked: boolean;
 };
 
+export type UpdateProfileInput = Pick<AuthUser, 'fullName' | 'phone' | 'birthDate' | 'gender' | 'address' | 'bio'>;
+
 export type AuthSession = {
   accessToken: string;
   tokenType: 'Bearer';

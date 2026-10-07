@@ -12,7 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class GatewayAuthenticationFilterTest {
-    private final GatewayAuthenticationFilter filter = new GatewayAuthenticationFilter();
+    private final GatewayAuthenticationFilter filter = new GatewayAuthenticationFilter("test-hop-secret");
 
     @AfterEach
     void clearSecurityContext() {
@@ -20,10 +20,37 @@ class GatewayAuthenticationFilterTest {
     }
 
     @Test
+    void rejectsMissingWrongOrBlankHopProof() throws Exception {
+        for (String secret : new String[] {null, "wrong-secret", " "}) {
+            assertRejected(filter, secret);
+        }
+    }
+
+    @Test
+    void blankConfiguredSecretFailsClosed() throws Exception {
+        assertRejected(new GatewayAuthenticationFilter(" "), "test-hop-secret");
+        assertRejected(new GatewayAuthenticationFilter(""), "");
+    }
+
+    private void assertRejected(GatewayAuthenticationFilter target, String secret) throws Exception {
+        var request = new MockHttpServletRequest();
+        request.addHeader("X-User-Id", "41aa1147-d62c-46f9-ae3f-83fcb76aafa7");
+        request.addHeader("X-User-Role", "ROLE_USER");
+        if (secret != null) request.addHeader("X-Internal-Secret", secret);
+        var response = new MockHttpServletResponse();
+        target.doFilter(request, response, (req, res) -> {
+            throw new AssertionError("Untrusted identity reached downstream");
+        });
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
     void authenticatesVerifiedGatewayIdentity() throws Exception {
         var request = new MockHttpServletRequest();
         request.addHeader("X-User-Id", "41aa1147-d62c-46f9-ae3f-83fcb76aafa7");
         request.addHeader("X-User-Role", "ROLE_ADMIN");
+        request.addHeader("X-Internal-Secret", "test-hop-secret");
         var response = new MockHttpServletResponse();
         var observed = new AtomicReference<Authentication>();
         FilterChain chain = (ignoredRequest, ignoredResponse) ->
@@ -44,6 +71,7 @@ class GatewayAuthenticationFilterTest {
         var request = new MockHttpServletRequest();
         request.addHeader("X-User-Id", "not-a-uuid");
         request.addHeader("X-User-Role", "ROLE_SUPER_ADMIN");
+        request.addHeader("X-Internal-Secret", "test-hop-secret");
         var observed = new AtomicReference<Authentication>();
 
         filter.doFilter(

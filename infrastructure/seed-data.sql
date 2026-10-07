@@ -18,6 +18,9 @@ FROM (VALUES
     ('user4@mindcare.local', 'Phạm Ngọc Mai', 'ROLE_USER'),
     ('user5@mindcare.local', 'Võ Đức Anh', 'ROLE_USER'),
     ('user6@mindcare.local', 'Đặng Khánh Linh', 'ROLE_USER'),
+    ('user7@mindcare.local', 'Demo User 7', 'ROLE_USER'),
+    ('user8@mindcare.local', 'Demo User 8', 'ROLE_USER'),
+    ('user9@mindcare.local', 'Demo User 9', 'ROLE_USER'),
     ('admin@mindcare.local', 'Quản trị MindCare', 'ROLE_ADMIN')
 ) AS account(email, full_name, role_name)
 JOIN auth_schema.roles ON roles.name = account.role_name

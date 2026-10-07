@@ -3,7 +3,7 @@ import { createContext, type PropsWithChildren, useCallback, useContext, useEffe
 import { authService } from '@/services/auth/auth.service';
 import { sessionStorage } from '@/services/auth/session.storage';
 import { onUnauthorized } from '@/services/api/api.client';
-import type { AuthSession, AuthStatus, LoginInput, RegisterInput } from './auth.types';
+import type { AuthSession, AuthStatus, AuthUser, LoginInput, RegisterInput } from './auth.types';
 
 type AuthContextValue = {
   session: AuthSession | null;
@@ -12,6 +12,7 @@ type AuthContextValue = {
   register(input: RegisterInput): Promise<void>;
   verifyEmail(email: string, code: string): Promise<void>;
   resendVerification(email: string): Promise<void>;
+  updateProfile(user: AuthUser): Promise<void>;
   logout(): Promise<void>;
 };
 
@@ -21,6 +22,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
   const activeToken = useRef<string | null>(null);
+  const sessionRef = useRef<AuthSession | null>(session);
+  sessionRef.current = session;
   const invalidation = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => onUnauthorized((token) => {
@@ -88,6 +91,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const verifyEmail = useCallback((email: string, code: string) => authService.verifyEmail(email, code), []);
   const resendVerification = useCallback((email: string) => authService.resendVerification(email), []);
 
+  const updateProfile = useCallback(async (user: AuthUser) => {
+    const current = sessionRef.current;
+    if (!current || activeToken.current !== current.accessToken) {
+      throw new Error('Phiên đăng nhập không còn hợp lệ. Vui lòng đăng nhập lại.');
+    }
+    const updated = { ...current, user };
+    sessionRef.current = updated;
+    setSession(updated);
+    await sessionStorage.save(updated);
+  }, []);
+
   const logout = useCallback(async () => {
     const token = activeToken.current;
     try {
@@ -106,7 +120,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, []);
 
-  const value = useMemo(() => ({ session, status, login, register, verifyEmail, resendVerification, logout }), [login, logout, register, resendVerification, session, status, verifyEmail]);
+  const value = useMemo(() => ({ session, status, login, register, verifyEmail, resendVerification, updateProfile, logout }), [login, logout, register, resendVerification, session, status, updateProfile, verifyEmail]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

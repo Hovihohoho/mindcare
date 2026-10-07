@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
 import { ActionButton } from '@/components/buttons';
@@ -11,6 +12,15 @@ import { colors, fonts, radius, spacing, type } from '@/theme/tokens';
 import { carePlanService, type CarePlan, type CarePlanRecommendation, type CarePlanTemplate } from './care-plan.service';
 
 const goalLabels = { REDUCE_STRESS: 'Giảm căng thẳng', IMPROVE_SLEEP: 'Ngủ tốt hơn', MANAGE_ANXIETY: 'Quản lý lo âu', BUILD_BALANCE: 'Xây dựng cân bằng' } as const;
+
+function isSafeEvidenceUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && Boolean(url.hostname) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
 
 function localDate() {
   const date = new Date();
@@ -24,10 +34,12 @@ export default function CarePlanScreen() {
   const [templates, setTemplates] = useState<CarePlanTemplate[]>([]);
   const [recommendations, setRecommendations] = useState<CarePlanRecommendation[]>([]);
   const [selectedCode, setSelectedCode] = useState<string>();
+  const [expandedEvidenceCode, setExpandedEvidenceCode] = useState<string>();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [linkError, setLinkError] = useState('');
 
   const load = useCallback(async () => {
     if (!session?.accessToken) return;
@@ -61,6 +73,15 @@ export default function CarePlanScreen() {
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Không thể cập nhật hoạt động.'); }
     finally { setSaving(false); }
   };
+  const openEvidence = async (url: string) => {
+    if (!isSafeEvidenceUrl(url)) return;
+    try {
+      await Linking.openURL(url);
+      setLinkError('');
+    } catch {
+      setLinkError('Không thể mở liên kết nguồn trên thiết bị này.');
+    }
+  };
 
   return <AppScreen>{loading ? <SkeletonList rows={4} /> : error && !plan ? <DataFeedback actionLabel="Thử lại" description={error} kind="error" onAction={() => { setLoading(true); void load(); }} title="Chưa tải được kế hoạch" /> : (
     <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl onRefresh={() => { setLoading(true); void load(); }} refreshing={loading} tintColor={colors.brand} />} showsVerticalScrollIndicator={false}>
@@ -75,12 +96,28 @@ export default function CarePlanScreen() {
       </> : <>
         {recommendations.map((item) => <View key={item.templateCode} style={styles.recommendation}><Ionicons color={colors.warning} name="sparkles-outline" size={20} /><Text style={styles.recommendationText}>{item.message}</Text></View>)}
         {templates.map((item) => <Pressable key={item.templateCode} onPress={() => setSelectedCode(item.templateCode)} style={[styles.template, selected?.templateCode === item.templateCode && styles.templateSelected]}><View style={styles.templateTop}><Ionicons color={colors.brand} name="flag-outline" size={23} />{recommendedCodes.has(item.templateCode) ? <Text style={styles.badge}>Được đề xuất</Text> : null}</View><Text style={styles.templateTitle}>{item.title}</Text><Text style={styles.templateText}>{item.description}</Text><Text style={styles.templateMeta}>{item.activities.length} hoạt động · phiên bản {item.templateVersion}</Text></Pressable>)}
-        {selected ? <View style={styles.detail}><Text style={styles.detailTitle}>Hoạt động trong kế hoạch</Text>{selected.activities.map((item) => <View key={item.activityCode} style={styles.detailRow}><Text style={styles.detailText}>{item.title}</Text><Text style={styles.detailTarget}>{item.targetPerWeek} lần/tuần</Text></View>)}<Text style={styles.limitation}>{selected.limitation}</Text><ActionButton label="Áp dụng kế hoạch" loading={saving} onPress={() => void apply()} /></View> : <DataFeedback kind="empty" title="Chưa có kế hoạch mẫu" description="Kế hoạch sẽ hiển thị khi được hệ thống cung cấp." />}
+        {selected ? <View style={styles.detail}><Text style={styles.detailTitle}>Hoạt động trong kế hoạch</Text>{selected.activities.map((item) => {
+          const expanded = expandedEvidenceCode === item.activityCode;
+          const safeUrl = isSafeEvidenceUrl(item.evidenceSourceUrl);
+          return <View key={item.activityCode} style={styles.evidenceActivity}>
+            <View style={styles.detailRow}><Text style={styles.detailText}>{item.title}</Text><Text style={styles.detailTarget}>{item.targetPerWeek} lần/tuần</Text></View>
+            <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => { setExpandedEvidenceCode(expanded ? undefined : item.activityCode); setLinkError(''); }} style={styles.evidenceToggle}>
+              <Text style={styles.evidenceToggleText}>{expanded ? 'Ẩn nguồn' : 'Nguồn'}</Text><Ionicons color={colors.brand} name={expanded ? 'chevron-up' : 'information-circle-outline'} size={16} />
+            </Pressable>
+            {expanded ? <View style={styles.evidenceDetail}>
+              <Text style={styles.evidenceSourceTitle}>{item.evidenceSourceTitle || 'Nguồn tham khảo'}</Text>
+              <Text style={styles.evidenceSection}>{item.evidenceSection || 'Chủ đề liên quan'}</Text>
+              <Text style={styles.evidenceNote}>{item.evidenceNote || 'Thông tin nguồn chưa có sẵn.'}</Text>
+              {safeUrl ? <Pressable accessibilityRole="link" onPress={() => void openEvidence(item.evidenceSourceUrl)} style={styles.evidenceLink}><Text style={styles.evidenceLinkText}>Mở nguồn chính thức</Text><Ionicons color={colors.brand} name="open-outline" size={15} /></Pressable> : <Text style={styles.evidenceUnavailable}>Liên kết nguồn không hợp lệ.</Text>}
+              {linkError ? <Text accessibilityRole="alert" style={styles.evidenceUnavailable}>{linkError}</Text> : null}
+            </View> : null}
+          </View>;
+        })}<Text style={styles.limitation}>{selected.limitation}</Text><ActionButton label="Áp dụng kế hoạch" loading={saving} onPress={() => void apply()} /></View> : <DataFeedback kind="empty" title="Chưa có kế hoạch mẫu" description="Kế hoạch sẽ hiển thị khi được hệ thống cung cấp." />}
       </>}
     </ScrollView>
   )}</AppScreen>;
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.md, padding: spacing.page, paddingBottom: 40 }, eyebrow: { color: colors.muted, fontFamily: fonts.semibold, fontSize: type.caption, letterSpacing: .7 }, title: { color: colors.ink, fontFamily: fonts.bold, fontSize: type.title, letterSpacing: -.8, lineHeight: 38 }, intro: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 23, marginBottom: spacing.xs }, error: { color: colors.danger, fontFamily: fonts.medium, fontSize: type.caption }, progressCard: { backgroundColor: colors.brandSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: spacing.md, padding: spacing.md }, progressTop: { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'space-between' }, muted: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.label }, progressValue: { color: colors.ink, fontFamily: fonts.bold, fontSize: 30, marginTop: spacing.xs }, percent: { color: colors.brandDark, fontFamily: fonts.bold, fontSize: type.cardTitle }, track: { backgroundColor: colors.surface, borderRadius: radius.pill, height: 10, overflow: 'hidden' }, fill: { backgroundColor: colors.brand, borderRadius: radius.pill, height: '100%' }, source: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: spacing.xxs, minHeight: 30 }, sourceText: { color: colors.brand, fontFamily: fonts.semibold, fontSize: type.caption }, activities: { backgroundColor: colors.surfaceMuted, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, overflow: 'hidden' }, activity: { alignItems: 'center', borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.md, minHeight: 82, padding: spacing.md }, activityCopy: { flex: 1 }, activityTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.body }, activityDetail: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, marginTop: 3 }, check: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.pill, height: 44, justifyContent: 'center', width: 44 }, checked: { backgroundColor: colors.brand }, recommendation: { alignItems: 'flex-start', backgroundColor: colors.warningSoft, borderColor: colors.line, borderLeftColor: colors.warning, borderLeftWidth: 3, borderRadius: radius.card, borderWidth: 1, flexDirection: 'row', gap: spacing.sm, padding: spacing.md }, recommendationText: { color: colors.ink, flex: 1, fontFamily: fonts.regular, fontSize: type.label, lineHeight: 20 }, template: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: spacing.xs, padding: spacing.md }, templateSelected: { backgroundColor: colors.brandSoft, borderColor: colors.brand, borderWidth: 2 }, templateTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }, badge: { backgroundColor: colors.warningSoft, borderRadius: radius.pill, color: colors.warning, fontFamily: fonts.semibold, fontSize: 11, paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs }, templateTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.cardTitle }, templateText: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.label, lineHeight: 20 }, templateMeta: { color: colors.tertiary, fontFamily: fonts.regular, fontSize: type.caption }, detail: { backgroundColor: colors.surfaceMuted, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: spacing.sm, padding: spacing.md }, detailTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.cardTitle }, detailRow: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'space-between' }, detailText: { color: colors.ink, flex: 1, fontFamily: fonts.regular, fontSize: type.label }, detailTarget: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption }, limitation: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginVertical: spacing.xs },
+  content: { gap: spacing.md, padding: spacing.page, paddingBottom: 40 }, eyebrow: { color: colors.muted, fontFamily: fonts.semibold, fontSize: type.caption, letterSpacing: .7 }, title: { color: colors.ink, fontFamily: fonts.bold, fontSize: type.title, letterSpacing: -.8, lineHeight: 38 }, intro: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.body, lineHeight: 23, marginBottom: spacing.xs }, error: { color: colors.danger, fontFamily: fonts.medium, fontSize: type.caption }, progressCard: { backgroundColor: colors.brandSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: spacing.md, padding: spacing.md }, progressTop: { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'space-between' }, muted: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.label }, progressValue: { color: colors.ink, fontFamily: fonts.bold, fontSize: 30, marginTop: spacing.xs }, percent: { color: colors.brandDark, fontFamily: fonts.bold, fontSize: type.cardTitle }, track: { backgroundColor: colors.surface, borderRadius: radius.pill, height: 10, overflow: 'hidden' }, fill: { backgroundColor: colors.brand, borderRadius: radius.pill, height: '100%' }, source: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: spacing.xxs, minHeight: 30 }, sourceText: { color: colors.brand, fontFamily: fonts.semibold, fontSize: type.caption }, activities: { backgroundColor: colors.surfaceMuted, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, overflow: 'hidden' }, activity: { alignItems: 'center', borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.md, minHeight: 82, padding: spacing.md }, activityCopy: { flex: 1 }, activityTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.body }, activityDetail: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, marginTop: 3 }, check: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.pill, height: 44, justifyContent: 'center', width: 44 }, checked: { backgroundColor: colors.brand }, recommendation: { alignItems: 'flex-start', backgroundColor: colors.warningSoft, borderColor: colors.line, borderLeftColor: colors.warning, borderLeftWidth: 3, borderRadius: radius.card, borderWidth: 1, flexDirection: 'row', gap: spacing.sm, padding: spacing.md }, recommendationText: { color: colors.ink, flex: 1, fontFamily: fonts.regular, fontSize: type.label, lineHeight: 20 }, template: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: spacing.xs, padding: spacing.md }, templateSelected: { backgroundColor: colors.brandSoft, borderColor: colors.brand, borderWidth: 2 }, templateTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }, badge: { backgroundColor: colors.warningSoft, borderRadius: radius.pill, color: colors.warning, fontFamily: fonts.semibold, fontSize: 11, paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs }, templateTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.cardTitle }, templateText: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.label, lineHeight: 20 }, templateMeta: { color: colors.tertiary, fontFamily: fonts.regular, fontSize: type.caption }, detail: { backgroundColor: colors.surfaceMuted, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: spacing.sm, padding: spacing.md }, detailTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.cardTitle }, detailRow: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'space-between' }, detailText: { color: colors.ink, flex: 1, fontFamily: fonts.regular, fontSize: type.label }, detailTarget: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption }, evidenceActivity: { borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingVertical: spacing.xs }, evidenceToggle: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: spacing.xxs, minHeight: 32 }, evidenceToggleText: { color: colors.brand, fontFamily: fonts.semibold, fontSize: type.caption }, evidenceDetail: { backgroundColor: colors.surface, borderRadius: radius.card, gap: spacing.xs, padding: spacing.sm }, evidenceSourceTitle: { color: colors.ink, fontFamily: fonts.semibold, fontSize: type.label }, evidenceSection: { color: colors.brandDark, fontFamily: fonts.medium, fontSize: type.caption }, evidenceNote: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18 }, evidenceLink: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: spacing.xxs, minHeight: 32 }, evidenceLinkText: { color: colors.brand, fontFamily: fonts.semibold, fontSize: type.caption }, evidenceUnavailable: { color: colors.danger, fontFamily: fonts.regular, fontSize: type.caption }, limitation: { color: colors.muted, fontFamily: fonts.regular, fontSize: type.caption, lineHeight: 18, marginVertical: spacing.xs },
 });

@@ -33,17 +33,18 @@ export function onUnauthorized(listener: (token: string) => void) {
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), options.timeout ?? 12_000);
+  const multipart = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
   try {
     const response = await fetch(`${API_URL}${path}`, {
       method: options.method ?? 'GET',
       headers: {
         Accept: 'application/json',
-        'Content-Type': 'application/json',
+        ...(!multipart ? { 'Content-Type': 'application/json' } : {}),
         ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
         ...options.headers,
       },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body === undefined ? undefined : multipart ? options.body as FormData : JSON.stringify(options.body),
       signal: controller.signal,
     });
     if (response.status === 401 && options.token) {

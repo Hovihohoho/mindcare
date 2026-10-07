@@ -15,6 +15,7 @@ import { AuthProvider } from '@/features/auth/auth-context';
 import { HealthConnectGate } from '@/features/health/health-connect-gate';
 import '@/features/health/health-background.task';
 import { PushNavigationGate } from '@/features/notifications/push-navigation-gate';
+import { NotificationProvider } from '@/features/notifications/notification-context';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,10 +38,12 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <AuthProvider>
+        <NotificationProvider>
         <StatusBar style="dark" />
         <HealthConnectGate />
         <PushNavigationGate />
         <Stack screenOptions={{ headerShown: false }} />
+        </NotificationProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

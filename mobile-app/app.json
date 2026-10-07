@@ -54,6 +54,12 @@
           "color": "#147D73"
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cho phép MindCare chọn ảnh đại diện của bạn."
+        }
+      ],
       "react-native-health-connect",
       [
         "expo-build-properties",

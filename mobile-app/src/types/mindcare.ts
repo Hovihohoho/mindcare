@@ -30,5 +30,5 @@ export type SettingItem = {
   id: string;
   title: string;
   description: string;
-  icon: 'person' | 'notifications' | 'lock' | 'language' | 'shield' | 'fitness' | 'download' | 'alarm';
+  icon: 'person' | 'notifications' | 'lock' | 'language' | 'shield' | 'fitness' | 'download' | 'alarm' | 'key';
 };

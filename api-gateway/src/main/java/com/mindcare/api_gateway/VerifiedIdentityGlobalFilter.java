@@ -22,11 +22,14 @@ public class VerifiedIdentityGlobalFilter implements GlobalFilter, Ordered {
     private static final String USER_ROLE_HEADER = "X-User-Role";
 
     private final WebClient authClient;
+    private final String internalSecret;
 
     public VerifiedIdentityGlobalFilter(
-            @Value("${mindcare.auth-service-uri}") String authServiceUri
+            @Value("${mindcare.auth-service-uri}") String authServiceUri,
+            @Value("${mindcare.internal-secret:}") String internalSecret
     ) {
         this.authClient = WebClient.builder().baseUrl(authServiceUri).build();
+        this.internalSecret = internalSecret;
     }
 
     @Override
@@ -74,6 +77,9 @@ public class VerifiedIdentityGlobalFilter implements GlobalFilter, Ordered {
             return chain.filter(sanitizedExchange);
         }
 
+        if (internalSecret == null || internalSecret.isBlank()) {
+            return serviceUnavailable(sanitizedExchange);
+        }
         return authClient.get()
                 .uri("/api/auth/me")
                 .header(HttpHeaders.AUTHORIZATION, authorization)
@@ -98,6 +104,7 @@ public class VerifiedIdentityGlobalFilter implements GlobalFilter, Ordered {
                             .request(request -> request.headers(headers -> {
                                 headers.set(USER_ID_HEADER, user.id().toString());
                                 headers.set(USER_ROLE_HEADER, user.role());
+                                headers.set("X-Internal-Secret", internalSecret);
                             }))
                             .build();
                     return chain.filter(verifiedExchange);
